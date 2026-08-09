@@ -1,4 +1,5 @@
-import { request as umiRequest } from '@umijs/max';
+import { history, request as umiRequest } from '@umijs/max';
+import { removeToken } from './token';
 import { showRuoyiError } from './message';
 import { ruoyiRequest } from './request';
 
@@ -35,6 +36,8 @@ describe('ruoyiRequest', () => {
   beforeEach(() => {
     mockUmiRequest.mockReset();
     mockShowRuoyiError.mockReset();
+    jest.mocked(removeToken).mockClear();
+    jest.mocked(history.replace).mockClear();
   });
 
   it('sends the RuoYi client and bearer token headers', async () => {
@@ -81,5 +84,31 @@ describe('ruoyiRequest', () => {
       skipErrorHandler: true,
     });
     expect(mockShowRuoyiError).toHaveBeenCalledWith('音色复刻功能未启用');
+  });
+
+  it('401 清理 Token 并跳转登录，403 保留登录状态', async () => {
+    mockUmiRequest.mockResolvedValueOnce({
+      data: { code: 401, msg: '会话已过期' },
+      headers: {},
+    });
+
+    await expect(ruoyiRequest('/system/user/getInfo')).rejects.toMatchObject({
+      message: '无效的会话，或者会话已过期，请重新登录。',
+    });
+    expect(removeToken).toHaveBeenCalledTimes(1);
+    expect(history.replace).toHaveBeenCalledTimes(1);
+
+    jest.mocked(removeToken).mockClear();
+    jest.mocked(history.replace).mockClear();
+    mockUmiRequest.mockResolvedValueOnce({
+      data: { code: 403, msg: '无权访问' },
+      headers: {},
+    });
+
+    await expect(ruoyiRequest('/system/user/getInfo')).rejects.toMatchObject({
+      message: '无权访问',
+    });
+    expect(removeToken).not.toHaveBeenCalled();
+    expect(history.replace).not.toHaveBeenCalled();
   });
 });

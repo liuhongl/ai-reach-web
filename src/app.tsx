@@ -160,7 +160,9 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
     childrenRender: (children) => (
       <>
         <SseBootstrap connectionKey={connectionKey} enabled={enabled} />
-        {children}
+        <React.Fragment key={initialState?.tenantSwitchVersion || 0}>
+          {children}
+        </React.Fragment>
       </>
     ),
     footerRender: () => <Footer />,

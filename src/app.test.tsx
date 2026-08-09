@@ -151,5 +151,32 @@ describe('layout background capabilities', () => {
     expect(screen.getByTestId('sse-bootstrap').dataset.connectionKey).toBe(
       '1:100001:2',
     );
+    expect(config.menuDataRender().some((item: any) => item.name === '外呼任务')).toBe(
+      false,
+    );
+  });
+
+  it('租户版本变化时重新挂载页面子树', () => {
+    let mounts = 0;
+    const Page = () => {
+      React.useEffect(() => {
+        mounts += 1;
+      }, []);
+      return <div>业务页面</div>;
+    };
+    const createLayout = (tenantSwitchVersion: number) =>
+      (layout as any)({
+        initialState: {
+          currentUser: { userid: '1', permissions: ['ai_call:agent:manage'] },
+          tenantSwitchVersion,
+        },
+      });
+    const first = createLayout(1);
+    const { rerender } = render(first.childrenRender(<Page />));
+
+    const second = createLayout(2);
+    rerender(second.childrenRender(<Page />));
+
+    expect(mounts).toBe(2);
   });
 });
