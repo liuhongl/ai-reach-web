@@ -2,6 +2,8 @@ import * as React from 'react';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history } from '@umijs/max';
 import { App as AntdApp } from 'antd';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
 import {
   clearStoredDynamicTenantId,
   getStoredDynamicTenantId,
@@ -11,12 +13,16 @@ import { RuoYiCode, RuoyiError } from '@/adapters/ruoyi/response';
 import { getToken } from '@/adapters/ruoyi/token';
 import { buildAiCallMenu } from '@/aiCallNavigation';
 import Footer from '@/components/Footer';
+import NotificationCenter from '@/components/NotificationCenter';
+import SseBootstrap from '@/components/SseBootstrap';
 import TenantSwitch from '@/components/TenantSwitch';
 import UserMenu from '@/components/UserMenu';
 import { switchTenant } from '@/services/ruoyi/tenant-context';
 import { getInfo, type UserInfo } from '@/services/ruoyi/user';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
+
+dayjs.extend(relativeTime);
 
 const loginPath = '/user/login';
 
@@ -123,28 +129,53 @@ export async function getInitialState(): Promise<AiReachInitialState> {
   };
 }
 
-export const layout: RunTimeLayoutConfig = ({ initialState }) => ({
-  ...defaultSettings,
-  actionsRender: () => [<TenantSwitch key="tenant" />],
-  avatarProps: initialState?.currentUser
-    ? {
-        title: initialState.currentUser.name,
-        render: () => (
-          <UserMenu>
-            <span>{initialState.currentUser?.name || '用户'}</span>
-          </UserMenu>
-        ),
+export const layout: RunTimeLayoutConfig = ({ initialState }) => {
+  const connectionKey = [
+    initialState?.currentUser?.userid || 'anonymous',
+    initialState?.dynamicTenantId || 'default',
+    initialState?.tenantSwitchVersion || 0,
+  ].join(':');
+  const enabled = Boolean(initialState?.currentUser);
+
+  return {
+    ...defaultSettings,
+    actionsRender: () => [
+      <TenantSwitch key="tenant" />,
+      <NotificationCenter
+        contextKey={connectionKey}
+        enabled={enabled}
+        key="notification"
+      />,
+    ],
+    avatarProps: initialState?.currentUser
+      ? {
+          title: initialState.currentUser.name,
+          render: () => (
+            <UserMenu>
+              <span>{initialState.currentUser?.name || '用户'}</span>
+            </UserMenu>
+          ),
+        }
+      : false,
+    childrenRender: (children) => (
+      <>
+        <SseBootstrap connectionKey={connectionKey} enabled={enabled} />
+        {children}
+      </>
+    ),
+    footerRender: () => <Footer />,
+    menuDataRender: () =>
+      buildAiCallMenu(initialState?.currentUser?.permissions ?? []),
+    onPageChange: () => {
+      if (
+        !initialState?.currentUser &&
+        history.location.pathname !== loginPath
+      ) {
+        redirectToLogin();
       }
-    : false,
-  footerRender: () => <Footer />,
-  menuDataRender: () =>
-    buildAiCallMenu(initialState?.currentUser?.permissions ?? []),
-  onPageChange: () => {
-    if (!initialState?.currentUser && history.location.pathname !== loginPath) {
-      redirectToLogin();
-    }
-  },
-});
+    },
+  };
+};
 
 const RuoyiAppBridge = ({ children }: { children: React.ReactNode }) => {
   const { message } = AntdApp.useApp();
