@@ -9,6 +9,8 @@ declare namespace API {
     email?: string;
     name?: string;
     phone?: string;
+    permissions?: string[];
+    roles?: string[];
     userid?: string;
   };
 }

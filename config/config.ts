@@ -1,5 +1,7 @@
 import { defineConfig } from '@umijs/max';
 import defaultSettings from './defaultSettings';
+import devProxy from './proxy';
+import routes from './routes';
 
 export default defineConfig({
   access: {},
@@ -28,5 +30,7 @@ export default defineConfig({
   },
   npmClient: 'npm',
   request: {},
+  proxy: devProxy,
+  ...(process.env.NODE_ENV === 'test' ? {} : { routes }),
   title: 'AI Reach',
 });
