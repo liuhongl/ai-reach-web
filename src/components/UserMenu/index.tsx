@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { LogoutOutlined } from '@ant-design/icons';
+import { LogoutOutlined, SkinOutlined } from '@ant-design/icons';
 import { history, useModel } from '@umijs/max';
 import type { MenuProps } from 'antd';
 import { stopSse } from '@/adapters/ruoyi/sse';
@@ -13,6 +13,13 @@ export default function UserMenu({ children }: { children: React.ReactNode }) {
   const { setInitialState } = useModel('@@initialState');
 
   const onMenuClick: MenuProps['onClick'] = async ({ key }) => {
+    if (key === 'preferences') {
+      setInitialState((state) =>
+        state ? { ...state, preferencesOpen: true } : state,
+      );
+      return;
+    }
+
     if (key !== 'logout') return;
 
     try {
@@ -35,6 +42,12 @@ export default function UserMenu({ children }: { children: React.ReactNode }) {
       arrow
       menu={{
         items: [
+          {
+            key: 'preferences',
+            icon: <SkinOutlined />,
+            label: '偏好设置',
+          },
+          { type: 'divider' },
           {
             key: 'logout',
             icon: <LogoutOutlined />,

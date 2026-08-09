@@ -29,14 +29,33 @@ jest.mock('@/components/HeaderDropdown', () => (props: any) => {
 });
 
 describe('UserMenu', () => {
+  const setInitialState = jest.fn();
+
   beforeEach(() => {
     mockCallOrder.length = 0;
     jest.clearAllMocks();
     jest.mocked(useModel).mockReturnValue({
       initialState: { currentUser: { userid: '1', name: '管理员' } },
-      setInitialState: jest.fn(),
+      setInitialState,
     } as never);
     jest.mocked(logout).mockResolvedValue({ code: 200 } as never);
+  });
+
+  it('显示偏好设置入口并打开抽屉', async () => {
+    render(<UserMenu><button type="button">管理员</button></UserMenu>);
+
+    expect(
+      dropdownProps.menu.items.some((item: any) => item?.key === 'preferences'),
+    ).toBe(true);
+
+    await act(async () => {
+      await dropdownProps.menu.onClick({ key: 'preferences' });
+    });
+
+    const update = setInitialState.mock.calls[0][0];
+    expect(update({ currentUser: {} })).toMatchObject({
+      preferencesOpen: true,
+    });
   });
 
   it('退出时按顺序停止 SSE、删除 Token 并跳转登录', async () => {
