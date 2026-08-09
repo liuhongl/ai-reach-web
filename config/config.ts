@@ -31,6 +31,6 @@ export default defineConfig({
   npmClient: 'npm',
   request: {},
   proxy: devProxy,
-  ...(process.env.NODE_ENV === 'test' ? {} : { routes }),
+  routes,
   title: 'AI Reach',
 });

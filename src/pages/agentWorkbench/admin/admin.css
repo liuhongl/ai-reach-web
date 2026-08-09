@@ -1,0 +1,57 @@
+.agent-admin-page {
+  min-height: 100%;
+  background: #f4f6f9;
+}
+
+.agent-admin-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.agent-admin-metric-card .ant-pro-card-body {
+  padding: 14px;
+}
+
+.agent-admin-metric-value {
+  margin-top: 2px;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.agent-admin-metric-card--blue .agent-admin-metric-value {
+  color: #1677ff;
+}
+
+.agent-admin-metric-card--green .agent-admin-metric-value {
+  color: #389e0d;
+}
+
+.agent-admin-metric-card--orange .agent-admin-metric-value {
+  color: #d46b08;
+}
+
+.agent-admin-metric-card--red .agent-admin-metric-value {
+  color: #cf1322;
+}
+
+.agent-admin-metric-card--purple .agent-admin-metric-value {
+  color: #722ed1;
+}
+
+.agent-admin-detail {
+  display: grid;
+  gap: 20px;
+}
+
+.agent-admin-detail-section h5 {
+  margin: 0 0 10px;
+}
+
+@media (max-width: 768px) {
+  .agent-admin-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

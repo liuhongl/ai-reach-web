@@ -14,3 +14,293 @@ body {
   margin: 0;
   background: #f5f5f5;
 }
+
+.ant-pro-page-container {
+  --recov-page-content-top-gap: 24px;
+
+  .ant-pro-page-container-warp,
+  .ant-page-header,
+  .ant-page-header-breadcrumb,
+  .ant-page-header-heading {
+    display: none;
+  }
+
+  .ant-pro-page-container-children-container {
+    padding-block-start: var(--recov-page-content-top-gap);
+  }
+}
+
+.recov-page-toolbar {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.recov-page-toolbar-extra {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+}
+
+.recov-list-page.ant-pro-page-container {
+  display: flex;
+  height: calc(100dvh - 56px);
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.recov-list-page.ant-pro-page-container > .ant-pro-grid-content,
+.recov-list-page.ant-pro-page-container
+  > .ant-pro-grid-content
+  > .ant-pro-grid-content-children,
+.recov-list-page.ant-pro-page-container
+  > .ant-pro-grid-content
+  > .ant-pro-grid-content-children
+  > .ant-pro-page-container-children-container {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.recov-list-page.ant-pro-page-container
+  > .ant-pro-grid-content
+  > .ant-pro-grid-content-children
+  > .ant-pro-page-container-children-container {
+  padding-block-end: 16px;
+}
+
+.recov-list-stack,
+.recov-list-fill {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.recov-list-stack {
+  gap: 16px;
+}
+
+.recov-stats-strip {
+  display: flex !important;
+  flex: 0 0 auto;
+  gap: 10px !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.recov-list-page .recov-stats-strip > .ant-pro-card {
+  min-width: 170px;
+  flex: 1 0 170px;
+}
+
+.recov-list-page .recov-stats-strip .ant-pro-card-body {
+  padding: 12px 14px !important;
+}
+
+.recov-list-page .recov-stats-strip .ant-pro-card-body > div,
+.recov-list-page .recov-stats-strip .ant-pro-card-body > button {
+  min-height: 58px !important;
+}
+
+.recov-table-card.ant-pro-card {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.recov-table-card.recov-toolbar-card.ant-pro-card {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.recov-table-card.ant-pro-card > .ant-pro-card-header {
+  flex: 0 0 auto;
+  min-height: 44px;
+  padding-block: 10px;
+}
+
+.recov-table-card.ant-pro-card > .ant-pro-card-body {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.recov-table-card.recov-toolbar-card.ant-pro-card > .ant-pro-card-body,
+.recov-task-create-form-card.ant-pro-card,
+.recov-task-create-form-card.ant-pro-card > .ant-pro-card-body {
+  flex: 0 0 auto;
+  overflow: visible;
+}
+
+.recov-task-create-page.ant-pro-page-container {
+  overflow-y: auto;
+}
+
+.recov-task-create-page .recov-list-stack {
+  overflow: visible;
+}
+
+.recov-table-card-content {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden;
+}
+
+.recov-table-toolbar {
+  flex: 0 0 auto;
+  margin-bottom: 12px;
+}
+
+.recov-table-toolbar > div,
+.recov-table-toolbar .ant-space {
+  max-width: 100%;
+  flex-wrap: nowrap !important;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.recov-table-toolbar .ant-form-item,
+.recov-table-toolbar .ant-btn {
+  flex: 0 0 auto;
+}
+
+.recov-stable-pagination-table.ant-table-wrapper {
+  display: flex;
+  height: clamp(420px, calc(100vh - 300px), 560px);
+  min-height: 0;
+  flex-direction: column;
+}
+
+.recov-table-card .recov-stable-pagination-table.ant-table-wrapper {
+  flex: 1 1 0;
+  height: auto;
+  overflow: hidden;
+}
+
+.recov-stable-pagination-table.ant-table-wrapper > .ant-spin,
+.recov-stable-pagination-table.ant-table-wrapper > .ant-spin-nested-loading,
+.recov-stable-pagination-table.ant-table-wrapper
+  > .ant-spin
+  > .ant-spin-container,
+.recov-stable-pagination-table.ant-table-wrapper
+  > .ant-spin-nested-loading
+  > .ant-spin-container {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.recov-stable-pagination-table.ant-table-wrapper .ant-table {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: auto;
+}
+
+.recov-stable-pagination-table.ant-table-wrapper
+  .ant-table-pagination.ant-pagination {
+  flex: 0 0 auto;
+  margin-top: 16px !important;
+  margin-bottom: 0 !important;
+}
+
+.ant-pro-layout-side .recov-sider-footer-action {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 7px;
+  width: 100%;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.ant-pro-layout-side .recov-sider-footer-action:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.ant-pro-layout-side .recov-sider-footer-action-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+}
+
+.ant-pro-layout-side .recov-sider-footer-action-count {
+  position: absolute;
+  top: -5px;
+  right: -8px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 2px;
+  border-radius: 999px;
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 8px;
+  line-height: 12px;
+  text-align: center;
+}
+
+.ant-pro-layout-side .recov-sider-footer-action-count-dot {
+  top: -3px;
+  right: -4px;
+  width: 7px;
+  min-width: 7px;
+  height: 7px;
+  padding: 0;
+}
+
+.ant-pro-layout-side .recov-sider-footer-action-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ant-pro-layout-side .recov-sider-footer-action-collapsed {
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+}
+
+@media (max-width: 575px) {
+  .ant-pro-page-container {
+    --recov-page-content-top-gap: 16px;
+  }
+
+  .recov-page-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .recov-page-toolbar-extra {
+    justify-content: flex-start;
+  }
+}

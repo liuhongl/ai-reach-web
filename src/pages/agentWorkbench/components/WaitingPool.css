@@ -1,0 +1,99 @@
+.agent-waiting-pool-notice {
+  margin-bottom: 12px;
+}
+
+.agent-waiting-pool-list {
+  display: grid;
+  max-height: 560px;
+  gap: 8px;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.agent-waiting-pool-overview {
+  padding: 0 2px 6px;
+  font-size: 12px;
+}
+
+.agent-waiting-pool-item {
+  padding: 12px;
+  border: 1px solid #e8edf3;
+  border-radius: 10px;
+  background: #fff;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.agent-waiting-pool-item[data-queue-position="head"] {
+  border-color: #91caff;
+  background: #f7fbff;
+  box-shadow: 0 4px 14px rgb(22 119 255 / 8%);
+}
+
+.agent-waiting-pool-content {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+}
+
+.agent-waiting-pool-identity {
+  display: grid;
+  min-width: 0;
+  gap: 6px;
+}
+
+.agent-waiting-pool-identity .ant-tag {
+  margin-inline-end: 0;
+}
+
+.agent-waiting-pool-wait {
+  flex: none;
+}
+
+.agent-waiting-pool-timer {
+  display: inline-block;
+  flex: none;
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: #31506f;
+  background: #edf5ff;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.agent-waiting-pool-timer[data-sla-level="warning"] {
+  color: #925400;
+  background: #fff5d6;
+}
+
+.agent-waiting-pool-timer[data-sla-level="urgent"] {
+  color: #a61d24;
+  background: #fff1f0;
+  font-weight: 600;
+}
+
+.agent-waiting-pool-reason {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-waiting-pool-summary {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #344054;
+  font-size: 13px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.agent-waiting-pool-action {
+  min-height: 24px;
+  padding-top: 2px;
+}
+
+.agent-waiting-pool-state {
+  font-size: 13px;
+}

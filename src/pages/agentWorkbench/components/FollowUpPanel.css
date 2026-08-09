@@ -1,0 +1,37 @@
+.agent-follow-up-panel {
+  display: grid;
+  gap: 16px;
+}
+
+.agent-follow-up-scope-tabs {
+  padding: 0 24px;
+  background: #fff;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.agent-follow-up-scope-tabs > .ant-tabs-nav {
+  margin: 0;
+}
+
+.agent-follow-up-scope-tabs > .ant-tabs-nav::before {
+  border-bottom: 0;
+}
+
+.agent-follow-up-scope-tabs .ant-tabs-tab {
+  padding: 15px 0 13px;
+}
+
+.agent-follow-up-scope-tabs .ant-tabs-ink-bar {
+  height: 2px;
+}
+
+.agent-follow-up-scope-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.agent-follow-up-close-form {
+  display: grid;
+  gap: 12px;
+}

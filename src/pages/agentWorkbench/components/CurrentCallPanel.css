@@ -1,0 +1,77 @@
+.agent-current-call {
+  display: grid;
+  gap: 20px;
+}
+
+.agent-current-call-status {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 10px;
+  background: #f4f8ff;
+}
+
+.agent-current-call-icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #1677ff;
+  font-size: 18px;
+}
+
+.agent-current-call-tags {
+  margin-top: 8px;
+}
+
+.agent-current-call-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agent-current-call-device {
+  min-width: 170px;
+  flex: 1;
+}
+
+.agent-follow-up-current-call {
+  position: sticky;
+  z-index: 2;
+  top: 8px;
+  margin-bottom: 12px;
+}
+
+.agent-follow-up-current-call .agent-current-call {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.agent-follow-up-current-call .agent-current-call-status {
+  min-width: 360px;
+  flex: 1;
+  padding: 8px 12px;
+}
+
+.agent-follow-up-current-call .agent-current-call-controls {
+  min-width: 360px;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+@media (max-width: 960px) {
+  .agent-follow-up-current-call .agent-current-call {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .agent-follow-up-current-call .agent-current-call-status,
+  .agent-follow-up-current-call .agent-current-call-controls {
+    min-width: 0;
+  }
+}

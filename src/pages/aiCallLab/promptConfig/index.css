@@ -1,0 +1,76 @@
+.ai-call-prompt-config-layout {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-call-prompt-config-grid {
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 0;
+  grid-template-columns: 280px minmax(360px, 1fr) minmax(360px, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+  overflow: hidden;
+}
+
+.ai-call-prompt-config-card.ant-pro-card {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  flex: 1 1 0;
+}
+
+.ai-call-prompt-config-card.ant-pro-card > .ant-pro-card-body {
+  min-height: 0;
+  flex: 1 1 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.ai-call-prompt-profile-button.ant-btn {
+  padding-block: 8px;
+}
+
+@media (max-width: 1399px) {
+  .ai-call-prompt-config-grid {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: max-content;
+    align-items: start;
+    padding-right: 4px;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .ai-call-prompt-config-card.ant-pro-card {
+    min-height: auto;
+    height: auto;
+    flex: 0 0 auto;
+  }
+
+  .ai-call-prompt-config-card.ant-pro-card > .ant-pro-card-body {
+    min-height: auto;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
+  .ai-call-prompt-structure-card {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 991px) {
+  .ai-call-prompt-config-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ai-call-prompt-structure-card {
+    grid-column: auto;
+  }
+}

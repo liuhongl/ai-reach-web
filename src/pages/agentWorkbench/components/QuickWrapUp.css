@@ -1,0 +1,29 @@
+.agent-quick-wrap-up {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.agent-quick-wrap-up h5 {
+  margin: 0;
+}
+
+.agent-wrap-up-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.agent-wrap-up-options .ant-radio-button-wrapper {
+  border-radius: 6px;
+  border-inline-start-width: 1px;
+}
+
+.agent-wrap-up-options .ant-radio-button-wrapper::before {
+  display: none;
+}
+
+.agent-wrap-up-draft {
+  margin: 8px 0;
+}

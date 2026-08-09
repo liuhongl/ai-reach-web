@@ -1,0 +1,6 @@
+.recov-table-card.ant-pro-card:has(.ai-call-task-confirmation),
+.recov-table-card.ant-pro-card:has(.ai-call-task-confirmation)
+  > .ant-pro-card-body {
+  flex: 0 0 auto;
+  overflow: visible;
+}

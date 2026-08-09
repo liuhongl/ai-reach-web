@@ -1,0 +1,91 @@
+.agent-handoff-context {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.agent-handoff-customer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.agent-handoff-customer .ant-tag {
+  margin-inline-start: auto;
+  margin-inline-end: 0;
+}
+
+.agent-handoff-section-title {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.agent-handoff-summary {
+  padding: 12px 14px;
+  border: 1px solid #dce8f5;
+  border-radius: 10px;
+  background: #f5f9ff;
+}
+
+.agent-handoff-summary .ant-typography:last-child {
+  margin-bottom: 0;
+}
+
+.agent-handoff-dialogue-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.agent-handoff-dialogue-heading .agent-handoff-section-title {
+  margin-bottom: 0;
+}
+
+.agent-handoff-dialogue {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.agent-handoff-dialogue .ant-alert {
+  margin-bottom: 10px;
+}
+
+.agent-handoff-dialogue-scroll {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  gap: 10px;
+  padding: 12px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-radius: 12px;
+  background: #f6f7fa;
+}
+
+.agent-handoff-dialogue-turn {
+  display: block;
+  width: fit-content;
+  max-width: 88%;
+  padding: 9px 12px;
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
+
+.agent-handoff-dialogue-turn[data-speaker="ai"] {
+  justify-self: start;
+  border-bottom-left-radius: 4px;
+  background: #eaf4ff;
+}
+
+.agent-handoff-dialogue-turn[data-speaker="customer"] {
+  justify-self: end;
+  border-bottom-right-radius: 4px;
+  background: #f2edff;
+}

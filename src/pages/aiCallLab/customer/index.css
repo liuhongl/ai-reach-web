@@ -1,0 +1,128 @@
+.ai-call-lab-customer-page {
+  --ai-call-lab-border: #edf0f5;
+  --ai-call-lab-bg: #f7f9fc;
+  --ai-call-lab-text: #111827;
+}
+
+.ai-call-lab-page-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-call-lab-customer-grid {
+  display: grid;
+  flex: 1 1 0;
+  min-height: 0;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.ai-call-lab-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-call-lab-observability {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-call-lab-observability-grid {
+  display: grid;
+  flex: 1 1 0;
+  min-height: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ai-call-lab-state-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.ai-call-lab-metric {
+  display: flex;
+  min-width: 0;
+  min-height: 64px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--ai-call-lab-border);
+  border-radius: 8px;
+  background: var(--ai-call-lab-bg);
+  padding: 10px 12px;
+}
+
+.ai-call-lab-metric .ant-typography {
+  max-width: 100%;
+}
+
+.ai-call-lab-recording-player {
+  width: min(100%, 360px);
+}
+
+.ai-call-lab-record-list {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
+}
+
+.ai-call-lab-record-row {
+  display: flex;
+  min-height: 36px;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--ai-call-lab-border);
+  padding: 6px 0;
+}
+
+.ai-call-lab-record-row .ant-typography {
+  min-width: 0;
+}
+
+.ai-call-lab-debug-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ai-call-lab-debug-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.ai-call-lab-debug-events h5.ant-typography {
+  margin: 0 0 8px;
+}
+
+@media (max-width: 1180px) {
+  .ai-call-lab-customer-grid,
+  .ai-call-lab-observability-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ai-call-lab-state-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 575px) {
+  .ai-call-lab-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ai-call-lab-state-grid {
+    grid-template-columns: 1fr;
+  }
+}
