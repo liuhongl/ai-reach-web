@@ -32,9 +32,7 @@ export type RuoyiCurrentUser = API.CurrentUser & {
   rawUser?: UserInfo['user'];
 };
 
-export const toCurrentUser = (
-  info?: UserInfo,
-): RuoyiCurrentUser | undefined => {
+const toCurrentUser = (info?: UserInfo): RuoyiCurrentUser | undefined => {
   const user = info?.user;
   if (!user) return undefined;
   const roles = info.roles ?? [];

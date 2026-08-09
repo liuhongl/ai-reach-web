@@ -9,6 +9,7 @@ import { setRuoyiMessage } from '@/adapters/ruoyi/message';
 import { getToken } from '@/adapters/ruoyi/token';
 import { switchTenant } from '@/services/ruoyi/tenant-context';
 import { getInfo } from '@/services/ruoyi/user';
+import * as appRuntime from './app';
 import { getInitialState, layout, rootContainer } from './app';
 
 jest.mock('@umijs/max', () => ({
@@ -46,6 +47,14 @@ const userResponse = (userId: number, roles: string[] = []) => ({
     roles,
     permissions: ['ai_call:agent:manage'],
   },
+});
+
+describe('Umi runtime exports', () => {
+  it('只导出 Umi 支持的运行时配置', () => {
+    expect(Object.keys(appRuntime).sort()).toEqual(
+      ['getInitialState', 'layout', 'request', 'rootContainer'].sort(),
+    );
+  });
 });
 
 describe('getInitialState', () => {
