@@ -16,7 +16,7 @@
 - 目标仓库：`/Users/liuhongli/Desktop/lingchen/ai-reach-web`
 - 迁移源以执行时源仓库磁盘内容为准；不得重置、清理或覆盖源仓库的未提交修改。
 - 不得完整复制 Recov 仓库，只机械复制本计划列出的文件和目录。
-- 依赖版本沿用源项目当前基线，不升级 Umi、React、Ant Design、ProComponents 或 LiveKit。
+- 依赖版本锁定为源项目当前安装基线，不升级 Umi、React、Ant Design、ProComponents 或 LiveKit。
 - 首版继续通过 `UMI_APP_CLIENT_ID` 使用现有 RuoYi `clientId`，不在源码或构建产物中写死环境值。
 - 本计划只完成设计第 8 节“阶段一：建立独立项目”和“阶段二：独立验证”。
 - `src/pages/recov/intelligentOutbound`、催收策略 `ai_call` 节点、数据洞察反馈和 Recov 运行控制均不迁入、不修改。
@@ -117,40 +117,41 @@ git -C "$target_repo" status --short --branch
     "tsc": "tsc --noEmit"
   },
   "dependencies": {
-    "@ant-design/icons": "^6.2.2",
-    "@ant-design/plots": "^2.6.8",
-    "@ant-design/pro-components": "^3.1.12-0",
-    "@microsoft/fetch-event-source": "^2.0.1",
-    "@tailwindcss/postcss": "^4.2.4",
-    "antd": "^6.3.7",
-    "antd-style": "^4.1.0",
-    "clsx": "^2.1.1",
-    "crypto-js": "^4.2.0",
-    "dayjs": "^1.11.20",
-    "express": "^5.2.1",
-    "jsencrypt": "^3.5.4",
-    "livekit-client": "^2.20.2",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5"
+    "@ant-design/icons": "6.2.2",
+    "@ant-design/plots": "2.6.8",
+    "@ant-design/pro-components": "3.1.12-0",
+    "@microsoft/fetch-event-source": "2.0.1",
+    "@tailwindcss/postcss": "4.2.4",
+    "antd": "6.3.7",
+    "antd-style": "4.1.0",
+    "clsx": "2.1.1",
+    "crypto-js": "4.2.0",
+    "dayjs": "1.11.20",
+    "express": "5.2.1",
+    "jsencrypt": "3.5.4",
+    "livekit-client": "2.20.2",
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
   },
   "devDependencies": {
-    "@biomejs/biome": "^2.4.13",
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/react": "^16.3.2",
-    "@types/crypto-js": "^4.2.2",
-    "@types/express": "^5.0.6",
-    "@types/jest": "^30.0.0",
-    "@types/node": "^25.6.0",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@umijs/lint": "^4.6.51",
-    "@umijs/max": "^4.6.51",
-    "cross-env": "^10.1.0",
-    "jest": "^30.4.1",
-    "jest-environment-jsdom": "^30.4.1",
-    "ts-node": "^10.9.2",
-    "tailwindcss": "^4.2.4",
-    "typescript": "^6.0.3"
+    "@ant-design/cli": "6.3.7",
+    "@biomejs/biome": "2.4.14",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.2",
+    "@types/crypto-js": "4.2.2",
+    "@types/express": "5.0.6",
+    "@types/jest": "30.0.0",
+    "@types/node": "25.6.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@umijs/lint": "4.6.51",
+    "@umijs/max": "4.6.51",
+    "cross-env": "10.1.0",
+    "jest": "30.4.1",
+    "jest-environment-jsdom": "30.4.1",
+    "ts-node": "10.9.2",
+    "tailwindcss": "4.2.4",
+    "typescript": "6.0.3"
   }
 }
 ```
