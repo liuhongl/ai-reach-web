@@ -10,6 +10,9 @@ import { setRuoyiMessage } from '@/adapters/ruoyi/message';
 import { RuoYiCode, RuoyiError } from '@/adapters/ruoyi/response';
 import { getToken } from '@/adapters/ruoyi/token';
 import { buildAiCallMenu } from '@/aiCallNavigation';
+import Footer from '@/components/Footer';
+import TenantSwitch from '@/components/TenantSwitch';
+import UserMenu from '@/components/UserMenu';
 import { switchTenant } from '@/services/ruoyi/tenant-context';
 import { getInfo, type UserInfo } from '@/services/ruoyi/user';
 import defaultSettings from '../config/defaultSettings';
@@ -73,7 +76,15 @@ const restoreDynamicTenant = async (currentUser?: RuoyiCurrentUser) => {
   }
 };
 
-export async function getInitialState() {
+export type AiReachInitialState = {
+  currentUser?: RuoyiCurrentUser;
+  dynamicTenantId?: string;
+  fetchUserInfo: () => Promise<RuoyiCurrentUser | undefined>;
+  settings: typeof defaultSettings;
+  tenantSwitchVersion: number;
+};
+
+export async function getInitialState(): Promise<AiReachInitialState> {
   const fetchUserInfo = async () => {
     try {
       const response = await getInfo({ skipErrorHandler: true });
@@ -85,12 +96,20 @@ export async function getInitialState() {
   };
 
   if (history.location.pathname === loginPath) {
-    return { fetchUserInfo, settings: defaultSettings };
+    return {
+      fetchUserInfo,
+      settings: defaultSettings,
+      tenantSwitchVersion: 0,
+    };
   }
 
   if (!getToken()) {
     redirectToLogin();
-    return { fetchUserInfo, settings: defaultSettings };
+    return {
+      fetchUserInfo,
+      settings: defaultSettings,
+      tenantSwitchVersion: 0,
+    };
   }
 
   const currentUser = await fetchUserInfo();
@@ -100,11 +119,24 @@ export async function getInitialState() {
     dynamicTenantId,
     fetchUserInfo,
     settings: defaultSettings,
+    tenantSwitchVersion: 0,
   };
 }
 
 export const layout: RunTimeLayoutConfig = ({ initialState }) => ({
   ...defaultSettings,
+  actionsRender: () => [<TenantSwitch key="tenant" />],
+  avatarProps: initialState?.currentUser
+    ? {
+        title: initialState.currentUser.name,
+        render: () => (
+          <UserMenu>
+            <span>{initialState.currentUser?.name || '用户'}</span>
+          </UserMenu>
+        ),
+      }
+    : false,
+  footerRender: () => <Footer />,
   menuDataRender: () =>
     buildAiCallMenu(initialState?.currentUser?.permissions ?? []),
   onPageChange: () => {
