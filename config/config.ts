@@ -16,6 +16,7 @@ export default defineConfig({
       },
     },
   },
+  esbuildMinifyIIFE: true,
   fastRefresh: true,
   hash: true,
   initialState: {},
