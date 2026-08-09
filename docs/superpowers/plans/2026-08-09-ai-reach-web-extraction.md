@@ -1,5 +1,7 @@
 # AI Reach Web 独立项目提取实现计划
 
+> 安全修订（2026-08-09 实机验收）：任务 4、8、10 中的登录后动态租户切换已作废。AI Call 后端只信任 JWT `tenantId`，RuoYi 动态租户接口不会更新该声明；新站仅保留登录时租户选择，切换租户需要重新登录。实现与验收以设计文档第 5.1 节为准。
+
 > **面向 AI 代理的工作者：** 必需子技能：使用 superpowers:subagent-driven-development（推荐）或 superpowers:executing-plans 逐任务实现此计划。步骤使用复选框（`- [ ]`）语法来跟踪进度。
 
 **目标：** 从当前 Recov 工作区提取一个可在 `8078` 独立登录、按权限展示 13 个 AI Call 入口、连接现有 RuoYi 与 AI Call 后端并通过测试和生产构建的 `ai-reach-web` 候选版本。

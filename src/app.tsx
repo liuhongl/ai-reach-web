@@ -4,20 +4,13 @@ import { history } from '@umijs/max';
 import { App as AntdApp } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
-import {
-  clearStoredDynamicTenantId,
-  getStoredDynamicTenantId,
-} from '@/adapters/ruoyi/dynamicTenant';
 import { setRuoyiMessage } from '@/adapters/ruoyi/message';
-import { RuoYiCode, RuoyiError } from '@/adapters/ruoyi/response';
 import { getToken } from '@/adapters/ruoyi/token';
 import { buildAiCallMenu } from '@/aiCallNavigation';
 import Footer from '@/components/Footer';
 import NotificationCenter from '@/components/NotificationCenter';
 import SseBootstrap from '@/components/SseBootstrap';
-import TenantSwitch from '@/components/TenantSwitch';
 import UserMenu from '@/components/UserMenu';
-import { switchTenant } from '@/services/ruoyi/tenant-context';
 import { getInfo, type UserInfo } from '@/services/ruoyi/user';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
@@ -58,34 +51,10 @@ const redirectToLogin = () => {
   }
 };
 
-const restoreDynamicTenant = async (currentUser?: RuoyiCurrentUser) => {
-  const tenantId = getStoredDynamicTenantId();
-  if (!tenantId || !currentUser) return undefined;
-  if (Number(currentUser.rawUser?.userId) !== 1) {
-    clearStoredDynamicTenantId();
-    return undefined;
-  }
-
-  try {
-    await switchTenant(tenantId);
-    return tenantId;
-  } catch (error) {
-    if (
-      error instanceof RuoyiError &&
-      [RuoYiCode.UNAUTHORIZED, 403].includes(Number(error.code))
-    ) {
-      clearStoredDynamicTenantId();
-    }
-    return undefined;
-  }
-};
-
 export type AiReachInitialState = {
   currentUser?: RuoyiCurrentUser;
-  dynamicTenantId?: string;
   fetchUserInfo: () => Promise<RuoyiCurrentUser | undefined>;
   settings: typeof defaultSettings;
-  tenantSwitchVersion: number;
 };
 
 export async function getInitialState(): Promise<AiReachInitialState> {
@@ -103,7 +72,6 @@ export async function getInitialState(): Promise<AiReachInitialState> {
     return {
       fetchUserInfo,
       settings: defaultSettings,
-      tenantSwitchVersion: 0,
     };
   }
 
@@ -112,33 +80,24 @@ export async function getInitialState(): Promise<AiReachInitialState> {
     return {
       fetchUserInfo,
       settings: defaultSettings,
-      tenantSwitchVersion: 0,
     };
   }
 
   const currentUser = await fetchUserInfo();
-  const dynamicTenantId = await restoreDynamicTenant(currentUser);
   return {
     currentUser,
-    dynamicTenantId,
     fetchUserInfo,
     settings: defaultSettings,
-    tenantSwitchVersion: 0,
   };
 }
 
 export const layout: RunTimeLayoutConfig = ({ initialState }) => {
-  const connectionKey = [
-    initialState?.currentUser?.userid || 'anonymous',
-    initialState?.dynamicTenantId || 'default',
-    initialState?.tenantSwitchVersion || 0,
-  ].join(':');
+  const connectionKey = initialState?.currentUser?.userid || 'anonymous';
   const enabled = Boolean(initialState?.currentUser);
 
   return {
     ...defaultSettings,
     actionsRender: () => [
-      <TenantSwitch key="tenant" />,
       <NotificationCenter
         contextKey={connectionKey}
         enabled={enabled}
@@ -158,9 +117,7 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
     childrenRender: (children) => (
       <>
         <SseBootstrap connectionKey={connectionKey} enabled={enabled} />
-        <React.Fragment key={initialState?.tenantSwitchVersion || 0}>
-          {children}
-        </React.Fragment>
+        {children}
       </>
     ),
     footerRender: () => <Footer />,

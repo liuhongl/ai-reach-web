@@ -2,7 +2,6 @@ import * as React from 'react';
 import { LogoutOutlined } from '@ant-design/icons';
 import { history, useModel } from '@umijs/max';
 import type { MenuProps } from 'antd';
-import { clearStoredDynamicTenantId } from '@/adapters/ruoyi/dynamicTenant';
 import { stopSse } from '@/adapters/ruoyi/sse';
 import { removeToken } from '@/adapters/ruoyi/token';
 import HeaderDropdown from '@/components/HeaderDropdown';
@@ -21,7 +20,6 @@ export default function UserMenu({ children }: { children: React.ReactNode }) {
     } finally {
       stopSse();
       removeToken();
-      clearStoredDynamicTenantId();
       setInitialState((state) =>
         state ? { ...state, currentUser: undefined } : state,
       );

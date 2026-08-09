@@ -1,13 +1,8 @@
 import * as React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { history } from '@umijs/max';
-import {
-  clearStoredDynamicTenantId,
-  getStoredDynamicTenantId,
-} from '@/adapters/ruoyi/dynamicTenant';
 import { setRuoyiMessage } from '@/adapters/ruoyi/message';
 import { getToken } from '@/adapters/ruoyi/token';
-import { switchTenant } from '@/services/ruoyi/tenant-context';
 import { getInfo } from '@/services/ruoyi/user';
 import * as appRuntime from './app';
 import { getInitialState, layout, rootContainer } from './app';
@@ -18,13 +13,8 @@ jest.mock('@umijs/max', () => ({
     replace: jest.fn(),
   },
 }));
-jest.mock('@/adapters/ruoyi/dynamicTenant', () => ({
-  clearStoredDynamicTenantId: jest.fn(),
-  getStoredDynamicTenantId: jest.fn(),
-}));
 jest.mock('@/adapters/ruoyi/message', () => ({ setRuoyiMessage: jest.fn() }));
 jest.mock('@/adapters/ruoyi/token', () => ({ getToken: jest.fn() }));
-jest.mock('@/services/ruoyi/tenant-context', () => ({ switchTenant: jest.fn() }));
 jest.mock('@/services/ruoyi/user', () => ({ getInfo: jest.fn() }));
 jest.mock('@/components/NotificationCenter', () => (props: any) => (
   <div data-context-key={props.contextKey} data-testid="notification-center" />
@@ -36,7 +26,6 @@ jest.mock('@/components/SseBootstrap', () => (props: any) => (
     data-testid="sse-bootstrap"
   />
 ));
-jest.mock('@/components/TenantSwitch', () => () => <div>租户切换</div>);
 jest.mock('@/components/UserMenu', () => ({ children }: any) => children);
 
 const mockHistory = history as any;
@@ -65,7 +54,6 @@ describe('getInitialState', () => {
       search: '?page=1',
       hash: '#top',
     };
-    jest.mocked(getStoredDynamicTenantId).mockReturnValue(undefined);
   });
 
   it('有 Token 时读取并映射用户、角色和权限', async () => {
@@ -103,29 +91,6 @@ describe('getInitialState', () => {
     expect(getInfo).not.toHaveBeenCalled();
   });
 
-  it('普通用户清除误留的本地动态租户', async () => {
-    jest.mocked(getToken).mockReturnValue('token');
-    jest.mocked(getInfo).mockResolvedValue(userResponse(2) as never);
-    jest.mocked(getStoredDynamicTenantId).mockReturnValue('100001');
-
-    const state = await getInitialState();
-
-    expect(clearStoredDynamicTenantId).toHaveBeenCalled();
-    expect(switchTenant).not.toHaveBeenCalled();
-    expect(state.dynamicTenantId).toBeUndefined();
-  });
-
-  it('超级管理员恢复已保存的动态租户', async () => {
-    jest.mocked(getToken).mockReturnValue('token');
-    jest.mocked(getInfo).mockResolvedValue(userResponse(1, ['admin']) as never);
-    jest.mocked(getStoredDynamicTenantId).mockReturnValue('100001');
-    jest.mocked(switchTenant).mockResolvedValue({ code: 200 } as never);
-
-    const state = await getInitialState();
-
-    expect(switchTenant).toHaveBeenCalledWith('100001');
-    expect(state.dynamicTenantId).toBe('100001');
-  });
 });
 
 describe('rootContainer', () => {
@@ -137,12 +102,10 @@ describe('rootContainer', () => {
 });
 
 describe('layout background capabilities', () => {
-  it('按用户和租户上下文挂载一个通知中心与一个 RuoYi SSE', () => {
+  it('按登录用户挂载一个通知中心与一个 RuoYi SSE，不提供运行时租户切换', () => {
     const config = (layout as any)({
       initialState: {
         currentUser: { userid: '1', name: '管理员', permissions: [] },
-        dynamicTenantId: '100001',
-        tenantSwitchVersion: 2,
       },
     });
 
@@ -153,39 +116,13 @@ describe('layout background capabilities', () => {
       </>,
     );
 
-    expect(screen.getByTestId('notification-center').dataset.contextKey).toBe(
-      '1:100001:2',
-    );
+    expect(screen.getByTestId('notification-center').dataset.contextKey).toBe('1');
     expect(screen.getByTestId('sse-bootstrap').dataset.enabled).toBe('true');
-    expect(screen.getByTestId('sse-bootstrap').dataset.connectionKey).toBe(
-      '1:100001:2',
-    );
+    expect(screen.getByTestId('sse-bootstrap').dataset.connectionKey).toBe('1');
+    expect(screen.queryByText('租户切换')).toBeNull();
     expect(config.menuDataRender().some((item: any) => item.name === '外呼任务')).toBe(
       false,
     );
   });
 
-  it('租户版本变化时重新挂载页面子树', () => {
-    let mounts = 0;
-    const Page = () => {
-      React.useEffect(() => {
-        mounts += 1;
-      }, []);
-      return <div>业务页面</div>;
-    };
-    const createLayout = (tenantSwitchVersion: number) =>
-      (layout as any)({
-        initialState: {
-          currentUser: { userid: '1', permissions: ['ai_call:agent:manage'] },
-          tenantSwitchVersion,
-        },
-      });
-    const first = createLayout(1);
-    const { rerender } = render(first.childrenRender(<Page />));
-
-    const second = createLayout(2);
-    rerender(second.childrenRender(<Page />));
-
-    expect(mounts).toBe(2);
-  });
 });
