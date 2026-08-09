@@ -104,6 +104,10 @@ const resolveTenantId = (
 
 const getInitialLoginValues = (): LoginFormValues => ({
   tenantId: getRememberedTenantId() || defaultTenantId,
+  username: '',
+  password: '',
+  code: '',
+  uuid: '',
 });
 
 const getCaptchaMimeType = (base64: string) => {
@@ -233,8 +237,8 @@ const Login: React.FC = () => {
       }
 
       form.setFieldsValue({
-        code: undefined,
-        uuid: undefined,
+        code: '',
+        uuid: '',
       });
       setCaptchaImage('');
       setInitErrors((current) => ({ ...current, captcha: undefined }));

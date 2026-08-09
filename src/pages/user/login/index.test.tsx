@@ -32,7 +32,8 @@ jest.mock('antd', () => {
   return {
     Alert: () => null,
     App: { useApp: () => ({ message: mockMessage }) },
-    Button: (props: any) => React.createElement('button', props),
+    Button: ({ loading: _loading, ...props }: any) =>
+      React.createElement('button', props),
     Form: {
       Item: ({ children }: any) => children,
       useForm: () => [
@@ -90,6 +91,13 @@ describe('LoginPage', () => {
     } as never);
     render(<LoginPage />);
     await waitFor(() => expect(getCodeImg).toHaveBeenCalled());
+    expect(loginFormProps.initialValues).toEqual({
+      tenantId: '000000',
+      username: '',
+      password: '',
+      code: '',
+      uuid: '',
+    });
 
     await act(async () => {
       await loginFormProps.onFinish({ username: 'admin', password: 'secret' });
