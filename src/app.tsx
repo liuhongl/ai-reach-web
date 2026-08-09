@@ -9,8 +9,14 @@ import { getToken } from '@/adapters/ruoyi/token';
 import { buildAiCallMenu } from '@/aiCallNavigation';
 import Footer from '@/components/Footer';
 import NotificationCenter from '@/components/NotificationCenter';
+import PreferencesDrawer from '@/components/PreferencesDrawer';
 import SseBootstrap from '@/components/SseBootstrap';
 import UserMenu from '@/components/UserMenu';
+import {
+  type AiReachPreferences,
+  buildPreferenceSettings,
+  readPreferences,
+} from '@/preferences';
 import { getInfo, type UserInfo } from '@/services/ruoyi/user';
 import defaultSettings from '../config/defaultSettings';
 import { errorConfig } from './requestErrorConfig';
@@ -54,10 +60,17 @@ const redirectToLogin = () => {
 export type AiReachInitialState = {
   currentUser?: RuoyiCurrentUser;
   fetchUserInfo: () => Promise<RuoyiCurrentUser | undefined>;
+  preferences: AiReachPreferences;
   settings: typeof defaultSettings;
+  preferencesOpen: boolean;
 };
 
 export async function getInitialState(): Promise<AiReachInitialState> {
+  const preferences = readPreferences();
+  const settings = {
+    ...defaultSettings,
+    ...buildPreferenceSettings(preferences),
+  } as typeof defaultSettings;
   const fetchUserInfo = async () => {
     try {
       const response = await getInfo({ skipErrorHandler: true });
@@ -71,7 +84,9 @@ export async function getInitialState(): Promise<AiReachInitialState> {
   if (history.location.pathname === loginPath) {
     return {
       fetchUserInfo,
-      settings: defaultSettings,
+      preferences,
+      preferencesOpen: false,
+      settings,
     };
   }
 
@@ -79,7 +94,9 @@ export async function getInitialState(): Promise<AiReachInitialState> {
     redirectToLogin();
     return {
       fetchUserInfo,
-      settings: defaultSettings,
+      preferences,
+      preferencesOpen: false,
+      settings,
     };
   }
 
@@ -87,7 +104,9 @@ export async function getInitialState(): Promise<AiReachInitialState> {
   return {
     currentUser,
     fetchUserInfo,
-    settings: defaultSettings,
+    preferences,
+    preferencesOpen: false,
+    settings,
   };
 }
 
@@ -97,6 +116,7 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
 
   return {
     ...defaultSettings,
+    ...initialState?.settings,
     actionsRender: () => [
       <NotificationCenter
         contextKey={connectionKey}
@@ -116,6 +136,7 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
       : false,
     childrenRender: (children) => (
       <>
+        <PreferencesDrawer />
         <SseBootstrap connectionKey={connectionKey} enabled={enabled} />
         {children}
       </>

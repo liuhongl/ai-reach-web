@@ -1,6 +1,7 @@
 import {
   DEFAULT_PREFERENCES,
   PREFERENCES_KEY,
+  buildPreferenceSettings,
   readPreferences,
   writePreferences,
 } from './preferences';
@@ -46,6 +47,25 @@ describe('AI Reach preferences', () => {
       ...DEFAULT_PREFERENCES,
       colorPrimary: '#13C2C2',
       fixSiderbar: false,
+    });
+  });
+
+  it('深色导航只生成侧栏主题 Token', () => {
+    expect(
+      buildPreferenceSettings({
+        ...DEFAULT_PREFERENCES,
+        appearance: 'dark-nav',
+        colorPrimary: '#13C2C2',
+      }),
+    ).toMatchObject({
+      navTheme: 'light',
+      colorPrimary: '#13C2C2',
+      token: {
+        sider: {
+          colorMenuBackground: '#1a1d24',
+          colorBgMenuItemSelected: '#13C2C229',
+        },
+      },
     });
   });
 

@@ -3,8 +3,8 @@ import { useModel } from '@umijs/max';
 import { Drawer, Radio, Space, Switch, Typography } from 'antd';
 import {
   DEFAULT_PREFERENCES,
-  PRIMARY_COLORS,
   type AiReachPreferences,
+  buildPreferenceSettings,
   writePreferences,
 } from '@/preferences';
 
@@ -17,17 +17,7 @@ const colorOptions = [
 
 export default function PreferencesDrawer() {
   const { initialState, setInitialState } = useModel('@@initialState');
-  const settings = initialState?.settings;
-  const preferences: AiReachPreferences = {
-    appearance: settings?.navTheme === 'dark' ? 'dark-nav' : 'light',
-    colorPrimary: PRIMARY_COLORS.includes(
-      settings?.colorPrimary as AiReachPreferences['colorPrimary'],
-    )
-      ? (settings?.colorPrimary as AiReachPreferences['colorPrimary'])
-      : DEFAULT_PREFERENCES.colorPrimary,
-    fixedHeader: settings?.fixedHeader ?? DEFAULT_PREFERENCES.fixedHeader,
-    fixSiderbar: settings?.fixSiderbar ?? DEFAULT_PREFERENCES.fixSiderbar,
-  };
+  const preferences = initialState?.preferences ?? DEFAULT_PREFERENCES;
 
   const updatePreferences = (patch: Partial<AiReachPreferences>) => {
     const next = { ...preferences, ...patch };
@@ -36,12 +26,10 @@ export default function PreferencesDrawer() {
       state
         ? {
             ...state,
+            preferences: next,
             settings: {
               ...state.settings,
-              navTheme: next.appearance === 'dark-nav' ? 'dark' : 'light',
-              colorPrimary: next.colorPrimary,
-              fixedHeader: next.fixedHeader,
-              fixSiderbar: next.fixSiderbar,
+              ...buildPreferenceSettings(next),
             },
           }
         : state,

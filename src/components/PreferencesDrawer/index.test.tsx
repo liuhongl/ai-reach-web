@@ -5,6 +5,21 @@ import { PREFERENCES_KEY } from '@/preferences';
 import PreferencesDrawer from './index';
 
 jest.mock('@umijs/max', () => ({ useModel: jest.fn() }));
+jest.mock('antd', () => {
+  const actual = jest.requireActual('antd');
+  return {
+    ...actual,
+    Drawer: ({ children, open, title }: any) =>
+      open
+        ? require('react').createElement(
+            'div',
+            { 'aria-label': String(title), role: 'dialog' },
+            title,
+            children,
+          )
+        : null,
+  };
+});
 
 describe('PreferencesDrawer', () => {
   const setInitialState = jest.fn();
@@ -15,6 +30,12 @@ describe('PreferencesDrawer', () => {
     jest.mocked(useModel).mockReturnValue({
       initialState: {
         preferencesOpen: true,
+        preferences: {
+          appearance: 'light',
+          colorPrimary: '#722ED1',
+          fixedHeader: false,
+          fixSiderbar: true,
+        },
         settings: {
           navTheme: 'light',
           colorPrimary: '#722ED1',
@@ -53,9 +74,16 @@ describe('PreferencesDrawer', () => {
     expect(
       update({
         preferencesOpen: true,
+        preferences: {
+          appearance: 'light',
+          colorPrimary: '#722ED1',
+          fixedHeader: false,
+          fixSiderbar: true,
+        },
         settings: { colorPrimary: '#722ED1' },
       }),
     ).toMatchObject({
+      preferences: { colorPrimary: '#1677FF' },
       settings: { colorPrimary: '#1677FF' },
     });
   });

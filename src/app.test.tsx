@@ -4,6 +4,7 @@ import { history } from '@umijs/max';
 import { setRuoyiMessage } from '@/adapters/ruoyi/message';
 import { getToken } from '@/adapters/ruoyi/token';
 import { getInfo } from '@/services/ruoyi/user';
+import { PREFERENCES_KEY } from './preferences';
 import * as appRuntime from './app';
 import { getInitialState, layout, rootContainer } from './app';
 
@@ -27,6 +28,9 @@ jest.mock('@/components/SseBootstrap', () => (props: any) => (
   />
 ));
 jest.mock('@/components/UserMenu', () => ({ children }: any) => children);
+jest.mock('@/components/PreferencesDrawer', () => () => (
+  <div data-testid="preferences-drawer" />
+));
 
 const mockHistory = history as any;
 
@@ -49,6 +53,7 @@ describe('Umi runtime exports', () => {
 describe('getInitialState', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
     mockHistory.location = {
       pathname: '/ai-call/tasks',
       search: '?page=1',
@@ -91,6 +96,32 @@ describe('getInitialState', () => {
     expect(getInfo).not.toHaveBeenCalled();
   });
 
+  it('读取本地偏好并生成运行时布局设置', async () => {
+    localStorage.setItem(
+      PREFERENCES_KEY,
+      JSON.stringify({
+        appearance: 'dark-nav',
+        colorPrimary: '#1677FF',
+        fixedHeader: true,
+        fixSiderbar: false,
+      }),
+    );
+    jest.mocked(getToken).mockReturnValue('token');
+    jest.mocked(getInfo).mockResolvedValue(userResponse(2) as never);
+
+    const state = await getInitialState();
+
+    expect(state.settings).toMatchObject({
+      navTheme: 'light',
+      colorPrimary: '#1677FF',
+      fixedHeader: true,
+      fixSiderbar: false,
+      token: { sider: { colorMenuBackground: '#1a1d24' } },
+    });
+    expect(state.preferences.appearance).toBe('dark-nav');
+    expect(state.preferencesOpen).toBe(false);
+  });
+
 });
 
 describe('rootContainer', () => {
@@ -123,6 +154,32 @@ describe('layout background capabilities', () => {
     expect(config.menuDataRender().some((item: any) => item.name === '外呼任务')).toBe(
       false,
     );
+  });
+
+  it('应用 initial state 设置并挂载偏好抽屉', () => {
+    const config = (layout as any)({
+      initialState: {
+        currentUser: { userid: '1', name: '管理员', permissions: [] },
+        settings: {
+          navTheme: 'light',
+          colorPrimary: '#13C2C2',
+          fixedHeader: true,
+          fixSiderbar: false,
+          token: { sider: { colorMenuBackground: '#1a1d24' } },
+        },
+      },
+    });
+
+    render(config.childrenRender(<div>页面</div>));
+
+    expect(config).toMatchObject({
+      navTheme: 'light',
+      colorPrimary: '#13C2C2',
+      fixedHeader: true,
+      fixSiderbar: false,
+      token: { sider: { colorMenuBackground: '#1a1d24' } },
+    });
+    expect(screen.getByTestId('preferences-drawer')).toBeTruthy();
   });
 
 });

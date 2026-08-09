@@ -1,3 +1,5 @@
+import type { ProLayoutProps } from '@ant-design/pro-components';
+
 export const PREFERENCES_KEY = 'ai-reach:preferences';
 
 const appearances = ['light', 'dark-nav'] as const;
@@ -21,6 +23,37 @@ export const DEFAULT_PREFERENCES: AiReachPreferences = {
   fixedHeader: false,
   fixSiderbar: true,
 };
+
+export const buildPreferenceSettings = (
+  preferences: AiReachPreferences,
+): Partial<ProLayoutProps> => ({
+  navTheme: 'light',
+  colorPrimary: preferences.colorPrimary,
+  fixedHeader: preferences.fixedHeader,
+  fixSiderbar: preferences.fixSiderbar,
+  token:
+    preferences.appearance === 'dark-nav'
+      ? {
+          sider: {
+            colorMenuBackground: '#1a1d24',
+            colorBgMenuItemActive: `${preferences.colorPrimary}29`,
+            colorBgMenuItemHover: `${preferences.colorPrimary}1A`,
+            colorBgMenuItemSelected: `${preferences.colorPrimary}29`,
+            colorMenuItemDivider: 'rgba(255, 255, 255, 0.08)',
+            colorTextMenu: '#c9ced8',
+            colorTextMenuActive: '#ffffff',
+            colorTextMenuItemHover: '#ffffff',
+            colorTextMenuSecondary: '#7d8492',
+            colorTextMenuSelected: '#ffffff',
+            colorTextMenuTitle: '#ffffff',
+            colorTextSubMenuSelected: '#ffffff',
+            colorBgCollapsedButton: '#252934',
+            colorTextCollapsedButton: '#c9ced8',
+            colorTextCollapsedButtonHover: preferences.colorPrimary,
+          },
+        }
+      : undefined,
+});
 
 export const readPreferences = (): AiReachPreferences => {
   if (typeof localStorage === 'undefined') return { ...DEFAULT_PREFERENCES };
