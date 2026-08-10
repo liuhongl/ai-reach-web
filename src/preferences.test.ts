@@ -12,8 +12,11 @@ describe('AI Reach preferences', () => {
     jest.restoreAllMocks();
   });
 
-  it('没有本地设置时返回默认值', () => {
-    expect(readPreferences()).toEqual(DEFAULT_PREFERENCES);
+  it('没有本地设置时默认深色导航', () => {
+    expect(readPreferences()).toEqual({
+      ...DEFAULT_PREFERENCES,
+      appearance: 'dark-nav',
+    });
   });
 
   it('读取并保存合法设置', () => {

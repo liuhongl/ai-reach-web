@@ -18,7 +18,7 @@ export type AiReachPreferences = {
 };
 
 export const DEFAULT_PREFERENCES: AiReachPreferences = {
-  appearance: 'light',
+  appearance: 'dark-nav',
   colorPrimary: '#722ED1',
   fixedHeader: false,
   fixSiderbar: true,
