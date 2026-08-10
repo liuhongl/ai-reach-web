@@ -2,6 +2,7 @@
   "name": "ai-reach-web",
   "private": true,
   "scripts": {
+    "prebuild": "node scripts/check-build-env.js",
     "build": "max build",
     "dev": "cross-env PORT=8078 UMI_ENV=dev MOCK=none max dev",
     "lint": "npm run biome:lint && npm run tsc",
