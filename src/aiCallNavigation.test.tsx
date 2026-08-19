@@ -13,6 +13,7 @@ const expected = [
   ['跟进处理', '/ai-call/follow-ups', 'ai_call:agent:console'],
   ['跟进总览', '/ai-call/follow-up-overview', 'ai_call:agent:manage'],
   ['外呼统计', '/ai-call/statistics', 'ai_call:agent:manage'],
+  ['知识资产', '/ai-call/knowledge', 'ai_call:knowledge:view'],
   ['坐席工作台', '/ai-call/agent-workbench', 'ai_call:agent:console'],
   ['坐席管理', '/ai-call/agents', 'ai_call:agent:manage'],
   ['转人工记录', '/ai-call/handoffs', 'ai_call:agent:manage'],
@@ -21,7 +22,7 @@ const expected = [
 ] as const;
 
 describe('AI Call navigation', () => {
-  it('固定维护 13 个入口及权限', () => {
+  it('固定维护 14 个入口及权限', () => {
     expect(
       AI_CALL_NAV_ITEMS.map(({ name, path, permission }) => [
         name,
@@ -35,7 +36,7 @@ describe('AI Call navigation', () => {
     expect(buildAiCallMenu(['ai_call:voice:manage']).map((item) => item.name)).toEqual([
       '音色管理',
     ]);
-    expect(buildAiCallMenu(['*:*:*'])).toHaveLength(13);
+    expect(buildAiCallMenu(['*:*:*'])).toHaveLength(14);
     expect(buildAiCallMenu([])).toEqual([]);
   });
 

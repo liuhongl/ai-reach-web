@@ -47,6 +47,11 @@ const routes: AiReachRoute[] = [
     'ai_call:agent:manage',
   ),
   protectedRoute(
+    '/ai-call/knowledge',
+    './aiCallKnowledge',
+    'ai_call:knowledge:view',
+  ),
+  protectedRoute(
     '/ai-call/agent-workbench',
     './agentWorkbench',
     'ai_call:agent:console',

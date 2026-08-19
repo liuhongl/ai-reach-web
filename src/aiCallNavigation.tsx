@@ -16,6 +16,11 @@ export const AI_CALL_NAV_ITEMS: AiCallNavItem[] = [
   { name: '跟进处理', path: '/ai-call/follow-ups', permission: 'ai_call:agent:console' },
   { name: '跟进总览', path: '/ai-call/follow-up-overview', permission: 'ai_call:agent:manage' },
   { name: '外呼统计', path: '/ai-call/statistics', permission: 'ai_call:agent:manage' },
+  {
+    name: '知识资产',
+    path: '/ai-call/knowledge',
+    permission: 'ai_call:knowledge:view',
+  },
   { name: '坐席工作台', path: '/ai-call/agent-workbench', permission: 'ai_call:agent:console' },
   { name: '坐席管理', path: '/ai-call/agents', permission: 'ai_call:agent:manage' },
   { name: '转人工记录', path: '/ai-call/handoffs', permission: 'ai_call:agent:manage' },
