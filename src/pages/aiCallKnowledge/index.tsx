@@ -55,6 +55,7 @@ import {
 
 const { Paragraph, Text } = Typography;
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+const PREVIEWABLE_EXTENSIONS = new Set(['txt', 'md', 'markdown', 'pdf']);
 
 const categoryOptions: Array<{
   label: string;
@@ -254,7 +255,23 @@ const AiCallKnowledgePage = () => {
 
   const previewVersion = async (version: KnowledgeVersion) => {
     try {
-      const blob = await previewKnowledgeVersion(version.id);
+      const blob = await previewKnowledgeVersion(version.id, version.extension);
+      if (version.extension.toLowerCase() === 'pdf') {
+        const url = window.URL.createObjectURL(blob);
+        Modal.info({
+          width: 1000,
+          title: `${version.sourceFilename} · v${version.versionNo}`,
+          content: (
+            <iframe
+              title={`${version.sourceFilename} 预览`}
+              src={url}
+              style={{ width: '100%', height: '70vh', border: 0 }}
+            />
+          ),
+          afterClose: () => window.URL.revokeObjectURL(url),
+        });
+        return;
+      }
       const text = await blob.text();
       Modal.info({
         width: 900,
@@ -634,10 +651,13 @@ const AiCallKnowledgePage = () => {
                   dataSource={versions}
                   renderItem={(version) => {
                     const meta = statusMeta[version.status];
+                    const canPreview = PREVIEWABLE_EXTENSIONS.has(
+                      version.extension.toLowerCase(),
+                    );
                     return (
                       <List.Item
                         actions={[
-                          ...(version.status === 'READY'
+                          ...(version.status === 'READY' && canPreview
                             ? [
                                 <Button
                                   key="preview"
@@ -647,6 +667,10 @@ const AiCallKnowledgePage = () => {
                                 >
                                   预览
                                 </Button>,
+                              ]
+                            : []),
+                          ...(version.status === 'READY'
+                            ? [
                                 <Button
                                   key="download"
                                   type="link"

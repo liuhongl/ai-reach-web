@@ -217,11 +217,15 @@ export const deleteKnowledgeItem = async (itemId: string) =>
     }),
   );
 
-const readBlob = async (versionId: string, action: 'preview' | 'download') => {
+const readBlob = async (
+  versionId: string,
+  action: 'preview' | 'download',
+  extension?: string,
+) => {
   const blob = await ruoyiRequest<Blob>(versionPath(versionId, action), {
     ...requestOptions,
     method: 'get',
-    ...(action === 'preview'
+    ...(action === 'preview' && extension?.toLowerCase() !== 'pdf'
       ? { headers: { Range: 'bytes=0-262143' } }
       : {}),
     responseType: 'blob',
@@ -233,8 +237,8 @@ const readBlob = async (versionId: string, action: 'preview' | 'download') => {
   return blob;
 };
 
-export const previewKnowledgeVersion = (versionId: string) =>
-  readBlob(versionId, 'preview');
+export const previewKnowledgeVersion = (versionId: string, extension: string) =>
+  readBlob(versionId, 'preview', extension);
 
 export const downloadKnowledgeVersion = async (
   versionId: string,

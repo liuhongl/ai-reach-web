@@ -58,13 +58,21 @@ jest.mock('@ant-design/pro-components', () => {
       void load();
     }, [load]);
     const toolBarRender = props.toolBarRender as CallableFunction;
+    const actionColumn = (props.columns as Array<Record<string, unknown>>).find(
+      (column) => column.key === 'actions',
+    );
     return React.createElement(
       'section',
       null,
       React.createElement('h1', null, props.headerTitle),
       ...(toolBarRender() || []).filter(Boolean),
       ...rows.map((row: { id: string; displayName: string }) =>
-        React.createElement('div', { key: row.id }, row.displayName),
+        React.createElement(
+          'div',
+          { key: row.id },
+          row.displayName,
+          (actionColumn?.render as CallableFunction)?.(undefined, row),
+        ),
       ),
     );
   };
@@ -180,6 +188,45 @@ describe('AiCallKnowledgePage', () => {
         expect.any(String),
         undefined,
       ),
+    );
+  });
+
+  it('previews PDF but only offers download for DOCX', async () => {
+    window.URL.createObjectURL = jest.fn(() => 'blob:pdf-preview');
+    window.URL.revokeObjectURL = jest.fn();
+    const pdfVersion = {
+      ...item.latestVersion,
+      id: 'pdf-version',
+      sourceFilename: 'guide.pdf',
+      extension: 'pdf',
+      mimeType: 'application/pdf',
+    };
+    const docxVersion = {
+      ...item.latestVersion,
+      id: 'docx-version',
+      versionNo: 2,
+      sourceFilename: 'guide.docx',
+      extension: 'docx',
+      mimeType:
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    };
+    (listKnowledgeVersions as jest.Mock).mockResolvedValue([
+      docxVersion,
+      pdfVersion,
+    ]);
+
+    render(React.createElement(AiCallKnowledgePage));
+    fireEvent.click(await screen.findByRole('button', { name: '详情' }));
+
+    expect(
+      await screen.findAllByRole('button', { name: /下载/ }),
+    ).toHaveLength(2);
+    const previewButtons = screen.getAllByRole('button', { name: /预览/ });
+    expect(previewButtons).toHaveLength(1);
+    fireEvent.click(previewButtons[0]);
+
+    await waitFor(() =>
+      expect(previewKnowledgeVersion).toHaveBeenCalledWith('pdf-version', 'pdf'),
     );
   });
 });
