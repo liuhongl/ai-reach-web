@@ -1,8 +1,8 @@
 # AI Call 知识库技术设计草案
 
-状态：**里程碑 0 已完成；第 15 节第 2～7 步的完整实现仍未合并。118 已部署 TXT/Markdown/PPTX 知识资产、租户化场景绑定、任务知识冻结（500 切片上限）、Realtime 词法检索安全链路和带来源的产品信息草稿；AI Reach 知识资产页面已发布到公网。前端与 118 最小后端均已建立 `release-20260819-knowledge-base` 标签；正式资料和真实业务问题验收仍待完成**
+状态：**里程碑 0 已完成；“跟进数据 + 当前知识库”的后端集成基线已固定在 `codex/knowledge-base-integrated@162b362`，前端发布基线为 `codex/knowledge-base-frontend-release@bf74ec1`。118 与 AI Reach 公网页面已完成 TXT/Markdown、PPTX、DOCX、文本型 PDF 的上传、解析或预览验收，并保留租户化场景绑定、任务知识冻结（500 切片上限）、Realtime 词法检索安全链路和带来源的产品信息草稿。正式资料、真实业务问题和受控通话验收仍待完成；扫描件 OCR、XLSX、图片、音频和视频不属于当前阶段**
 
-日期：2026-08-18（2026-08-19 完成里程碑 0、开发合同审计、第 2～7 步隔离实现、118 分阶段部署、PPTX 目标机冒烟、500 切片固定并发实测及前后端发布收口）
+日期：2026-08-18（2026-08-20 更新：完成集成基线、DOCX/文本型 PDF 解析、PDF/DOCX/PPTX 浏览器预览及生产验收）
 
 涉及项目：`ai-reach-web`、`ai-call`
 
@@ -63,12 +63,12 @@ PostgreSQL 创建内部 UPLOADING 上传意图
 
 后端可以从上述干净提交创建隔离工作树开始开发。前端需先处理重叠的本地改动；正式资料、评测脚本、语料校验值和结果文件在上线验收前纳入受控版本。
 
-2026-08-19 发布收口后的当前事实如下，开发启动前基线仍保留用于解释分支来源：
+2026-08-20 发布收口后的当前事实如下，开发启动前基线仍保留用于解释分支来源：
 
-- AI Reach 远端 `main` 已快进到 `cd759a3`，前端标签 `release-20260819-knowledge-base` 指向同一提交；主工作区原有未提交改动没有被覆盖或纳入发布；
-- 118 最小后端继续以 `codex/knowledge-base-118-minimal@dd2240f` 为生产基线，后端同名标签指向该提交；不整体合并夹带其他业务改动的 `codex/knowledge-base-m1`；
-- 公网 `https://reach.lingchen-ai.com/ai-call/knowledge` 返回 `200`，线上主包和知识页面分包与 `cd759a3` 的生产构建 SHA-256 一致；生产登录态刷新后知识列表正常显示空态，控制台没有错误；
-- `https://reach.lingchen-ai.com/ai-call-agent-api/ai-call/health` 返回 `200 {"status":"ok"}`。本轮终端没有 81/118 的 SSH 私钥，因此没有把历史主机内软链接、容器镜像和重启次数快照冒充为本轮现场结果；主机内部署事实仍以第 2.3.1 节已记录的当日现场快照为准。
+- AI Reach 当前发布分支为 `codex/knowledge-base-frontend-release@bf74ec1`；81 的版本目录为 `bf74ec1-20260820-123224`，旧版本 `ed54c9e-20260820-112047` 保留用于回滚；主工作区原有未提交改动没有被覆盖或纳入发布；
+- 后端后续开发统一基于 `codex/knowledge-base-integrated@162b362`，它在已提交的跟进数据基线上合入知识主链、DOCX、文本型 PDF 和安全 PDF 预览，不再整体归并范围不明的旧分支；
+- 公网 `https://reach.lingchen-ai.com/ai-call/knowledge` 返回 `200`，未登录的真实知识列表接口返回 `401`；登录态下 DOCX 与 PPTX 均上传进入 `READY`，分别生成 5、16 个切片，浏览器预览正常且控制台无错误；
+- 上述两份资料只用于工程验收，关联场景数保持为 0，未创建外呼任务、未提交号码、未调用拨号端点。
 
 ### 2.1 AI Reach 前端
 
@@ -110,7 +110,7 @@ PostgreSQL 创建内部 UPLOADING 上传意图
 
 ### 2.3 隔离工作树实现进度
 
-截至 2026-08-19，`codex/knowledge-base-m1` 已按第 15 节顺序完成第 2～7 步，并完成第 8 步的首个 PPTX 隔离解析纵向切片：
+截至 2026-08-20，`codex/knowledge-base-integrated` 已在跟进数据基线上收拢第 15 节第 2～7 步，并完成 PPTX、DOCX 和文本型 PDF 解析：
 
 - PostgreSQL 表、迁移、TXT/Markdown 确定性解析切片和固定词法检索；
 - 腾讯 COS 服务端流式上传下载、版本 API、Knowledge Worker 和过期上传对账；
@@ -119,9 +119,9 @@ PostgreSQL 创建内部 UPLOADING 上传意图
 - 产品与服务总结的全量提取、来源/冲突展示、人工应用和过期草稿保护；
 - Legacy SIP 与 Owner Runtime 的可信知识上下文、条件注册的 `search_scene_knowledge`、`OK/NO_HIT/TIMEOUT/FAILED` 审计，以及客户转写、工具结果和最终回答事件关联；
 - 恶意知识正文只作为不可信业务数据进入模型；它不能在后端直接授权转人工或结束通话。
-- PPTX 使用独立非 root 解析镜像，通过 Unix Socket 传递只读文件描述符，保留幻灯片页码引用；解析容器禁网、只读、移除 Linux capabilities，并设置 25 秒处理截止、进程数和内存上限。后端上传白名单由解析 Socket 配置控制；目标 118 冒烟通过后，前端已开放 PPTX，并通过登录态页面上传验收，公网页面已发布。
+- PPTX、DOCX 和文本型 PDF 使用独立非 root 解析镜像，通过 Unix Socket 传递只读文件描述符；解析容器禁网、只读、移除 Linux capabilities，并设置 25 秒处理截止、进程数和内存上限。PPTX 保留幻灯片页码，PDF 保留页码；目标 118 冒烟通过后，前端已开放三种格式并完成登录态上传或预览验收。
 
-上述完整实现通过单元测试、一次性 PostgreSQL 16 集成测试、不发起真实外呼的 SIP/Owner Runtime 回归，以及本地和目标 118 的 `linux/amd64` PPTX 隔离容器冒烟；完整分支仍未合并，也未完成正式资料与真实问题上线验收。其中第 2.3.1 节列出的最小子集已经提交并部署到 118。PPTX 上传入口已开放，并通过登录态页面测试，公网页面已发布；DOCX、XLSX、PDF、OCR 和音视频解析仍未实现。
+上述实现通过单元测试、一次性 PostgreSQL 16 集成测试、不发起真实外呼的 SIP/Owner Runtime 回归，以及本地和目标 118 的 `linux/amd64` 解析容器冒烟；集成分支已经推送但尚未归入后端 `main`，正式资料与真实问题上线验收仍未完成。当前支持 TXT、Markdown、PPTX、DOCX 和文本型 PDF；扫描件 OCR、XLSX、图片、音频和视频明确延后，不能据此扩大上传白名单。
 
 #### 2.3.1 118 最小部署与冒烟快照
 
@@ -453,8 +453,9 @@ Content-Type: multipart/form-data
 
 下载和预览统一由 AI Call API 校验租户、权限和版本后流式返回，浏览器不直接访问 COS。音视频请求支持 `Range` 和 `206 Partial Content`。
 
-- PDF 和白名单图片可以安全内联预览；
-- HTML、SVG、Office 文件和其他活动内容统一使用 `Content-Disposition: attachment` 下载，不直接内联；
+- PDF 使用鉴权 Blob 安全内联预览；
+- DOCX、PPTX 通过鉴权下载 Blob 后在浏览器本地渲染，不转成 PDF，也不暴露 COS 地址；
+- 其他活动内容统一使用 `Content-Disposition: attachment` 下载，不直接内联；
 - 数据库、接口响应和前端都不保存永久 COS URL。
 
 ## 8. Knowledge Worker
@@ -475,7 +476,7 @@ Worker 位于 AI Call 后端代码库，注册到现有 `JOBS` 进程角色，�
 
 2026-08-19 只读核对现有 118 部署工作树 `codex/ai-call-118-deploy@d6cd380` 确认：`deploy/ai-call-118/` 已有独立 Compose 和以非 root 用户运行的 API 镜像；旧结论“当前 AI Call 仓库没有生产 Dockerfile”不成立。但该基线没有二进制解析服务专用的禁网、只读文件系统、权限移除、资源上限和凭证隔离，仍不能作为安全解析已经具备的证据。
 
-`codex/knowledge-base-m1` 已增加只包含 PPTX OOXML 解析器的 `linux/amd64` 镜像和 118 Compose 覆盖：解析服务不加载业务 `.env`，通过 Unix Socket 接收 API 传递的只读文件描述符，并以 `network_mode: none`、非 root、只读根文件系统、`cap_drop: ALL`、`no-new-privileges`、`pids_limit: 32`、512 MiB 内存上限运行；单次解析在进程内强制 25 秒截止，早于 API 的 30 秒等待上限。本地严格冒烟和与 118 基线的 Compose 合并校验已通过。118 已完成真实 PPTX 的 COS 上传、Worker `READY`、页码引用、词法命中和异常文件拒绝验收，本地前端因此开放 PPTX，并通过登录态页面上传；其他二进制格式仍须分别通过目标环境验证后才能开放。
+`codex/knowledge-base-integrated` 的 `linux/amd64` 解析镜像支持 PPTX、DOCX 和文本型 PDF：解析服务不加载业务 `.env`，通过 Unix Socket 接收 API 传递的只读文件描述符，并以 `network_mode: none`、非 root、只读根文件系统、`cap_drop: ALL`、`no-new-privileges`、`pids_limit: 32`、512 MiB 内存上限运行；单次解析在进程内强制 25 秒截止，早于 API 的 30 秒等待上限。三种格式均已完成对应测试和生产登录态验收；未列出的二进制格式不得开放。
 
 ### 8.2 状态
 
@@ -498,26 +499,16 @@ PROCESSING -> FAILED
 
 | 类型 | 处理方式 | 引用位置 |
 | --- | --- | --- |
-| TXT、Markdown、HTML | 文本解析和清洗 | 标题、段落 |
-| CSV、JSON | 结构化展开 | 行号、JSON Path |
-| DOCX、XLSX | 对应 Office 解析器 | 页、工作表 |
+| TXT、Markdown | 文本解析和清洗 | 标题、段落 |
+| DOCX | 不执行宏或嵌入对象的 OOXML 解析器 | 文档正文 |
 | PPTX | 不执行宏或嵌入对象的 OOXML 解析器 | 幻灯片页码 |
-| PDF | 先提取文本，无文本页面再 OCR | 页码 |
-| PNG、JPG/JPEG | PaddleOCR | 图片序号 |
-| MP3、WAV、M4A、AAC、FLAC | Qwen-Audio FileTrans | 开始、结束时间 |
-| MP4、MOV、WebM | FFmpeg、ASR、字幕、关键帧 OCR | 开始、结束时间 |
-| SRT、WebVTT | 解析字幕和时间码 | 开始、结束时间 |
+| 文本型 PDF | 提取 PDF 文字层 | 页码 |
 
 旧二进制 Office 格式在安全转换器通过验证前不开放。
 
-界面开放顺序固定为：
+当前界面只开放 TXT、Markdown、PPTX、DOCX 和文本型 PDF。PDF 中已有的文字可以解析，图片可以随原 PDF 预览，但图片内文字、图表含义和纯扫描页不能解析；纯扫描 PDF 必须明确失败，不能静默生成空知识。
 
-1. 已完成的 UTF-8 TXT、Markdown；
-2. 不执行活动内容的 HTML、CSV、JSON、SRT、WebVTT；
-3. 完成目标 Linux 解析隔离后逐一开放 DOCX、XLSX、PPTX 和文本型 PDF；PPTX 已通过目标 118 验收并加入本地前端 `accept`，其他格式不得据此一并开放；
-4. PaddleOCR 固定版本在目标 Linux CPU 冒烟通过后，开放图片和扫描 PDF；
-5. 云 ASR 的账号、地域、费用、数据出域和保留策略确认后，开放音频；
-6. 最后开放视频，并复用已经验收的 FFmpeg、字幕、ASR 和关键帧 OCR 子链路。
+扫描件 OCR、XLSX、图片、音频和视频不是本期任务。只有正式资料确实需要且用户重新确认范围后，才分别设计、开发和验收；不得因为依赖已经存在就提前扩大前端 `accept` 或后端上传白名单。
 
 每一档都必须先完成解析、来源定位、检索、异常文件、资源上限和临时文件清理测试；不得因为代码中存在解析器就提前扩大前端 `accept` 或后端上传白名单。
 
@@ -854,7 +845,7 @@ COS 和 PostgreSQL 没有共同事务，通过不可变 Key、幂等任务和状
 5. 创建外呼任务时冻结完整知识快照并强制 500 切片上限（已提交并部署到 118，服务器事务验证通过，完整分支尚未合并）；
 6. 产品与服务总结的全量提取、来源展示和人工应用（完整隔离实现已完成、尚未合并；最小端点已部署到 118，并通过登录态下“不自动应用、不自动保存”的受控验收）；
 7. 补齐 Legacy SIP 与 Owner Runtime 的可信知识上下文，再接入 Realtime `search_scene_knowledge` 和审计（可信上下文、条件注册、检索审计和安全兜底子集已提交并部署到 118，通过无真实外呼测试；完整分支尚未合并）；
-8. 按第 8.3 节固定顺序实现剩余格式处理；PPTX 的隔离解析、页码引用、异常文件拒绝、Worker 入库、本地与目标 118 的 `linux/amd64` 容器冒烟及本地前端开放已完成；DOCX、XLSX、PDF、PaddleOCR、音频和视频仍等待对应运行条件后实施；
+8. 完成当前格式处理：PPTX、DOCX 和文本型 PDF 的隔离解析、来源引用、异常文件拒绝、Worker 入库、`linux/amd64` 容器冒烟及前端开放均已完成；扫描件 OCR、XLSX、图片、音频和视频不属于当前阶段；
 9. 使用正式资料分别建立固定检索基准集、Realtime 运行集、安全与恢复集并完成上线前验收；
 10. 未通过质量门槛时阻止上线，修复对应环节或缩小可回答范围；后续检索方案变化必须另行立项。
 
@@ -958,7 +949,6 @@ COS 和 PostgreSQL 没有共同事务，通过不可变 Key、幂等任务和状
 2. 文件和历史版本保留期限；
 3. 第 4 步前在上游 RuoYi 创建并分配 `ai_call:knowledge:view/manage`，确认普通用户 JWT 能实际获得对应权限；
 4. `productInfo` 推荐内容预算和总结模型；
-5. 云 ASR 模型已固定为 `qwen3-asr-flash-filetrans`；账号、地域、费用、数据出域和供应商保留策略仍待确认；
-6. PaddleOCR 在目标 Linux CPU 主机上的固定版本与冒烟结果仍待确认；
-7. 各格式的界面开放顺序已固定在第 8.3 节，实际开放仍以对应安全、解析和检索测试通过为准；
-8. 同一白名单环境下的无检索通话 P95 基线、知识检索后的绝对 P95 与允许新增 P95 门槛。
+5. 云 ASR、PaddleOCR、XLSX、图片、音频和视频均不属于当前阶段，不需要为本次发布确认运行参数；
+6. 当前界面开放格式固定为 TXT、Markdown、PPTX、DOCX 和文本型 PDF；新增格式必须重新确认范围并通过对应安全、解析和检索测试；
+7. 同一白名单环境下的无检索通话 P95 基线、知识检索后的绝对 P95 与允许新增 P95 门槛。
