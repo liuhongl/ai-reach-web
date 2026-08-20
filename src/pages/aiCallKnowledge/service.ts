@@ -238,7 +238,11 @@ const readBlob = async (
 };
 
 export const previewKnowledgeVersion = (versionId: string, extension: string) =>
-  readBlob(versionId, 'preview', extension);
+  readBlob(
+    versionId,
+    ['docx', 'pptx'].includes(extension.toLowerCase()) ? 'download' : 'preview',
+    extension,
+  );
 
 export const downloadKnowledgeVersion = async (
   versionId: string,

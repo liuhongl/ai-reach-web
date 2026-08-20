@@ -52,10 +52,18 @@ import {
   updateKnowledgeItem,
   uploadKnowledgeItem,
 } from './service';
+import OfficePreview from './OfficePreview';
 
 const { Paragraph, Text } = Typography;
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
-const PREVIEWABLE_EXTENSIONS = new Set(['txt', 'md', 'markdown', 'pdf']);
+const PREVIEWABLE_EXTENSIONS = new Set([
+  'txt',
+  'md',
+  'markdown',
+  'pdf',
+  'docx',
+  'pptx',
+]);
 
 const categoryOptions: Array<{
   label: string;
@@ -255,8 +263,17 @@ const AiCallKnowledgePage = () => {
 
   const previewVersion = async (version: KnowledgeVersion) => {
     try {
-      const blob = await previewKnowledgeVersion(version.id, version.extension);
-      if (version.extension.toLowerCase() === 'pdf') {
+      const extension = version.extension.toLowerCase();
+      const blob = await previewKnowledgeVersion(version.id, extension);
+      if (extension === 'docx' || extension === 'pptx') {
+        Modal.info({
+          width: 1100,
+          title: `${version.sourceFilename} · v${version.versionNo}`,
+          content: <OfficePreview blob={blob} extension={extension} />,
+        });
+        return;
+      }
+      if (extension === 'pdf') {
         const url = window.URL.createObjectURL(blob);
         Modal.info({
           width: 1000,

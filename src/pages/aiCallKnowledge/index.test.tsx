@@ -191,7 +191,7 @@ describe('AiCallKnowledgePage', () => {
     );
   });
 
-  it('previews PDF but only offers download for DOCX', async () => {
+  it('offers preview and download for PDF, DOCX, and PPTX', async () => {
     window.URL.createObjectURL = jest.fn(() => 'blob:pdf-preview');
     window.URL.revokeObjectURL = jest.fn();
     const pdfVersion = {
@@ -210,8 +210,18 @@ describe('AiCallKnowledgePage', () => {
       mimeType:
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
+    const pptxVersion = {
+      ...item.latestVersion,
+      id: 'pptx-version',
+      versionNo: 3,
+      sourceFilename: 'guide.pptx',
+      extension: 'pptx',
+      mimeType:
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    };
     (listKnowledgeVersions as jest.Mock).mockResolvedValue([
       docxVersion,
+      pptxVersion,
       pdfVersion,
     ]);
 
@@ -220,10 +230,10 @@ describe('AiCallKnowledgePage', () => {
 
     expect(
       await screen.findAllByRole('button', { name: /下载/ }),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     const previewButtons = screen.getAllByRole('button', { name: /预览/ });
-    expect(previewButtons).toHaveLength(1);
-    fireEvent.click(previewButtons[0]);
+    expect(previewButtons).toHaveLength(3);
+    fireEvent.click(previewButtons[2]);
 
     await waitFor(() =>
       expect(previewKnowledgeVersion).toHaveBeenCalledWith('pdf-version', 'pdf'),

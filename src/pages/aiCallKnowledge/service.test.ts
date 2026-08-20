@@ -149,10 +149,14 @@ describe('AI Call knowledge service', () => {
   it('previews only the first text range and downloads through authenticated blobs', async () => {
     const preview = new Blob(['preview'], { type: 'text/plain' });
     const pdfPreview = new Blob(['pdf'], { type: 'application/pdf' });
+    const docxPreview = new Blob(['docx']);
+    const pptxPreview = new Blob(['pptx']);
     const download = new Blob(['download'], { type: 'text/markdown' });
     mockedRuoyiRequest
       .mockResolvedValueOnce(preview)
       .mockResolvedValueOnce(pdfPreview)
+      .mockResolvedValueOnce(docxPreview)
+      .mockResolvedValueOnce(pptxPreview)
       .mockResolvedValueOnce(download);
     window.URL.createObjectURL = jest.fn(() => 'blob:knowledge-download');
     window.URL.revokeObjectURL = jest.fn();
@@ -163,6 +167,12 @@ describe('AI Call knowledge service', () => {
     await expect(previewKnowledgeVersion('version-1', 'md')).resolves.toBe(preview);
     await expect(previewKnowledgeVersion('version-2', 'pdf')).resolves.toBe(
       pdfPreview,
+    );
+    await expect(previewKnowledgeVersion('version-3', 'docx')).resolves.toBe(
+      docxPreview,
+    );
+    await expect(previewKnowledgeVersion('version-4', 'pptx')).resolves.toBe(
+      pptxPreview,
     );
     await downloadKnowledgeVersion('version-1', 'faq.md');
 
@@ -178,6 +188,22 @@ describe('AI Call knowledge service', () => {
       ],
       [
         '/ai-call/knowledge/versions/version-2/preview',
+        {
+          baseApi: '/ai-call-agent-api',
+          method: 'get',
+          responseType: 'blob',
+        },
+      ],
+      [
+        '/ai-call/knowledge/versions/version-3/download',
+        {
+          baseApi: '/ai-call-agent-api',
+          method: 'get',
+          responseType: 'blob',
+        },
+      ],
+      [
+        '/ai-call/knowledge/versions/version-4/download',
         {
           baseApi: '/ai-call-agent-api',
           method: 'get',
