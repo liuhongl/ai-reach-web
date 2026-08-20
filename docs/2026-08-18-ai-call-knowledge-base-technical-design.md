@@ -947,7 +947,7 @@ COS 和 PostgreSQL 没有共同事务，通过不可变 Key、幂等任务和状
 
 1. 第 3 步前确认腾讯 COS 开发 Bucket、Region、独立前缀和服务端角色；上线前再确认生产参数、生命周期及备份规则；
 2. 文件和历史版本保留期限；
-3. 第 4 步前在上游 RuoYi 创建并分配 `ai_call:knowledge:view/manage`，确认普通用户 JWT 能实际获得对应权限；
+3. 上游 RuoYi 已定义 `ai_call:knowledge:view/manage` 权限点；本期生产只保持超级管理员通过 `*:*:*` 访问，不向租户角色扩权，待确认实际使用租户和角色后再分配并验证其 JWT 权限；
 4. `productInfo` 推荐内容预算和总结模型；
 5. 云 ASR、PaddleOCR、XLSX、图片、音频和视频均不属于当前阶段，不需要为本次发布确认运行参数；
 6. 当前界面开放格式固定为 TXT、Markdown、PPTX、DOCX 和文本型 PDF；新增格式必须重新确认范围并通过对应安全、解析和检索测试；
