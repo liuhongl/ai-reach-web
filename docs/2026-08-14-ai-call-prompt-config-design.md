@@ -151,8 +151,8 @@
 ### 4.7 历史版本
 
 - 标题展示版本数量。
-- 列表展示版本号、创建方式、操作人和创建时间。
-- 操作包括：查看详情、对比当前、应用此版本、删除。
+- 列表展示版本号、可编辑版本名称、创建方式、操作人和创建时间；版本名称默认使用场景名称。
+- 操作包括：查看详情、对比当前、应用此版本、删除；当前版本不展示“应用此版本”。
 - 应用历史版本会基于该快照生成一个新的最新版本，不覆盖历史记录。
 - 当前最新版本不可删除。
 - 被任务引用的版本只允许逻辑删除，任务审计仍可读取完整快照。
@@ -272,6 +272,7 @@
 - `tenant_id`
 - `profile_id`
 - `version_no`
+- `version_name`：默认使用保存时的场景名称，可单独修改且不改变版本快照
 - `snapshot_json`
 - `creation_method`：`manual`、`ai_generated`、`ai_optimized`、`restored`
 - `restored_from_version_id`
@@ -353,6 +354,7 @@
 
 - `GET /ai-call/prompt-profiles/{profileId}/versions`
 - `GET /ai-call/prompt-profiles/{profileId}/versions/{versionId}`
+- `PATCH /ai-call/prompt-profiles/{profileId}/versions/{versionId}`：只修改版本名称
 - `POST /ai-call/prompt-profiles/{profileId}/versions/{versionId}/apply`
 - `DELETE /ai-call/prompt-profiles/{profileId}/versions/{versionId}`
 

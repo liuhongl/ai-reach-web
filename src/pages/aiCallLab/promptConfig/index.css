@@ -211,6 +211,15 @@
   margin-top: 16px;
 }
 
+.ai-call-prompt-version-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 64vh;
+  margin-top: 16px;
+  overflow-y: auto;
+}
+
 .ai-call-prompt-compare {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

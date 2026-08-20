@@ -12,6 +12,7 @@ import {
   Alert,
   Button,
   Collapse,
+  Descriptions,
   Empty,
   Input,
   List,
@@ -42,6 +43,7 @@ import {
   previewAiCallLabPromptProfile,
   saveAiCallLabPromptCommonConfig,
   saveAiCallLabPromptProfile,
+  updateAiCallLabPromptVersionName,
 } from '@/services/ruoyi/ai-call-lab';
 import VariableEditor from './VariableEditor';
 import './index.css';
@@ -174,6 +176,11 @@ const creationMethodText: Record<string, string> = {
   ai_generated: 'AI 生成',
   ai_optimized: 'AI 优化',
   restored: '应用历史版本',
+};
+
+const providerText: Record<string, string> = {
+  static_profile: '固定场景配置',
+  business_query: '业务查询',
 };
 
 const AiCallLabPromptConfigPage = () => {
@@ -486,7 +493,7 @@ const AiCallLabPromptConfigPage = () => {
     const snapshot: Partial<AiCallLabPromptProfile> = detail.snapshot || {};
     Modal.info({
       width: compare ? 1000 : 760,
-      title: `版本 v${version.versionNo}${compare ? ' 与当前草稿对比' : ''}`,
+      title: `v${version.versionNo} · ${detail.versionName || snapshot.name || selectedProfile.name}${compare ? ' 与当前草稿对比' : ''}`,
       content: compare ? (
         <div className="ai-call-prompt-compare">
           <div>
@@ -499,11 +506,81 @@ const AiCallLabPromptConfigPage = () => {
           </div>
         </div>
       ) : (
-        <pre className="ai-call-prompt-preview">
-          {JSON.stringify(snapshot, null, 2)}
-        </pre>
+        <div className="ai-call-prompt-version-detail">
+          <Descriptions
+            bordered
+            size="small"
+            column={2}
+            items={[
+              {
+                key: 'name',
+                label: '场景名称',
+                children: snapshot.name || '—',
+              },
+              {
+                key: 'sceneCode',
+                label: '场景编码',
+                children: snapshot.sceneCode || '—',
+              },
+              {
+                key: 'providerKey',
+                label: '配置方式',
+                children:
+                  providerText[snapshot.providerKey || ''] ||
+                  snapshot.providerKey ||
+                  '—',
+              },
+              {
+                key: 'variables',
+                label: '业务变量',
+                children:
+                  snapshot.variables?.map((item) => item.label).join('、') ||
+                  '无',
+              },
+            ]}
+          />
+          <Text strong>开场白</Text>
+          <div className="ai-call-prompt-readonly">
+            {snapshot.openingMessage || '—'}
+          </div>
+          <Text strong>产品与服务总结</Text>
+          <div className="ai-call-prompt-readonly">
+            {snapshot.productInfo || '—'}
+          </div>
+          <Text strong>场景提示词</Text>
+          <pre className="ai-call-prompt-preview">
+            {snapshot.promptText || '—'}
+          </pre>
+        </div>
       ),
     });
+  };
+
+  const renameVersion = async (
+    version: AiCallLabPromptVersion,
+    versionName: string,
+  ) => {
+    const nextName = versionName.trim();
+    if (!selectedProfile.id || !nextName) {
+      messageApi.warning('版本名称不能为空');
+      return;
+    }
+    if (nextName === version.versionName) return;
+    try {
+      const saved = await updateAiCallLabPromptVersionName(
+        selectedProfile.id,
+        version.id,
+        nextName,
+      );
+      setVersions((current) =>
+        current.map((item) =>
+          String(item.id) === String(saved.id) ? saved : item,
+        ),
+      );
+      messageApi.success('版本名称已修改');
+    } catch {
+      messageApi.error('版本名称修改失败');
+    }
   };
 
   const applyVersion = (version: AiCallLabPromptVersion) => {
@@ -532,10 +609,10 @@ const AiCallLabPromptConfigPage = () => {
               items={[
                 {
                   key: 'common',
-                  label: '通用提示词模板',
+                  label: '通用沟通规则模板',
                   extra: (
                     <Text type="secondary">
-                      独立配置 · 可单独保存，也可一次性应用到当前场景
+                      仅替换当前场景的「三、沟通规则」
                     </Text>
                   ),
                   children: (
@@ -567,13 +644,13 @@ const AiCallLabPromptConfigPage = () => {
                                 );
                               setCommonPrompt(saved.content || '');
                               setCommonDirty(false);
-                              messageApi.success('通用提示词已保存');
+                              messageApi.success('通用沟通规则已保存');
                             } finally {
                               setSavingCommon(false);
                             }
                           }}
                         >
-                          保存通用提示词
+                          保存通用沟通规则
                         </Button>
                         <Button onClick={handleApplyCommon}>
                           应用到当前场景
@@ -755,7 +832,14 @@ const AiCallLabPromptConfigPage = () => {
 
                 <div className="ai-call-prompt-field">
                   <div className="ai-call-prompt-field-title">
-                    <Text strong>场景提示词</Text>
+                    <div>
+                      <Text strong>场景提示词</Text>
+                      <div>
+                        <Text type="secondary">
+                          新建场景的二至六节会填入通用示例，不来自知识资料，请按实际场景修改。
+                        </Text>
+                      </div>
+                    </div>
                     <Button
                       size="small"
                       loading={aiLoading && aiTarget === 'scenePrompt'}
@@ -834,13 +918,17 @@ const AiCallLabPromptConfigPage = () => {
                         >
                           对比当前
                         </Button>,
-                        <Button
-                          key="apply"
-                          type="link"
-                          onClick={() => applyVersion(version)}
-                        >
-                          应用此版本
-                        </Button>,
+                        ...(version.versionNo === selectedProfile.versionNo
+                          ? []
+                          : [
+                              <Button
+                                key="apply"
+                                type="link"
+                                onClick={() => applyVersion(version)}
+                              >
+                                应用此版本
+                              </Button>,
+                            ]),
                         <Button
                           key="delete"
                           type="link"
@@ -880,10 +968,21 @@ const AiCallLabPromptConfigPage = () => {
                             >
                               v{version.versionNo}
                             </Tag>
-                            <Text>
+                            <Text
+                              strong
+                              editable={{
+                                tooltip: '编辑版本名称',
+                                maxLength: 100,
+                                onChange: (value) =>
+                                  void renameVersion(version, value),
+                              }}
+                            >
+                              {version.versionName || selectedProfile.name}
+                            </Text>
+                            <Tag>
                               {creationMethodText[version.creationMethod] ||
                                 version.creationMethod}
-                            </Text>
+                            </Tag>
                           </Space>
                         }
                         description={`${version.createdByName || '系统'} · ${new Date(version.createdAt).toLocaleString()}`}

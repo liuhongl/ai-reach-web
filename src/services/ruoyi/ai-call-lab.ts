@@ -56,6 +56,7 @@ export type AiCallLabPromptVersion = {
   id: number | string;
   profileId: number | string;
   versionNo: number;
+  versionName: string;
   creationMethod: 'manual' | 'ai_generated' | 'ai_optimized' | 'restored';
   restoredFromVersionId?: number | string | null;
   createdBy?: number | string | null;
@@ -351,6 +352,26 @@ export const applyAiCallLabPromptVersion = async (
     { method: 'post', timeout: AI_CALL_LAB_ACTION_TIMEOUT },
   );
   return unwrapAiCallLabResponse<AiCallLabPromptProfile>(response);
+};
+
+export const updateAiCallLabPromptVersionName = async (
+  profileId: number | string,
+  versionId: number | string,
+  versionName: string,
+) => {
+  const response = await aiCallLabRequest<
+    AiCallLabResponse<AiCallLabPromptVersion>
+  >(
+    buildPath(
+      `/prompt-profiles/${encodeURIComponent(String(profileId))}/versions/${encodeURIComponent(String(versionId))}`,
+    ),
+    {
+      method: 'patch',
+      data: { versionName },
+      timeout: AI_CALL_LAB_ACTION_TIMEOUT,
+    },
+  );
+  return unwrapAiCallLabResponse<AiCallLabPromptVersion>(response);
 };
 
 export const deleteAiCallLabPromptVersion = (

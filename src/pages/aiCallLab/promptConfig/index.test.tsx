@@ -7,11 +7,13 @@ import {
   extractAiCallLabProductInfo,
   getAiCallLabPromptCommonConfig,
   getAiCallLabPromptProfiles,
+  getAiCallLabPromptVersion,
   getAiCallLabPromptVersions,
   optimizeAiCallLabPrompt,
   previewAiCallLabPromptProfile,
   saveAiCallLabPromptCommonConfig,
   saveAiCallLabPromptProfile,
+  updateAiCallLabPromptVersionName,
 } from '@/services/ruoyi/ai-call-lab';
 import AiCallLabPromptConfigPage from './index';
 
@@ -28,6 +30,7 @@ jest.mock('@/services/ruoyi/ai-call-lab', () => ({
   previewAiCallLabPromptProfile: jest.fn(),
   saveAiCallLabPromptCommonConfig: jest.fn(),
   saveAiCallLabPromptProfile: jest.fn(),
+  updateAiCallLabPromptVersionName: jest.fn(),
 }));
 
 jest.mock('@/components/Permission', () => ({
@@ -36,12 +39,15 @@ jest.mock('@/components/Permission', () => ({
 
 const extractProductInfoMock = extractAiCallLabProductInfo as jest.Mock;
 const getPromptProfilesMock = getAiCallLabPromptProfiles as jest.Mock;
+const getPromptVersionMock = getAiCallLabPromptVersion as jest.Mock;
 const getCommonConfigMock = getAiCallLabPromptCommonConfig as jest.Mock;
 const getPromptVersionsMock = getAiCallLabPromptVersions as jest.Mock;
 const optimizePromptMock = optimizeAiCallLabPrompt as jest.Mock;
 const previewPromptMock = previewAiCallLabPromptProfile as jest.Mock;
 const saveCommonConfigMock = saveAiCallLabPromptCommonConfig as jest.Mock;
 const savePromptProfileMock = saveAiCallLabPromptProfile as jest.Mock;
+const updatePromptVersionNameMock =
+  updateAiCallLabPromptVersionName as jest.Mock;
 const stylesPath = join(__dirname, 'index.css');
 const styles = existsSync(stylesPath) ? readFileSync(stylesPath, 'utf8') : '';
 
@@ -61,8 +67,8 @@ describe('AiCallLabPromptConfigPage', () => {
           openingMessage: '张总您好',
           productInfo: 'GEO 产品事实',
           variables: [],
-          versionNo: 1,
-          versionCount: 1,
+          versionNo: 2,
+          versionCount: 2,
         },
         {
           id: 'profile-follow-up',
@@ -81,6 +87,16 @@ describe('AiCallLabPromptConfigPage', () => {
     });
     getCommonConfigMock.mockResolvedValue({ content: '统一使用专业语气。' });
     getPromptVersionsMock.mockResolvedValue({ rows: [], total: 0 });
+    updatePromptVersionNameMock.mockImplementation(
+      async (_profileId, _versionId, versionName) => ({
+        id: 'version-1',
+        profileId: 'profile-geo',
+        versionNo: 2,
+        versionName,
+        creationMethod: 'manual',
+        createdAt: '2026-08-20T12:00:00Z',
+      }),
+    );
     optimizePromptMock.mockResolvedValue({
       candidateContent: '您好，现在方便简单沟通吗？',
       warnings: [],
@@ -140,7 +156,8 @@ describe('AiCallLabPromptConfigPage', () => {
     render(React.createElement(AiCallLabPromptConfigPage));
 
     expect(await screen.findByDisplayValue('GEO 产品介绍')).toBeTruthy();
-    expect(screen.getByText('通用提示词模板')).toBeTruthy();
+    expect(screen.getByText('通用沟通规则模板')).toBeTruthy();
+    expect(screen.getByText('仅替换当前场景的「三、沟通规则」')).toBeTruthy();
     expect(screen.queryByDisplayValue('统一使用专业语气。')).toBeNull();
     expect(screen.getByText('产品&服务总结')).toBeTruthy();
     expect(screen.getByText('核心内容提取自关联知识库')).toBeTruthy();
@@ -165,12 +182,12 @@ describe('AiCallLabPromptConfigPage', () => {
   it('edits and saves the common template independently', async () => {
     render(React.createElement(AiCallLabPromptConfigPage));
 
-    fireEvent.click(await screen.findByText('通用提示词模板'));
+    fireEvent.click(await screen.findByText('通用沟通规则模板'));
     const input = await screen.findByDisplayValue('统一使用专业语气。');
     fireEvent.change(input, {
       target: { value: '统一使用克制、自然的语气。' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '保存通用提示词' }));
+    fireEvent.click(screen.getByRole('button', { name: '保存通用沟通规则' }));
 
     await waitFor(() =>
       expect(saveCommonConfigMock).toHaveBeenCalledWith(
@@ -195,6 +212,56 @@ describe('AiCallLabPromptConfigPage', () => {
     expect(
       await screen.findByText(/平台安全、转人工和结束通话约束/),
     ).toBeTruthy();
+  });
+
+  it('renders readable version details and hides apply on the current version', async () => {
+    getPromptVersionsMock.mockResolvedValue({
+      rows: [
+        {
+          id: 'version-1',
+          profileId: 'profile-geo',
+          versionNo: 2,
+          versionName: 'GEO 产品介绍',
+          creationMethod: 'manual',
+          createdAt: '2026-08-20T12:00:00Z',
+        },
+        {
+          id: 'version-old',
+          profileId: 'profile-geo',
+          versionNo: 1,
+          versionName: 'GEO 初稿',
+          creationMethod: 'restored',
+          createdAt: '2026-08-20T11:00:00Z',
+        },
+      ],
+      total: 2,
+    });
+    getPromptVersionMock.mockResolvedValue({
+      id: 'version-1',
+      profileId: 'profile-geo',
+      versionNo: 2,
+      versionName: 'GEO 产品介绍',
+      creationMethod: 'manual',
+      createdAt: '2026-08-20T12:00:00Z',
+      snapshot: {
+        name: 'GEO 产品介绍',
+        sceneCode: 'intro_geo',
+        providerKey: 'static_profile',
+        openingMessage: '您好',
+        productInfo: 'GEO 产品事实',
+        promptText: 'GEO 场景提示词',
+        variables: [{ key: 'customerName', label: '客户名称' }],
+      },
+    });
+
+    render(React.createElement(AiCallLabPromptConfigPage));
+
+    expect((await screen.findAllByText('应用此版本')).length).toBe(1);
+    fireEvent.click(screen.getAllByRole('button', { name: '查看详情' })[0]);
+    expect(await screen.findByText('固定场景配置')).toBeTruthy();
+    expect(screen.getAllByText('场景编码').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('客户名称').length).toBeGreaterThan(0);
+    expect(screen.queryByText('static_profile')).toBeNull();
   });
 
   it('switches scenes and saves all business fields as a static scene profile', async () => {

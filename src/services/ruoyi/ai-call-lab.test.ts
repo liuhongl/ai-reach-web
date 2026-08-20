@@ -16,6 +16,7 @@ import {
   previewAiCallLabPromptProfile,
   saveAiCallLabPromptCommonConfig,
   saveAiCallLabPromptProfile,
+  updateAiCallLabPromptVersionName,
   unwrapAiCallLabPage,
 } from './ai-call-lab';
 
@@ -60,6 +61,33 @@ describe('AI Call Lab configuration service', () => {
         params: { pageSize: 200 },
         timeout: 10_000,
       },
+    );
+  });
+
+  it('updates a prompt version name through the authenticated proxy', async () => {
+    mockRuoyiRequest.mockResolvedValueOnce({
+      data: {
+        id: 'version/2',
+        profileId: 'prompt/1',
+        versionNo: 2,
+        versionName: 'GEO 产品介绍',
+        creationMethod: 'manual',
+        createdAt: '2026-08-20T12:00:00Z',
+      },
+    });
+
+    await updateAiCallLabPromptVersionName(
+      'prompt/1',
+      'version/2',
+      'GEO 产品介绍',
+    );
+
+    expect(mockRuoyiRequest).toHaveBeenCalledWith(
+      '/ai-call/prompt-profiles/prompt%2F1/versions/version%2F2',
+      expect.objectContaining({
+        method: 'patch',
+        data: { versionName: 'GEO 产品介绍' },
+      }),
     );
   });
 
