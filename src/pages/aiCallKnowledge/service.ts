@@ -112,6 +112,7 @@ const unwrapPage = (
 export const listKnowledgeItems = async (params: {
   pageNum: number;
   pageSize: number;
+  contentCategory?: KnowledgeContentCategory;
 }) =>
   unwrapPage(
     await ruoyiRequest<KnowledgeItem>(ITEMS_PATH, {

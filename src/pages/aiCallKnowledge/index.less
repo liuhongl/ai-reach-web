@@ -1,0 +1,164 @@
+.ai-call-knowledge-layout {
+  display: flex;
+  flex: 1 1 0;
+  min-height: 0;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ai-call-knowledge-toolbar {
+  display: grid;
+  flex: 0 0 auto;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  gap: 16px;
+}
+
+.ai-call-knowledge-filters {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid #f0f0f0;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ai-call-knowledge-filters:only-child {
+  grid-column: 1 / -1;
+}
+
+.ai-call-knowledge-filter-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 72px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.ai-call-knowledge-filter-options {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-call-knowledge-filter-options .ant-btn {
+  border: 0;
+  border-radius: 8px;
+}
+
+.ai-call-knowledge-filter-options .ant-btn-text {
+  background: #f5f7fa;
+}
+
+.ai-call-knowledge-upload-card.ant-upload-wrapper .ant-upload-drag {
+  height: 100%;
+  min-height: 156px;
+  border-color: #d9dfe8;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.ai-call-knowledge-upload-card.ant-upload-wrapper .ant-upload-btn,
+.ai-call-knowledge-upload-card.ant-upload-wrapper
+  .ant-upload-drag-container {
+  height: 100%;
+}
+
+.ai-call-knowledge-upload-card.ant-upload-wrapper
+  .ant-upload-drag-container {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column !important;
+  gap: 8px;
+}
+
+.ai-call-knowledge-upload-icon {
+  color: #8c8c8c;
+  font-size: 28px;
+}
+
+.ai-call-knowledge-file {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ai-call-knowledge-file-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #edf0f5;
+  border-radius: 6px;
+  background: #fafbfc;
+  color: #1677ff;
+}
+
+.ai-call-knowledge-file-copy {
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-call-knowledge-file-name.ant-btn-link {
+  height: auto;
+  max-width: 100%;
+  padding: 0;
+  color: #1f1f1f;
+  font-weight: 600;
+  text-align: left;
+  white-space: normal;
+}
+
+.ai-call-knowledge-note.ant-tag {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-call-knowledge-file-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.ai-call-knowledge-file-state .ant-tag {
+  margin: 0;
+}
+
+.ai-call-knowledge-scene-select {
+  width: 220px;
+  max-width: 100%;
+}
+
+@media (max-width: 1100px) {
+  .ai-call-knowledge-page.ant-pro-page-container {
+    overflow-y: auto;
+  }
+
+  .ai-call-knowledge-layout {
+    overflow: visible;
+  }
+
+  .ai-call-knowledge-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 575px) {
+  .ai-call-knowledge-filter-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

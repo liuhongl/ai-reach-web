@@ -1,10 +1,11 @@
 import {
+  CloudUploadOutlined,
   DeleteOutlined,
   DownloadOutlined,
-  EditOutlined,
   EyeOutlined,
+  FileTextOutlined,
   PlusOutlined,
-  ReloadOutlined,
+  TagsOutlined,
   UploadOutlined,
 } from '@ant-design/icons';
 import type { ActionType, ProColumns } from '@ant-design/pro-components';
@@ -18,14 +19,15 @@ import {
   Input,
   List,
   Modal,
+  message,
   Popconfirm,
   Select,
   Space,
   Spin,
   Tag,
+  Tooltip,
   Typography,
   Upload,
-  message,
 } from 'antd';
 import dayjs from 'dayjs';
 import React, { useEffect, useRef, useState } from 'react';
@@ -35,15 +37,17 @@ import {
   type AiCallLabPromptProfile,
   getAiCallLabPromptProfiles,
 } from '@/services/ruoyi/ai-call-lab';
+import OfficePreview from './OfficePreview';
 import {
-  type KnowledgeContentCategory,
-  type KnowledgeItem,
-  type KnowledgeItemPatch,
-  type KnowledgeVersion,
   deleteKnowledgeItem,
   downloadKnowledgeVersion,
   getKnowledgeItem,
   hashKnowledgeFile,
+  type KnowledgeContentCategory,
+  type KnowledgeItem,
+  type KnowledgeItemPatch,
+  type KnowledgeSceneBinding,
+  type KnowledgeVersion,
   listKnowledgeItems,
   listKnowledgeVersions,
   previewKnowledgeVersion,
@@ -52,10 +56,12 @@ import {
   updateKnowledgeItem,
   uploadKnowledgeItem,
 } from './service';
-import OfficePreview from './OfficePreview';
+import './index.less';
 
 const { Paragraph, Text } = Typography;
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
+const UPLOAD_ACCEPT =
+  '.txt,.md,.markdown,.pptx,.docx,.pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf';
 const PREVIEWABLE_EXTENSIONS = new Set([
   'txt',
   'md',
@@ -65,16 +71,36 @@ const PREVIEWABLE_EXTENSIONS = new Set([
   'pptx',
 ]);
 
+type ContentCategoryFilter = KnowledgeContentCategory | 'ALL';
+type MediaCategory = 'DOCUMENT' | 'VIDEO' | 'AUDIO' | 'IMAGE';
+
+const mediaCategoryOptions: Array<{
+  label: string;
+  value: MediaCategory | 'ALL';
+  disabled?: boolean;
+}> = [
+  { label: '全部', value: 'ALL' },
+  { label: '文档库', value: 'DOCUMENT' },
+  { label: '视频库', value: 'VIDEO', disabled: true },
+  { label: '音频库', value: 'AUDIO', disabled: true },
+  { label: '图片库', value: 'IMAGE', disabled: true },
+];
+
 const categoryOptions: Array<{
   label: string;
   value: KnowledgeContentCategory;
 }> = [
-  { label: '产品与服务', value: 'PRODUCT_SERVICE' },
+  { label: '产品&服务', value: 'PRODUCT_SERVICE' },
   { label: 'FAQ', value: 'FAQ' },
-  { label: '专业沉淀', value: 'PROFESSIONAL' },
+  { label: '专业沉淀（含案例）', value: 'PROFESSIONAL' },
   { label: '行业知识', value: 'INDUSTRY' },
   { label: '其他', value: 'OTHER' },
 ];
+
+const contentCategoryOptions: Array<{
+  label: string;
+  value: ContentCategoryFilter;
+}> = [{ label: '全部', value: 'ALL' }, ...categoryOptions];
 
 const categoryLabel = Object.fromEntries(
   categoryOptions.map((option) => [option.value, option.label]),
@@ -100,10 +126,33 @@ const createIdempotencyKey = () =>
   globalThis.crypto?.randomUUID?.() ||
   `knowledge-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
+const buildBindingOptions = (
+  bindings: KnowledgeSceneBinding[],
+  profiles: AiCallLabPromptProfile[],
+) =>
+  Array.from(
+    new Map(
+      [
+        ...bindings.map((binding) => ({
+          value: binding.promptProfileId,
+          label: `${binding.name} · ${binding.sceneCode}`,
+        })),
+        ...profiles
+          .filter((profile) => profile.id !== undefined)
+          .map((profile) => ({
+            value: String(profile.id),
+            label: `${profile.name} · ${profile.sceneCode}`,
+          })),
+      ].map((option) => [option.value, option]),
+    ).values(),
+  );
+
 type UploadValues = {
   contentCategory: KnowledgeContentCategory;
   note?: string;
 };
+
+type NoteValues = Pick<KnowledgeItemPatch, 'note'>;
 
 type PendingUpload = {
   fingerprint: string;
@@ -113,12 +162,18 @@ type PendingUpload = {
 const AiCallKnowledgePage = () => {
   const actionRef = useRef<ActionType>(null);
   const pendingUploadRef = useRef<PendingUpload | undefined>(undefined);
+  const contentFilterMountedRef = useRef(false);
   const [messageApi, messageContextHolder] = message.useMessage();
   const { hasPermission } = usePermission();
   const canManage = hasPermission('ai_call:knowledge:manage');
   const [uploadForm] = Form.useForm<UploadValues>();
-  const [editForm] = Form.useForm<KnowledgeItemPatch>();
+  const [editForm] = Form.useForm<NoteValues>();
   const [hasProcessing, setHasProcessing] = useState(false);
+  const [contentCategoryFilter, setContentCategoryFilter] =
+    useState<ContentCategoryFilter>('ALL');
+  const [mediaCategoryFilter, setMediaCategoryFilter] = useState<
+    MediaCategory | 'ALL'
+  >('ALL');
   const [uploadOpen, setUploadOpen] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<KnowledgeItem>();
   const [uploadFile, setUploadFile] = useState<File>();
@@ -130,14 +185,44 @@ const AiCallKnowledgePage = () => {
   const [detail, setDetail] = useState<KnowledgeItem>();
   const [versions, setVersions] = useState<KnowledgeVersion[]>([]);
   const [profiles, setProfiles] = useState<AiCallLabPromptProfile[]>([]);
+  const [bindingRowId, setBindingRowId] = useState<string>();
   const [bindingIds, setBindingIds] = useState<string[]>([]);
   const [savingBindings, setSavingBindings] = useState(false);
 
   useEffect(() => {
     if (!hasProcessing) return;
-    const timer = window.setInterval(() => void actionRef.current?.reload(), 3000);
+    const timer = window.setInterval(
+      () => void actionRef.current?.reload(),
+      3000,
+    );
     return () => window.clearInterval(timer);
   }, [hasProcessing]);
+
+  useEffect(() => {
+    if (!contentFilterMountedRef.current) {
+      contentFilterMountedRef.current = true;
+      return;
+    }
+    void actionRef.current?.reloadAndRest?.();
+  }, [contentCategoryFilter]);
+
+  useEffect(() => {
+    if (!canManage) return;
+    let active = true;
+    void getAiCallLabPromptProfiles()
+      .then((result) => {
+        if (active) setProfiles(result.rows);
+      })
+      .catch(() => {
+        if (active) {
+          setProfiles([]);
+          messageApi.warning('场景列表加载失败，知识列表仍可查看');
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [canManage, messageApi]);
 
   const loadDetail = async (item: KnowledgeItem) => {
     setDrawerOpen(true);
@@ -156,15 +241,6 @@ const AiCallKnowledgePage = () => {
           (binding) => binding.promptProfileId,
         ),
       );
-      if (canManage) {
-        try {
-          const result = await getAiCallLabPromptProfiles();
-          setProfiles(result.rows);
-        } catch {
-          setProfiles([]);
-          messageApi.warning('场景列表加载失败，其他详情仍可查看');
-        }
-      }
     } catch {
       messageApi.error('知识详情加载失败');
     } finally {
@@ -172,15 +248,36 @@ const AiCallKnowledgePage = () => {
     }
   };
 
-  const openUpload = (item?: KnowledgeItem) => {
+  const openUpload = (item?: KnowledgeItem, file?: File) => {
     setUploadTarget(item);
-    setUploadFile(undefined);
+    setUploadFile(file);
     pendingUploadRef.current = undefined;
     uploadForm.setFieldsValue({
       contentCategory: item?.contentCategory || 'FAQ',
       note: '',
     });
     setUploadOpen(true);
+  };
+
+  const selectUploadFile = (file: File, openModal = false) => {
+    if (!/\.(txt|md|markdown|pptx|docx|pdf)$/i.test(file.name)) {
+      messageApi.warning('当前支持 TXT、Markdown、PPTX、DOCX 和文本型 PDF');
+      return Upload.LIST_IGNORE;
+    }
+    if (file.size === 0) {
+      messageApi.warning('文件不能为空');
+      return Upload.LIST_IGNORE;
+    }
+    if (file.size > MAX_UPLOAD_BYTES) {
+      messageApi.warning('文件不能超过 100 MB');
+      return Upload.LIST_IGNORE;
+    }
+    if (openModal) openUpload(undefined, file);
+    else {
+      setUploadFile(file);
+      pendingUploadRef.current = undefined;
+    }
+    return false;
   };
 
   const submitUpload = async () => {
@@ -218,7 +315,9 @@ const AiCallKnowledgePage = () => {
       );
       pendingUploadRef.current = undefined;
       setUploadOpen(false);
-      messageApi.success(uploadTarget ? '新版本已进入处理队列' : '知识文件已进入处理队列');
+      messageApi.success(
+        uploadTarget ? '新版本已进入处理队列' : '知识文件已进入处理队列',
+      );
       await actionRef.current?.reload();
       if (uploadTarget && detail?.id === uploadTarget.id) {
         await loadDetail(uploadTarget);
@@ -232,8 +331,6 @@ const AiCallKnowledgePage = () => {
 
   const openEdit = (item: KnowledgeItem) => {
     editForm.setFieldsValue({
-      displayName: item.displayName,
-      contentCategory: item.contentCategory,
       note: item.note || '',
     });
     setEditingItem(item);
@@ -241,7 +338,7 @@ const AiCallKnowledgePage = () => {
 
   const submitEdit = async () => {
     if (!editingItem) return;
-    let values: KnowledgeItemPatch;
+    let values: NoteValues;
     try {
       values = await editForm.validateFields();
     } catch {
@@ -339,6 +436,22 @@ const AiCallKnowledgePage = () => {
     }
   };
 
+  const saveRowBindings = async (
+    item: KnowledgeItem,
+    promptProfileIds: string[],
+  ) => {
+    setBindingRowId(item.id);
+    try {
+      await replaceKnowledgeSceneBindings(item.id, promptProfileIds);
+      messageApi.success('关联场景已更新');
+      await actionRef.current?.reload();
+    } catch {
+      messageApi.error('关联场景更新失败');
+    } finally {
+      setBindingRowId(undefined);
+    }
+  };
+
   const retryVersion = async (version: KnowledgeVersion) => {
     try {
       await retryKnowledgeVersion(version.id);
@@ -361,98 +474,107 @@ const AiCallKnowledgePage = () => {
     }
   };
 
-  const bindingOptions = Array.from(
-    new Map(
-      [
-        ...(detail?.sceneBindings || []).map((binding) => ({
-          value: binding.promptProfileId,
-          label: `${binding.name} · ${binding.sceneCode}`,
-        })),
-        ...profiles
-          .filter((profile) => profile.id !== undefined)
-          .map((profile) => ({
-            value: String(profile.id),
-            label: `${profile.name} · ${profile.sceneCode}`,
-          })),
-      ].map((option) => [option.value, option]),
-    ).values(),
+  const bindingOptions = buildBindingOptions(
+    detail?.sceneBindings || [],
+    profiles,
   );
 
   const columns: ProColumns<KnowledgeItem>[] = [
     {
-      title: '知识名称',
+      title: '文件名',
       dataIndex: 'displayName',
-      render: (_, item) => (
-        <Space direction="vertical" size={0}>
-          <Button type="link" style={{ padding: 0 }} onClick={() => loadDetail(item)}>
-            {item.displayName}
-          </Button>
-          {item.note ? <Text type="secondary">{item.note}</Text> : null}
-        </Space>
-      ),
-    },
-    {
-      title: '内容分类',
-      dataIndex: 'contentCategory',
-      width: 120,
-      render: (_, item) => categoryLabel[item.contentCategory],
-    },
-    {
-      title: '处理状态',
-      dataIndex: ['latestVersion', 'status'],
-      width: 140,
+      width: 260,
       render: (_, item) => {
         const meta = statusMeta[item.latestVersion.status];
         return (
-          <Space direction="vertical" size={0}>
-            <Tag color={meta.color}>{meta.label}</Tag>
-            {item.latestVersion.failureMessage ? (
-              <Text type="danger">{item.latestVersion.failureMessage}</Text>
-            ) : null}
-          </Space>
+          <div className="ai-call-knowledge-file">
+            <span className="ai-call-knowledge-file-icon">
+              <FileTextOutlined />
+            </span>
+            <div className="ai-call-knowledge-file-copy">
+              <Button
+                type="link"
+                className="ai-call-knowledge-file-name"
+                onClick={() => loadDetail(item)}
+              >
+                {item.displayName}
+              </Button>
+              {item.note ? (
+                <Tag className="ai-call-knowledge-note" color="orange">
+                  备注：{item.note}
+                </Tag>
+              ) : null}
+              <span className="ai-call-knowledge-file-state">
+                <Tag color={meta.color}>{meta.label}</Tag>
+                <Text type="secondary">v{item.latestVersion.versionNo}</Text>
+              </span>
+            </div>
+          </div>
         );
       },
     },
     {
-      title: '当前版本',
+      title: '载体分类',
+      width: 90,
+      render: () => <Text type="secondary">文档库</Text>,
+    },
+    {
+      title: '内容分类',
+      dataIndex: 'contentCategory',
       width: 130,
       render: (_, item) => (
-        <Space direction="vertical" size={0}>
-          <Text>v{item.latestVersion.versionNo}</Text>
-          <Text type="secondary">{item.latestVersion.chunkCount} 个切片</Text>
-        </Space>
+        <Tag variant="filled">{categoryLabel[item.contentCategory]}</Tag>
       ),
     },
     {
-      title: '关联场景',
-      dataIndex: 'bindingCount',
-      width: 100,
-      render: (_, item) => `${item.bindingCount} 个`,
+      title: '上传时间',
+      dataIndex: 'createdAt',
+      width: 160,
+      render: (_, item) => formatDateTime(item.createdAt),
     },
     {
-      title: '更新时间',
-      dataIndex: 'updatedAt',
-      width: 170,
-      render: (_, item) => formatDateTime(item.updatedAt),
+      title: '关联产品（场景）',
+      dataIndex: 'sceneBindings',
+      width: 230,
+      render: (_, item) => {
+        const bindings = item.sceneBindings ?? [];
+        return (
+          <Select
+            mode="multiple"
+            className="ai-call-knowledge-scene-select"
+            aria-label={`${item.displayName}关联场景`}
+            disabled={!canManage}
+            loading={bindingRowId === item.id}
+            value={bindings.map((binding) => binding.promptProfileId)}
+            options={buildBindingOptions(bindings, profiles)}
+            placeholder={
+              item.bindingCount > 0
+                ? `已关联 ${item.bindingCount} 个场景`
+                : '未关联'
+            }
+            maxTagCount="responsive"
+            onChange={(values) => void saveRowBindings(item, values)}
+          />
+        );
+      },
     },
     {
       title: '操作',
       key: 'actions',
-      width: canManage ? 300 : 80,
+      width: canManage ? 88 : 0,
       fixed: 'right',
       render: (_, item) => (
-        <Space size={0} wrap>
-          <Button type="link" onClick={() => loadDetail(item)}>
-            详情
-          </Button>
+        <Space size={4}>
           {canManage ? (
             <>
-              <Button type="link" icon={<EditOutlined />} onClick={() => openEdit(item)}>
-                编辑
-              </Button>
-              <Button type="link" icon={<UploadOutlined />} onClick={() => openUpload(item)}>
-                新版本
-              </Button>
+              <Tooltip title="添加或修改备注">
+                <Button
+                  type="text"
+                  aria-label="编辑备注"
+                  icon={<TagsOutlined />}
+                  onClick={() => openEdit(item)}
+                />
+              </Tooltip>
               <Popconfirm
                 title="删除该知识条目？"
                 description="删除后将解除所有场景关联，历史外呼快照不受影响。"
@@ -460,9 +582,14 @@ const AiCallKnowledgePage = () => {
                 cancelText="取消"
                 onConfirm={() => removeItem(item)}
               >
-                <Button type="link" danger icon={<DeleteOutlined />}>
-                  删除
-                </Button>
+                <Tooltip title="删除知识条目">
+                  <Button
+                    type="text"
+                    danger
+                    aria-label="删除知识条目"
+                    icon={<DeleteOutlined />}
+                  />
+                </Tooltip>
               </Popconfirm>
             </>
           ) : null}
@@ -472,60 +599,131 @@ const AiCallKnowledgePage = () => {
   ];
 
   return (
-    <ListPage>
+    <ListPage className="ai-call-knowledge-page">
       {messageContextHolder}
-      <TableCard>
-        <ProTable<KnowledgeItem>
-          rowKey="id"
-          actionRef={actionRef}
-          columns={columns}
-          search={false}
-          options={false}
-          scroll={{ x: 1080 }}
-          pagination={{ defaultPageSize: 20, showSizeChanger: true }}
-          headerTitle="知识资产"
-          toolBarRender={() => [
-            <Button
-              key="reload"
-              icon={<ReloadOutlined />}
-              onClick={() => actionRef.current?.reload()}
+      <div className="ai-call-knowledge-layout">
+        <div className="ai-call-knowledge-toolbar">
+          <section
+            className="ai-call-knowledge-filters"
+            aria-label="知识分类筛选"
+          >
+            <div className="ai-call-knowledge-filter-row">
+              <Text strong>媒体分类</Text>
+              <div className="ai-call-knowledge-filter-options">
+                {mediaCategoryOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    size="small"
+                    autoInsertSpace={false}
+                    type={
+                      mediaCategoryFilter === option.value ? 'primary' : 'text'
+                    }
+                    disabled={option.disabled}
+                    aria-pressed={mediaCategoryFilter === option.value}
+                    onClick={() => setMediaCategoryFilter(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="ai-call-knowledge-filter-row">
+              <Text strong>内容分类</Text>
+              <div className="ai-call-knowledge-filter-options">
+                {contentCategoryOptions.map((option) => (
+                  <Button
+                    key={option.value}
+                    size="small"
+                    autoInsertSpace={false}
+                    type={
+                      contentCategoryFilter === option.value
+                        ? 'primary'
+                        : 'text'
+                    }
+                    aria-pressed={contentCategoryFilter === option.value}
+                    onClick={() => setContentCategoryFilter(option.value)}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          </section>
+
+          {canManage ? (
+            <Upload.Dragger
+              className="ai-call-knowledge-upload-card"
+              accept={UPLOAD_ACCEPT}
+              showUploadList={false}
+              beforeUpload={(file) => selectUploadFile(file, true)}
             >
-              刷新
-            </Button>,
-            canManage ? (
+              <CloudUploadOutlined className="ai-call-knowledge-upload-icon" />
               <Button
-                key="upload"
                 type="primary"
+                aria-label="上传新知识"
                 icon={<PlusOutlined />}
-                onClick={() => openUpload()}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openUpload();
+                }}
               >
-                上传知识
+                上传新知识
               </Button>
-            ) : null,
-          ]}
-          request={async ({ current, pageSize }) => {
-            try {
-              const result = await listKnowledgeItems({
-                pageNum: current || 1,
-                pageSize: pageSize || 20,
-              });
-              setHasProcessing(
-                result.rows.some(
-                  (item) => item.latestVersion.status === 'PROCESSING',
-                ),
-              );
-              return { data: result.rows, total: result.total, success: true };
-            } catch {
-              setHasProcessing(false);
-              messageApi.error('知识列表加载失败');
-              return { data: [], total: 0, success: false };
-            }
-          }}
-        />
-      </TableCard>
+              <Text>拖拽文件至此或点击上传</Text>
+              <Text type="secondary">
+                支持 TXT、MD、PPTX、DOCX、文本型 PDF，最大 100 MB
+              </Text>
+            </Upload.Dragger>
+          ) : null}
+        </div>
+
+        <TableCard>
+          <ProTable<KnowledgeItem>
+            rowKey="id"
+            actionRef={actionRef}
+            columns={columns}
+            search={false}
+            options={false}
+            scroll={{ x: 950 }}
+            pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+            headerTitle={false}
+            toolBarRender={false}
+            request={async ({ current, pageSize }) => {
+              try {
+                const result = await listKnowledgeItems({
+                  pageNum: current || 1,
+                  pageSize: pageSize || 10,
+                  contentCategory:
+                    contentCategoryFilter === 'ALL'
+                      ? undefined
+                      : contentCategoryFilter,
+                });
+                setHasProcessing(
+                  result.rows.some(
+                    (item) => item.latestVersion.status === 'PROCESSING',
+                  ),
+                );
+                return {
+                  data: result.rows,
+                  total: result.total,
+                  success: true,
+                };
+              } catch {
+                setHasProcessing(false);
+                messageApi.error('知识列表加载失败');
+                return { data: [], total: 0, success: false };
+              }
+            }}
+          />
+        </TableCard>
+      </div>
 
       <Modal
-        title={uploadTarget ? `上传“${uploadTarget.displayName}”的新版本` : '上传知识文件'}
+        title={
+          uploadTarget
+            ? `上传“${uploadTarget.displayName}”的新版本`
+            : '上传知识文件'
+        }
         open={uploadOpen}
         okText="开始上传"
         cancelText="取消"
@@ -537,32 +735,30 @@ const AiCallKnowledgePage = () => {
         <Form form={uploadForm} layout="vertical" preserve={false}>
           <Form.Item label="文件" required>
             <Upload.Dragger
-              accept=".txt,.md,.markdown,.pptx,.docx,.pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
+              accept={UPLOAD_ACCEPT}
               maxCount={1}
-              beforeUpload={(file) => {
-                if (!/\.(txt|md|markdown|pptx|docx|pdf)$/i.test(file.name)) {
-                  messageApi.warning(
-                    '当前支持 TXT、Markdown、PPTX、DOCX 和文本型 PDF',
-                  );
-                  return Upload.LIST_IGNORE;
-                }
-                if (file.size === 0) {
-                  messageApi.warning('文件不能为空');
-                  return Upload.LIST_IGNORE;
-                }
-                if (file.size > MAX_UPLOAD_BYTES) {
-                  messageApi.warning('文件不能超过 100 MB');
-                  return Upload.LIST_IGNORE;
-                }
-                setUploadFile(file);
-                return false;
-              }}
+              fileList={
+                uploadFile
+                  ? [
+                      {
+                        uid: `${uploadFile.name}-${uploadFile.lastModified}`,
+                        name: uploadFile.name,
+                        size: uploadFile.size,
+                        type: uploadFile.type,
+                        status: 'done',
+                      },
+                    ]
+                  : []
+              }
+              beforeUpload={(file) => selectUploadFile(file)}
               onRemove={() => {
                 setUploadFile(undefined);
                 pendingUploadRef.current = undefined;
               }}
             >
-              <Paragraph style={{ marginBottom: 4 }}>点击或拖拽文件到此处</Paragraph>
+              <Paragraph style={{ marginBottom: 4 }}>
+                点击或拖拽文件到此处
+              </Paragraph>
               <Text type="secondary">
                 支持 TXT、MD、PPTX、DOCX、文本型 PDF（不含扫描件），最大 100 MB
               </Text>
@@ -582,7 +778,7 @@ const AiCallKnowledgePage = () => {
       </Modal>
 
       <Modal
-        title="编辑知识信息"
+        title="编辑备注"
         open={Boolean(editingItem)}
         okText="保存"
         cancelText="取消"
@@ -591,20 +787,6 @@ const AiCallKnowledgePage = () => {
         onCancel={() => !savingEdit && setEditingItem(undefined)}
       >
         <Form form={editForm} layout="vertical">
-          <Form.Item
-            name="displayName"
-            label="知识名称"
-            rules={[{ required: true, whitespace: true }, { max: 255 }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            name="contentCategory"
-            label="内容分类"
-            rules={[{ required: true }]}
-          >
-            <Select options={categoryOptions} />
-          </Form.Item>
           <Form.Item name="note" label="备注" rules={[{ max: 1000 }]}>
             <Input.TextArea rows={3} showCount maxLength={1000} />
           </Form.Item>
@@ -618,7 +800,10 @@ const AiCallKnowledgePage = () => {
         onClose={() => setDrawerOpen(false)}
         extra={
           canManage && detail ? (
-            <Button icon={<UploadOutlined />} onClick={() => openUpload(detail)}>
+            <Button
+              icon={<UploadOutlined />}
+              onClick={() => openUpload(detail)}
+            >
               上传新版本
             </Button>
           ) : null
@@ -632,11 +817,32 @@ const AiCallKnowledgePage = () => {
                 size="small"
                 column={2}
                 items={[
-                  { key: 'category', label: '内容分类', children: categoryLabel[detail.contentCategory] },
-                  { key: 'versions', label: '版本数', children: detail.versionCount },
-                  { key: 'bindings', label: '关联场景', children: detail.bindingCount },
-                  { key: 'updated', label: '更新时间', children: formatDateTime(detail.updatedAt) },
-                  { key: 'note', label: '备注', span: 2, children: detail.note || '-' },
+                  {
+                    key: 'category',
+                    label: '内容分类',
+                    children: categoryLabel[detail.contentCategory],
+                  },
+                  {
+                    key: 'versions',
+                    label: '版本数',
+                    children: detail.versionCount,
+                  },
+                  {
+                    key: 'bindings',
+                    label: '关联场景',
+                    children: detail.bindingCount,
+                  },
+                  {
+                    key: 'updated',
+                    label: '更新时间',
+                    children: formatDateTime(detail.updatedAt),
+                  },
+                  {
+                    key: 'note',
+                    label: '备注',
+                    span: 2,
+                    children: detail.note || '-',
+                  },
                 ]}
               />
 
@@ -653,7 +859,11 @@ const AiCallKnowledgePage = () => {
                     onChange={setBindingIds}
                   />
                   {canManage ? (
-                    <Button type="primary" loading={savingBindings} onClick={saveBindings}>
+                    <Button
+                      type="primary"
+                      loading={savingBindings}
+                      onClick={saveBindings}
+                    >
                       保存关联
                     </Button>
                   ) : null}
@@ -696,7 +906,9 @@ const AiCallKnowledgePage = () => {
                                     downloadKnowledgeVersion(
                                       version.id,
                                       version.sourceFilename,
-                                    ).catch(() => messageApi.error('文件下载失败'))
+                                    ).catch(() =>
+                                      messageApi.error('文件下载失败'),
+                                    )
                                   }
                                 >
                                   下载
@@ -726,11 +938,19 @@ const AiCallKnowledgePage = () => {
                           }
                           description={
                             <Space wrap>
-                              <Text type="secondary">{formatBytes(version.byteSize)}</Text>
-                              <Text type="secondary">{version.chunkCount} 个切片</Text>
-                              <Text type="secondary">{formatDateTime(version.createdAt)}</Text>
+                              <Text type="secondary">
+                                {formatBytes(version.byteSize)}
+                              </Text>
+                              <Text type="secondary">
+                                {version.chunkCount} 个切片
+                              </Text>
+                              <Text type="secondary">
+                                {formatDateTime(version.createdAt)}
+                              </Text>
                               {version.failureMessage ? (
-                                <Text type="danger">{version.failureMessage}</Text>
+                                <Text type="danger">
+                                  {version.failureMessage}
+                                </Text>
                               ) : null}
                             </Space>
                           }

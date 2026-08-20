@@ -33,7 +33,11 @@ describe('AI Call knowledge service', () => {
       .mockResolvedValueOnce({ code: 200, data: [{ id: 'version-1' }] });
 
     await expect(
-      listKnowledgeItems({ pageNum: 2, pageSize: 10 }),
+      listKnowledgeItems({
+        pageNum: 2,
+        pageSize: 10,
+        contentCategory: 'FAQ',
+      }),
     ).resolves.toEqual({ rows: [{ id: 'item-1' }], total: 1 });
     await getKnowledgeItem('item-1');
     await listKnowledgeVersions('item-1');
@@ -44,7 +48,7 @@ describe('AI Call knowledge service', () => {
         {
           baseApi: '/ai-call-agent-api',
           method: 'get',
-          params: { pageNum: 2, pageSize: 10 },
+          params: { pageNum: 2, pageSize: 10, contentCategory: 'FAQ' },
         },
       ],
       [
@@ -164,7 +168,9 @@ describe('AI Call knowledge service', () => {
       .spyOn(HTMLAnchorElement.prototype, 'click')
       .mockImplementation(() => undefined);
 
-    await expect(previewKnowledgeVersion('version-1', 'md')).resolves.toBe(preview);
+    await expect(previewKnowledgeVersion('version-1', 'md')).resolves.toBe(
+      preview,
+    );
     await expect(previewKnowledgeVersion('version-2', 'pdf')).resolves.toBe(
       pdfPreview,
     );

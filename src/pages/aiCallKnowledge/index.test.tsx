@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { message, Modal } from 'antd';
+import { Modal, message } from 'antd';
 import React from 'react';
 import { getAiCallLabPromptProfiles } from '@/services/ruoyi/ai-call-lab';
+import AiCallKnowledgePage from './index';
 import {
   deleteKnowledgeItem,
   downloadKnowledgeVersion,
@@ -15,7 +16,6 @@ import {
   updateKnowledgeItem,
   uploadKnowledgeItem,
 } from './service';
-import AiCallKnowledgePage from './index';
 
 jest.mock('@/components/Permission', () => ({
   usePermission: () => ({ hasPermission: () => true }),
@@ -47,7 +47,10 @@ jest.mock('@ant-design/pro-components', () => {
     propsRef.current = props;
     const [rows, setRows] = React.useState([]);
     const load = React.useCallback(async () => {
-      const result = await propsRef.current.request({ current: 1, pageSize: 20 });
+      const result = await propsRef.current.request({
+        current: 1,
+        pageSize: propsRef.current.pagination?.defaultPageSize || 20,
+      });
       setRows(result.data || []);
     }, []);
     React.useEffect(() => {
@@ -58,20 +61,36 @@ jest.mock('@ant-design/pro-components', () => {
       void load();
     }, [load]);
     const toolBarRender = props.toolBarRender as CallableFunction;
-    const actionColumn = (props.columns as Array<Record<string, unknown>>).find(
-      (column) => column.key === 'actions',
-    );
+    const columns = props.columns as Array<Record<string, unknown>>;
     return React.createElement(
       'section',
       null,
       React.createElement('h1', null, props.headerTitle),
-      ...(toolBarRender() || []).filter(Boolean),
+      ...(typeof toolBarRender === 'function'
+        ? (toolBarRender() || []).filter(Boolean)
+        : []),
+      ...columns.map((column, index) =>
+        React.createElement(
+          'span',
+          { key: `heading-${String(column.key || column.dataIndex || index)}` },
+          column.title,
+        ),
+      ),
       ...rows.map((row: { id: string; displayName: string }) =>
         React.createElement(
           'div',
           { key: row.id },
-          row.displayName,
-          (actionColumn?.render as CallableFunction)?.(undefined, row),
+          ...columns.map((column, index) =>
+            React.createElement(
+              React.Fragment,
+              {
+                key: `cell-${String(column.key || column.dataIndex || index)}`,
+              },
+              typeof column.render === 'function'
+                ? (column.render as CallableFunction)(undefined, row)
+                : row[column.dataIndex as keyof typeof row],
+            ),
+          ),
         ),
       ),
     );
@@ -106,7 +125,15 @@ const item = {
     createdAt: '2026-08-19T08:00:00Z',
   },
   versionCount: 1,
-  bindingCount: 0,
+  note: '退款政策，客服必读',
+  sceneBindings: [
+    {
+      promptProfileId: '101',
+      sceneCode: 'after_sales',
+      name: '售后回访',
+    },
+  ],
+  bindingCount: 1,
   createdAt: '2026-08-19T08:00:00Z',
   updatedAt: '2026-08-19T08:00:00Z',
 };
@@ -134,8 +161,14 @@ describe('AiCallKnowledgePage', () => {
       item.latestVersion,
     ]);
     (getAiCallLabPromptProfiles as jest.Mock).mockResolvedValue({
-      rows: [],
-      total: 0,
+      rows: [
+        {
+          id: 101,
+          sceneCode: 'after_sales',
+          name: '售后回访',
+        },
+      ],
+      total: 1,
     });
     (deleteKnowledgeItem as jest.Mock).mockResolvedValue({});
     (downloadKnowledgeVersion as jest.Mock).mockResolvedValue(undefined);
@@ -147,6 +180,26 @@ describe('AiCallKnowledgePage', () => {
     });
     (retryKnowledgeVersion as jest.Mock).mockResolvedValue({});
     (updateKnowledgeItem as jest.Mock).mockResolvedValue(item);
+  });
+
+  it('matches the knowledge asset prototype structure and filters by content category', async () => {
+    render(React.createElement(AiCallKnowledgePage));
+
+    expect(await screen.findByText('媒体分类')).toBeTruthy();
+    expect(screen.getAllByText('内容分类')).toHaveLength(2);
+    expect(screen.getByRole('button', { name: '上传新知识' })).toBeTruthy();
+    expect(await screen.findByText('备注：退款政策，客服必读')).toBeTruthy();
+    expect(screen.getByText('关联产品（场景）')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '编辑备注' })).toBeTruthy();
+
+    fireEvent.click(screen.getByRole('button', { name: '行业知识' }));
+    await waitFor(() =>
+      expect(listKnowledgeItems).toHaveBeenLastCalledWith({
+        pageNum: 1,
+        pageSize: 10,
+        contentCategory: 'INDUSTRY',
+      }),
+    );
   });
 
   it.each([
@@ -167,10 +220,11 @@ describe('AiCallKnowledgePage', () => {
     expect(await screen.findByText('售后知识.md')).toBeTruthy();
     expect(listKnowledgeItems).toHaveBeenCalledWith({
       pageNum: 1,
-      pageSize: 20,
+      pageSize: 10,
+      contentCategory: undefined,
     });
 
-    fireEvent.click(screen.getByRole('button', { name: /上传知识/ }));
+    fireEvent.click(screen.getByRole('button', { name: '上传新知识' }));
     const file = new File(['test content'], fileName, { type: mimeType });
     const input = document.querySelector('input[type="file"]');
     expect(input).toBeTruthy();
@@ -226,17 +280,20 @@ describe('AiCallKnowledgePage', () => {
     ]);
 
     render(React.createElement(AiCallKnowledgePage));
-    fireEvent.click(await screen.findByRole('button', { name: '详情' }));
+    fireEvent.click(await screen.findByRole('button', { name: '售后知识.md' }));
 
-    expect(
-      await screen.findAllByRole('button', { name: /下载/ }),
-    ).toHaveLength(3);
+    expect(await screen.findAllByRole('button', { name: /下载/ })).toHaveLength(
+      3,
+    );
     const previewButtons = screen.getAllByRole('button', { name: /预览/ });
     expect(previewButtons).toHaveLength(3);
     fireEvent.click(previewButtons[2]);
 
     await waitFor(() =>
-      expect(previewKnowledgeVersion).toHaveBeenCalledWith('pdf-version', 'pdf'),
+      expect(previewKnowledgeVersion).toHaveBeenCalledWith(
+        'pdf-version',
+        'pdf',
+      ),
     );
   });
 });
