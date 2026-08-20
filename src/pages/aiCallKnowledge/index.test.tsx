@@ -141,7 +141,19 @@ describe('AiCallKnowledgePage', () => {
     (updateKnowledgeItem as jest.Mock).mockResolvedValue(item);
   });
 
-  it('loads the list and uploads one PPTX file through the service', async () => {
+  it.each([
+    [
+      'PPTX',
+      'faq.pptx',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    ],
+    [
+      'DOCX',
+      'faq.docx',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    ],
+    ['text PDF', 'faq.pdf', 'application/pdf'],
+  ])('loads the list and uploads one %s file through the service', async (_, fileName, mimeType) => {
     render(React.createElement(AiCallKnowledgePage));
 
     expect(await screen.findByText('售后知识.md')).toBeTruthy();
@@ -151,9 +163,7 @@ describe('AiCallKnowledgePage', () => {
     });
 
     fireEvent.click(screen.getByRole('button', { name: /上传知识/ }));
-    const file = new File(['PK\x03\x04'], 'faq.pptx', {
-      type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    });
+    const file = new File(['test content'], fileName, { type: mimeType });
     const input = document.querySelector('input[type="file"]');
     expect(input).toBeTruthy();
     fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });

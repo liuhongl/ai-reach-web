@@ -182,7 +182,7 @@ const AiCallKnowledgePage = () => {
       return;
     }
     if (!uploadFile) {
-      messageApi.warning('请选择 TXT、Markdown 或 PPTX 文件');
+      messageApi.warning('请选择 TXT、Markdown、PPTX、DOCX 或文本型 PDF 文件');
       return;
     }
     const fingerprint = [
@@ -503,11 +503,13 @@ const AiCallKnowledgePage = () => {
         <Form form={uploadForm} layout="vertical" preserve={false}>
           <Form.Item label="文件" required>
             <Upload.Dragger
-              accept=".txt,.md,.markdown,.pptx,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+              accept=".txt,.md,.markdown,.pptx,.docx,.pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf"
               maxCount={1}
               beforeUpload={(file) => {
-                if (!/\.(txt|md|markdown|pptx)$/i.test(file.name)) {
-                  messageApi.warning('当前只支持 TXT、Markdown 和 PPTX');
+                if (!/\.(txt|md|markdown|pptx|docx|pdf)$/i.test(file.name)) {
+                  messageApi.warning(
+                    '当前支持 TXT、Markdown、PPTX、DOCX 和文本型 PDF',
+                  );
                   return Upload.LIST_IGNORE;
                 }
                 if (file.size === 0) {
@@ -527,7 +529,9 @@ const AiCallKnowledgePage = () => {
               }}
             >
               <Paragraph style={{ marginBottom: 4 }}>点击或拖拽文件到此处</Paragraph>
-              <Text type="secondary">支持 TXT、MD、PPTX，最大 100 MB</Text>
+              <Text type="secondary">
+                支持 TXT、MD、PPTX、DOCX、文本型 PDF（不含扫描件），最大 100 MB
+              </Text>
             </Upload.Dragger>
           </Form.Item>
           <Form.Item
