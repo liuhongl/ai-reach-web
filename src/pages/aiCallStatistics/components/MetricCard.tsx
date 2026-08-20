@@ -1,5 +1,5 @@
 import { Card, Flex, Space, Typography, theme } from 'antd';
-import React, { type KeyboardEvent, type ReactNode } from 'react';
+import React, { type ReactNode } from 'react';
 import MetricIcon, {
   type MetricTone,
 } from '@/components/MetricIcon';
@@ -11,10 +11,10 @@ type MetricCardProps = {
   value: string;
   unit?: string;
   comparison: string;
+  comparisonTone?: 'positive' | 'negative' | 'neutral';
   icon: ReactNode;
   tone: MetricTone;
   emphasized?: boolean;
-  onClick: () => void;
 };
 
 const MetricCard = ({
@@ -22,29 +22,24 @@ const MetricCard = ({
   value,
   unit,
   comparison,
+  comparisonTone = 'neutral',
   icon,
   tone,
   emphasized = false,
-  onClick,
 }: MetricCardProps) => {
   const { token } = theme.useToken();
   const emphasizedColor = emphasized ? token.colorPrimary : undefined;
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      onClick();
-    }
-  };
+  const comparisonColor =
+    comparisonTone === 'positive'
+      ? token.colorSuccess
+      : comparisonTone === 'negative'
+        ? token.colorError
+        : token.colorTextSecondary;
 
   return (
     <Card
-      hoverable
       size="small"
-      role="button"
-      tabIndex={0}
       aria-label={`${title} ${value}${unit ?? ''}`}
-      onClick={onClick}
-      onKeyDown={handleKeyDown}
       styles={{ body: { padding: 16 } }}
       style={{ height: '100%' }}
     >
@@ -74,7 +69,7 @@ const MetricCard = ({
             </Text>
           ) : null}
         </Space>
-        <Text type="secondary" style={{ fontSize: 12 }}>
+        <Text style={{ color: comparisonColor, fontSize: 12 }}>
           {comparison}
         </Text>
       </Flex>

@@ -3,7 +3,7 @@ export type CallWindow = {
   endTime: string;
 };
 
-export type RetryableResult = 'no_answer' | 'busy' | 'call_failed';
+export type RetryableResult = 'no_answer' | 'busy' | 'rejected';
 
 export type AiCallRule = {
   ruleId: string;

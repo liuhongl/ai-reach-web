@@ -1,14 +1,14 @@
 import {
   type ActionType,
-  PageContainer,
   type ProColumns,
   ProTable,
 } from '@ant-design/pro-components';
 import {
+  App,
   Button,
-  Collapse,
   Descriptions,
   Drawer,
+  Empty,
   Modal,
   Space,
   Tag,
@@ -17,6 +17,12 @@ import {
 } from 'antd';
 import * as React from 'react';
 import { useMemo, useRef, useState } from 'react';
+import { ListPage } from '@/components/ListLayout';
+import AgentName from '@/pages/agentWorkbench/components/AgentName';
+import {
+  type AiCallRecording,
+  getAiCallRecordRecording,
+} from '@/pages/aiCallRecords/service';
 import {
   getAdminHandoff,
   type HandoffDto,
@@ -47,6 +53,13 @@ const detailDescriptionStyles = {
   label: { color: '#1f1f1f' },
 };
 
+const terminalHandoffStatuses = new Set([
+  'completed',
+  'expired',
+  'canceled',
+  'failed',
+]);
+
 const waitSeconds = (row: HandoffDto) => {
   const end = row.connected_at || row.ended_at || new Date().toISOString();
   return Math.max(
@@ -66,9 +79,11 @@ const createIdempotencyKey = () => {
 };
 
 const HandoffAdminPage = () => {
+  const { message } = App.useApp();
   const actionRef = useRef<ActionType | undefined>(undefined);
   const [metrics, setMetrics] = useState<Record<string, number>>({});
   const [detail, setDetail] = useState<HandoffAdminDetail>();
+  const [recording, setRecording] = useState<AiCallRecording | null>();
 
   const columns = useMemo<ProColumns<HandoffDto>[]>(
     () => [
@@ -154,7 +169,7 @@ const HandoffAdminPage = () => {
         key: 'human_agent_identity_display',
         dataIndex: 'human_agent_identity',
         search: false,
-        renderText: (value) => value || '-',
+        render: (_, row) => <AgentName identity={row.human_agent_identity} />,
       },
       {
         title: '最终结果',
@@ -184,44 +199,65 @@ const HandoffAdminPage = () => {
             <Button
               type="link"
               size="small"
-              onClick={async () =>
-                setDetail(
-                  normalizeHandoffDetail(await getAdminHandoff(row.handoff_id)),
-                )
-              }
+              onClick={async () => {
+                setRecording(undefined);
+                const [detailResult, recordingResult] =
+                  await Promise.allSettled([
+                    getAdminHandoff(row.handoff_id),
+                    getAiCallRecordRecording(row.call_id),
+                  ]);
+                if (detailResult.status === 'fulfilled') {
+                  setDetail(normalizeHandoffDetail(detailResult.value));
+                }
+                setRecording(
+                  recordingResult.status === 'fulfilled'
+                    ? recordingResult.value
+                    : null,
+                );
+              }}
             >
               查看详情
             </Button>
-            {row.failure_stage || row.status === 'failed' ? (
+            {row.failure_stage && !terminalHandoffStatuses.has(row.status) ? (
               <Button
                 danger
                 type="link"
                 size="small"
                 onClick={() =>
                   Modal.confirm({
-                    title: '确认修复异常状态',
+                    title: '确认重新核对状态',
                     content:
                       '系统会重新核对该异常转人工记录的状态，不会重新外呼或修改正常通话结果。',
-                    okText: '确认修复',
+                    okText: '重新核对',
                     cancelText: '取消',
                     onOk: async () => {
-                      await reconcileAdminHandoff(
+                      const result = await reconcileAdminHandoff(
                         row.handoff_id,
                         createIdempotencyKey(),
+                      );
+                      const nextHandoff =
+                        normalizeHandoffDetail(result).handoff;
+                      message.success(
+                        nextHandoff.status === row.status
+                          ? '核对完成，当前状态无需调整'
+                          : `核对完成，状态已更新为“${
+                              statusLabels[nextHandoff.status] ||
+                              nextHandoff.status
+                            }”`,
                       );
                       actionRef.current?.reload();
                     },
                   })
                 }
               >
-                修复异常状态
+                重新核对状态
               </Button>
             ) : null}
           </Space>
         ),
       },
     ],
-    [],
+    [message],
   );
 
   const detailHandoff = detail?.handoff;
@@ -247,27 +283,9 @@ const HandoffAdminPage = () => {
       ].filter((item) => item.value)
     : [];
   const normalizedMetrics = normalizeHandoffMetrics(metrics);
-  const executionConfig = detailRecord?.execution_config;
-  const executionConfigItems =
-    executionConfig && typeof executionConfig === 'object'
-      ? [
-          {
-            label: '提示词',
-            value: Reflect.get(executionConfig, 'promptName'),
-          },
-          {
-            label: '音色',
-            value: Reflect.get(executionConfig, 'voiceName'),
-          },
-          {
-            label: '外呼规则',
-            value: Reflect.get(executionConfig, 'ruleName'),
-          },
-        ].filter(
-          (item): item is { label: string; value: string } =>
-            typeof item.value === 'string' && Boolean(item.value.trim()),
-        )
-      : [];
+  const recordingUrl =
+    recording?.playUrl ||
+    recording?.tracks?.find((track) => track.playUrl)?.playUrl;
   const afterCallWorkSummary = detail?.afterCallWork
     ? Reflect.get(detail.afterCallWork, 'summary')
     : undefined;
@@ -283,7 +301,7 @@ const HandoffAdminPage = () => {
     '无';
 
   return (
-    <PageContainer className="agent-admin-page" title="转人工记录">
+    <ListPage className="agent-admin-page" title="转人工记录">
       <AdminMetricRow
         items={[
           {
@@ -319,6 +337,7 @@ const HandoffAdminPage = () => {
         ]}
       />
       <ProTable<HandoffDto>
+        className="recov-stable-pagination-table"
         actionRef={actionRef}
         rowKey={(row) => String(row.handoff_id)}
         columns={columns}
@@ -326,6 +345,7 @@ const HandoffAdminPage = () => {
         scroll={{ x: 1280 }}
         pagination={{
           defaultPageSize: 10,
+          showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条`,
         }}
         beforeSearchSubmit={(values) => {
@@ -385,7 +405,10 @@ const HandoffAdminPage = () => {
         title="转人工记录详情"
         open={Boolean(detail)}
         size={720}
-        onClose={() => setDetail(undefined)}
+        onClose={() => {
+          setDetail(undefined);
+          setRecording(undefined);
+        }}
       >
         {detailHandoff ? (
           <div className="agent-admin-detail">
@@ -424,7 +447,12 @@ const HandoffAdminPage = () => {
                   {
                     key: 'agent',
                     label: '接听坐席',
-                    children: detailHandoff.human_agent_identity || '未接听',
+                    children: (
+                      <AgentName
+                        identity={detailHandoff.human_agent_identity}
+                        emptyText="未接听"
+                      />
+                    ),
                   },
                   {
                     key: 'status',
@@ -526,12 +554,34 @@ const HandoffAdminPage = () => {
               )}
             </section>
             <section className="agent-admin-detail-section">
-              <Title level={5}>录音状态</Title>
-              <Text>
-                {getRecordingStatusLabel(
-                  detailRecord?.recording_status as string | undefined,
+              <Title level={5}>通话录音</Title>
+              <div data-testid="handoff-recording-player">
+                {recordingUrl ? (
+                  // biome-ignore lint/a11y/useMediaCaption: 同一详情中已展示完整转接前对话，录音暂无独立字幕轨道。
+                  <audio
+                    controls
+                    controlsList="nodownload"
+                    preload="metadata"
+                    src={recordingUrl}
+                    style={{ width: '100%' }}
+                  />
+                ) : (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description={
+                      getRecordingStatusLabel(
+                        detailRecord?.recording_status as string | undefined,
+                      ) === '录音已生成'
+                        ? '暂无可播放录音'
+                        : getRecordingStatusLabel(
+                            detailRecord?.recording_status as
+                              | string
+                              | undefined,
+                          )
+                    }
+                  />
                 )}
-              </Text>
+              </div>
             </section>
             <section className="agent-admin-detail-section">
               <Title level={5}>快速话后结果</Title>
@@ -553,33 +603,10 @@ const HandoffAdminPage = () => {
               <Title level={5}>关联跟进任务</Title>
               <Text>{followUpTaskName}</Text>
             </section>
-            <Collapse
-              items={[
-                {
-                  key: 'model-prompt',
-                  label: '通话配置快照（排查用）',
-                  children: executionConfigItems.length ? (
-                    <Descriptions
-                      column={1}
-                      size="small"
-                      items={executionConfigItems.map((item) => ({
-                        key: item.label,
-                        label: item.label,
-                        children: item.value,
-                      }))}
-                    />
-                  ) : (
-                    <Text type="secondary">
-                      本次通话未保存配置快照，无法事后还原
-                    </Text>
-                  ),
-                },
-              ]}
-            />
           </div>
         ) : null}
       </Drawer>
-    </PageContainer>
+    </ListPage>
   );
 };
 

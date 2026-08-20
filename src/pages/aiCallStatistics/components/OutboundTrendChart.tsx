@@ -9,7 +9,6 @@ type TrendItem = OutboundStatistics['trend'][number];
 type OutboundTrendChartProps = {
   data: TrendItem[];
   granularity: StatisticsGranularity;
-  onBucketClick: (bucketStart: string) => void;
 };
 
 const TREND_COLORS = {
@@ -20,7 +19,6 @@ const TREND_COLORS = {
 const OutboundTrendChart = ({
   data,
   granularity,
-  onBucketClick,
 }: OutboundTrendChartProps) => {
   if (data.length === 0) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
@@ -93,15 +91,6 @@ const OutboundTrendChart = ({
           itemLabelText: (datum: { label?: string }) =>
             datum.label === 'dialAttempts' ? '拨打次数' : '接通率',
         },
-      }}
-      onEvent={(_, event) => {
-        if (event.type !== 'element:click') {
-          return;
-        }
-        const bucketStart = event.data?.data?.bucketStart;
-        if (typeof bucketStart === 'string') {
-          onBucketClick(bucketStart);
-        }
       }}
     />
   );

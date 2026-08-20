@@ -5,21 +5,26 @@ import {
   cancelAiCallTask,
   createAiCallTask,
   createBatchValidation,
+  downloadExceptionTargets,
   downloadOutboundTargetTemplate,
   downloadValidationIssues,
   endAiCallTaskActiveCall,
   getAiCallTask,
   getAiCallTaskTestCapability,
   getAiCallTaskTestStatus,
+  getExceptionSummary,
   getValidationResult,
   listAiCallTasks,
   listAiCallTaskTargets,
+  listExceptionTargets,
   listValidationIssues,
   pauseAiCallTask,
   resumeAiCallTask,
   retryBatchValidation,
   runAiCallTaskTest,
   stopAiCallTask,
+  startExceptionBatch,
+  updateExceptionPolicy,
   updateAiCallTaskSchedule,
   validateSingleTarget,
 } from './service';
@@ -247,6 +252,116 @@ describe('AI Call task service', () => {
         },
       ],
     ]);
+  });
+
+  it('maps exception summary, details, policy and manual batch APIs', async () => {
+    mockedRuoyiRequest
+      .mockResolvedValueOnce({ code: 200, data: { cards: [] } })
+      .mockResolvedValueOnce({ code: 200, rows: [], total: 0 })
+      .mockResolvedValueOnce({
+        code: 200,
+        data: {
+          category: 'no_answer',
+          intervalDays: 30,
+          maxRetryCount: 3,
+          retryable: true,
+        },
+      })
+      .mockResolvedValueOnce({
+        code: 200,
+        data: {
+          batchId: 'batch-1',
+          category: 'no_answer',
+          status: 'RUNNING',
+          targetCount: 9,
+          intervalDays: 30,
+          maxRetryCount: 3,
+          startedAt: '2026-08-13T03:00:00Z',
+        },
+      });
+
+    await getExceptionSummary();
+    await listExceptionTargets({
+      category: 'no_answer',
+      pageNum: 1,
+      pageSize: 20,
+      status: 'PENDING',
+      keyword: '王先生',
+    });
+    await updateExceptionPolicy('no_answer', {
+      intervalDays: 30,
+      maxRetryCount: 3,
+    });
+    await startExceptionBatch('no_answer', 'exception-key');
+
+    expect(mockedRuoyiRequest.mock.calls).toEqual([
+      [
+        '/ai-call/outbound-exceptions/summary',
+        { baseApi: '/ai-call-agent-api', method: 'get' },
+      ],
+      [
+        '/ai-call/outbound-exceptions',
+        {
+          baseApi: '/ai-call-agent-api',
+          method: 'get',
+          params: {
+            category: 'no_answer',
+            pageNum: 1,
+            pageSize: 20,
+            status: 'PENDING',
+            keyword: '王先生',
+          },
+        },
+      ],
+      [
+        '/ai-call/outbound-exceptions/no_answer/policy',
+        {
+          baseApi: '/ai-call-agent-api',
+          method: 'put',
+          data: { intervalDays: 30, maxRetryCount: 3 },
+          repeatSubmit: false,
+        },
+      ],
+      [
+        '/ai-call/outbound-exceptions/no_answer/retry-batches',
+        {
+          baseApi: '/ai-call-agent-api',
+          method: 'post',
+          headers: { 'Idempotency-Key': 'exception-key' },
+        },
+      ],
+    ]);
+  });
+
+  it('downloads exception data through the isolated AI Call proxy', async () => {
+    const blob = new Blob(['xlsx'], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    });
+    mockedRuoyiRequest.mockResolvedValueOnce(blob);
+    const createObjectURL = window.URL.createObjectURL as jest.Mock;
+    createObjectURL.mockReset();
+    createObjectURL.mockReturnValue('blob:exception-export');
+    const revokeObjectURL = jest.fn();
+    window.URL.revokeObjectURL = revokeObjectURL;
+    const click = jest
+      .spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => undefined);
+
+    await downloadExceptionTargets('no_answer');
+
+    expect(mockedRuoyiRequest).toHaveBeenCalledWith(
+      '/ai-call/outbound-exceptions/export',
+      {
+        baseApi: '/ai-call-agent-api',
+        method: 'get',
+        params: { category: 'no_answer' },
+        responseType: 'blob',
+      },
+    );
+    expect(createObjectURL).toHaveBeenCalledWith(blob);
+    expect(click).toHaveBeenCalledTimes(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith('blob:exception-export');
+    click.mockRestore();
   });
 
   it('maps Linphone task test APIs and idempotency headers', async () => {

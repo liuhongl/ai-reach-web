@@ -11,13 +11,9 @@ import {
 } from 'antd';
 import type { Dayjs } from 'dayjs';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ListPage, ListStack, TableCard } from '@/components/ListLayout';
 import type { AiCallRule } from '@/pages/aiCallRules/domain';
 import { listAiCallRules } from '@/pages/aiCallRules/service';
-import {
-  ListPage,
-  ListStack,
-  TableCard,
-} from '@/components/ListLayout';
 import {
   type AiCallLabPromptProfile,
   type AiCallLabVoiceProfile,
@@ -111,6 +107,7 @@ const CreateAiCallTaskPage = () => {
   const activeValidationIdRef = useRef<string | undefined>(undefined);
   const pollOwnerRef = useRef<symbol | null>(null);
   const taskMode = Form.useWatch('taskMode', form);
+  const promptKey = Form.useWatch('promptKey', form);
   const answerMode = Form.useWatch('answerMode', form);
   const executionMode = Form.useWatch('executionMode', form);
   const ruleId = Form.useWatch('ruleId', form);
@@ -373,7 +370,7 @@ const CreateAiCallTaskPage = () => {
       title="新建外呼任务"
     >
       {messageContextHolder}
-      <ListStack className="pb-20">
+      <ListStack>
         <div className="flex items-center justify-between gap-4">
           <h2 className="m-0 text-xl font-semibold">新建外呼任务</h2>
           <Button onClick={() => history.push('/ai-call/tasks')}>
@@ -431,7 +428,14 @@ const CreateAiCallTaskPage = () => {
                   onDownload={async () => {
                     setDownloadingTemplate(true);
                     try {
-                      await downloadOutboundTargetTemplate();
+                      const prompt = promptProfiles.find(
+                        (item) => getPromptKey(item) === promptKey,
+                      );
+                      await downloadOutboundTargetTemplate(
+                        prompt?.id === undefined
+                          ? undefined
+                          : String(prompt.id),
+                      );
                     } catch (error) {
                       messageApi.error(getErrorMessage(error));
                     } finally {

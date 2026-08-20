@@ -218,7 +218,7 @@ describe('single target AI Call task creation', () => {
         name: '校验任务',
       });
       const actionArea = actionButton.parentElement;
-      expect(pageStack?.classList.contains('pb-20')).toBe(true);
+      expect(pageStack?.classList.contains('pb-20')).toBe(false);
       expect(ruleSummary.classList.contains('mb-8')).toBe(true);
       expect(actionArea?.classList.contains('sticky')).toBe(false);
       expect(actionArea?.classList.contains('mt-2')).toBe(true);
@@ -510,7 +510,11 @@ describe('single target AI Call task creation', () => {
     fireEvent.change(replacementInput, {
       target: { files: [new File(['xlsx'], 'new-targets.xlsx')] },
     });
-    expect(await screen.findByText('new-targets.xlsx')).toBeTruthy();
+    expect(
+      await screen.findByRole('button', {
+        name: '完整文件名：new-targets.xlsx',
+      }),
+    ).toBeTruthy();
     await act(async () => {
       resolvePolling?.({
         validationId: 'stale-poll-validation',

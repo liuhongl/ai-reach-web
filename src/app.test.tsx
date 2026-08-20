@@ -151,6 +151,7 @@ describe('layout background capabilities', () => {
     expect(screen.getByTestId('sse-bootstrap').dataset.enabled).toBe('true');
     expect(screen.getByTestId('sse-bootstrap').dataset.connectionKey).toBe('1');
     expect(screen.queryByText('租户切换')).toBeNull();
+    expect(config.footerRender).toBeUndefined();
     expect(config.menuDataRender().some((item: any) => item.name === '外呼任务')).toBe(
       false,
     );
@@ -180,6 +181,29 @@ describe('layout background capabilities', () => {
       token: { sider: { colorMenuBackground: '#1a1d24' } },
     });
     expect(screen.getByTestId('preferences-drawer')).toBeTruthy();
+  });
+
+  it('配置路由也显示完整的分组菜单', () => {
+    mockHistory.location = { pathname: '/ai-call/voices', search: '', hash: '' };
+    const config = (layout as any)({
+      initialState: {
+        currentUser: {
+          userid: '1',
+          name: '管理员',
+          permissions: ['*:*:*'],
+        },
+      },
+    });
+
+    expect(config.menuDataRender().map((item: any) => item.name)).toEqual([
+      '数据看板',
+      '知识库',
+      '外呼',
+      '坐席',
+      '跟进',
+      '规则配置',
+      '线路',
+    ]);
   });
 
 });

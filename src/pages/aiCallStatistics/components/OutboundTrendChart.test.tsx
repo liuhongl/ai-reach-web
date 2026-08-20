@@ -29,7 +29,6 @@ describe('OutboundTrendChart', () => {
           },
         ]}
         granularity="day"
-        onBucketClick={jest.fn()}
       />,
     );
 

@@ -36,6 +36,9 @@ import {
   submitFollowUpHandlingResult,
 } from '@/services/ruoyi/agent-console';
 import './FollowUpPanel.css';
+import AfterCallResultForm, {
+  type AfterCallResultValues,
+} from './AfterCallResultForm';
 import FollowUpTaskDetailDrawer from './FollowUpTaskDetailDrawer';
 
 const { Text } = Typography;
@@ -250,7 +253,9 @@ const FollowUpPanel = ({
         setNextFollowUpAt('');
         setClosedReason(undefined);
         setHandlingError('');
-        setHandlingIdempotencyKey(createIdempotencyKey());
+        setHandlingIdempotencyKey(
+          callId ? `follow-up-handling:${callId}` : createIdempotencyKey(),
+        );
       }),
     [messageApi, runOnce, services],
   );
@@ -330,6 +335,30 @@ const FollowUpPanel = ({
   const callbackInProgress = ['claiming', 'in_call', 'reconnecting'].includes(
     agentStatus,
   );
+
+  const finishHandlingSubmission = async () => {
+    messageApi.success('处理结果已提交');
+    setHandlingTask(undefined);
+    setHandlingError('');
+    await Promise.all([actionRef.current?.reload(), refreshScopeTotals()]);
+  };
+
+  const submitCallResult = async (values: AfterCallResultValues) => {
+    if (!handlingTask || !handlingCallId) return;
+    await services.submitResult(handlingTask.id, {
+      callId: handlingCallId,
+      contactResult,
+      remark: values.remark,
+      classification: values.classification,
+      lowValueReason: values.lowValueReason,
+      conclusion: values.conclusion,
+      scheduleFollowUp: values.scheduleFollowUp,
+      nextFollowUpAt: values.nextFollowUpAt,
+      expectedVersion: handlingTask.follow_up_data_version ?? 0,
+      idempotencyKey: handlingIdempotencyKey,
+    });
+    await finishHandlingSubmission();
+  };
 
   const taskActions = (task: FollowUpTaskDto) => (
     <Flex gap="small" wrap>
@@ -497,7 +526,7 @@ const FollowUpPanel = ({
             key: 'mine',
             label: (
               <span className="agent-follow-up-scope-label">
-                我的跟进
+                我的任务
                 {scopeTotals.mine !== undefined ? (
                   <Badge
                     color="#722ed1"
@@ -513,6 +542,7 @@ const FollowUpPanel = ({
         onChange={(key) => setScope(key as 'unassigned' | 'mine')}
       />
       <ProTable<FollowUpTaskDto>
+        className="recov-stable-pagination-table"
         actionRef={actionRef}
         rowKey="id"
         columns={columns}
@@ -521,6 +551,7 @@ const FollowUpPanel = ({
         scroll={{ x: 1400 }}
         pagination={{
           defaultPageSize: 10,
+          showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条`,
         }}
         request={async ({
@@ -563,14 +594,15 @@ const FollowUpPanel = ({
       />
 
       <Modal
-        title="提交处理结果"
+        title={handlingCallId ? '提交话后结果' : '提交处理结果'}
         open={Boolean(handlingTask)}
         okText="提交结果"
         cancelText="取消"
+        footer={handlingCallId ? null : undefined}
         mask={{ enabled: true, closable: false }}
         onCancel={() => setHandlingTask(undefined)}
         onOk={async () => {
-          if (!handlingTask) return;
+          if (!handlingTask || handlingCallId) return;
           const remark = handlingRemark.trim();
           if (!remark) {
             setHandlingError('请填写处理备注');
@@ -612,112 +644,119 @@ const FollowUpPanel = ({
               closedReason: nextAction === 'close' ? closedReason : undefined,
               idempotencyKey: handlingIdempotencyKey,
             });
-            messageApi.success('处理结果已提交');
-            setHandlingTask(undefined);
-            setHandlingError('');
-            await Promise.all([
-              actionRef.current?.reload(),
-              refreshScopeTotals(),
-            ]);
+            await finishHandlingSubmission();
           } catch {
             setHandlingError('处理结果提交失败，请保留当前内容后重试');
           }
         }}
       >
-        <div className="agent-follow-up-close-form">
-          {handlingError ? (
-            <Alert type="error" showIcon title={handlingError} />
-          ) : null}
-          <Select
-            aria-label="联系结果"
-            disabled={Boolean(handlingCallId)}
-            value={contactResult}
-            options={[
-              { value: 'connected', label: '已接通' },
-              { value: 'no_answer', label: '无人接听' },
-              { value: 'busy', label: '占线' },
-              { value: 'rejected', label: '客户拒接' },
-              { value: 'invalid_contact', label: '联系方式无效' },
-              { value: 'technical_failure', label: '技术失败' },
-            ]}
-            onChange={(value) => {
-              setContactResult(value);
-              setNextAction('continue');
-              setHandlingRemark(defaultRemarkFor(value, false));
-              setHandlingError('');
-            }}
+        {handlingTask && handlingCallId ? (
+          <AfterCallResultForm
+            key={handlingCallId}
+            contactResult={contactResult}
+            currentClassification={handlingTask.classification}
+            includeConverted
+            includeInvalidContactReason={false}
+            initialRemark={defaultRemarkFor(contactResult, true)}
+            submitText="提交话后结果"
+            onSubmit={submitCallResult}
           />
-          <Input.TextArea
-            aria-label="处理备注"
-            rows={3}
-            placeholder="填写本次沟通结论"
-            maxLength={300}
-            value={handlingRemark}
-            onChange={(event) => {
-              setHandlingRemark(event.target.value);
-              setHandlingError('');
-            }}
-          />
-          <Select
-            aria-label="下一步"
-            value={nextAction}
-            options={allowedNextActions(contactResult).map((value) => ({
-              value,
-              label: nextActionLabels[value],
-            }))}
-            onChange={(value) => {
-              setNextAction(value);
-              setHandlingError('');
-            }}
-          />
-          {nextAction === 'continue' ? (
-            <DatePicker
-              aria-label="下次跟进时间"
-              format="YYYY-MM-DD HH:mm"
-              showTime={{ format: 'HH:mm', hideDisabledOptions: true }}
-              style={{ width: '100%' }}
-              value={nextFollowUpAt ? dayjs(nextFollowUpAt) : null}
-              disabledDate={(current) => current.isBefore(dayjs(), 'day')}
-              disabledTime={(current) => {
-                const now = dayjs();
-                if (!current.isSame(now, 'day')) return {};
-                return {
-                  disabledHours: () =>
-                    Array.from({ length: now.hour() }, (_, hour) => hour),
-                  disabledMinutes: (hour) =>
-                    hour === now.hour()
-                      ? Array.from(
-                          { length: now.minute() + 1 },
-                          (_, minute) => minute,
-                        )
-                      : [],
-                };
-              }}
-              onChange={(value) => {
-                setNextFollowUpAt(value?.format('YYYY-MM-DDTHH:mm') || '');
-                setHandlingError('');
-              }}
-            />
-          ) : null}
-          {nextAction === 'close' ? (
+        ) : (
+          <div className="agent-follow-up-close-form">
+            {handlingError ? (
+              <Alert type="error" showIcon title={handlingError} />
+            ) : null}
             <Select
-              aria-label="终止原因"
-              placeholder="选择终止原因"
-              value={closedReason}
+              aria-label="联系结果"
+              disabled={Boolean(handlingCallId)}
+              value={contactResult}
               options={[
-                { value: 'customer_refused', label: '客户明确拒绝' },
+                { value: 'connected', label: '已接通' },
+                { value: 'no_answer', label: '无人接听' },
+                { value: 'busy', label: '占线' },
+                { value: 'rejected', label: '客户拒接' },
                 { value: 'invalid_contact', label: '联系方式无效' },
-                { value: 'created_by_error', label: '任务误创建' },
-                { value: 'no_longer_needed', label: '已无需跟进' },
-                { value: 'other', label: '其他' },
+                { value: 'technical_failure', label: '技术失败' },
               ]}
               onChange={(value) => {
-                setClosedReason(value);
+                setContactResult(value);
+                setNextAction('continue');
+                setHandlingRemark(defaultRemarkFor(value, false));
                 setHandlingError('');
               }}
             />
-          ) : null}
-        </div>
+            <Input.TextArea
+              aria-label="处理备注"
+              rows={3}
+              placeholder="填写本次沟通结论"
+              maxLength={300}
+              value={handlingRemark}
+              onChange={(event) => {
+                setHandlingRemark(event.target.value);
+                setHandlingError('');
+              }}
+            />
+            <Select
+              aria-label="下一步"
+              value={nextAction}
+              options={allowedNextActions(contactResult).map((value) => ({
+                value,
+                label: nextActionLabels[value],
+              }))}
+              onChange={(value) => {
+                setNextAction(value);
+                setHandlingError('');
+              }}
+            />
+            {nextAction === 'continue' ? (
+              <DatePicker
+                aria-label="下次跟进时间"
+                format="YYYY-MM-DD HH:mm"
+                showTime={{ format: 'HH:mm', hideDisabledOptions: true }}
+                style={{ width: '100%' }}
+                value={nextFollowUpAt ? dayjs(nextFollowUpAt) : null}
+                disabledDate={(current) => current.isBefore(dayjs(), 'day')}
+                disabledTime={(current) => {
+                  const now = dayjs();
+                  if (!current.isSame(now, 'day')) return {};
+                  return {
+                    disabledHours: () =>
+                      Array.from({ length: now.hour() }, (_, hour) => hour),
+                    disabledMinutes: (hour) =>
+                      hour === now.hour()
+                        ? Array.from(
+                            { length: now.minute() + 1 },
+                            (_, minute) => minute,
+                          )
+                        : [],
+                  };
+                }}
+                onChange={(value) => {
+                  setNextFollowUpAt(value?.format('YYYY-MM-DDTHH:mm') || '');
+                  setHandlingError('');
+                }}
+              />
+            ) : null}
+            {nextAction === 'close' ? (
+              <Select
+                aria-label="终止原因"
+                placeholder="选择终止原因"
+                value={closedReason}
+                options={[
+                  { value: 'customer_refused', label: '客户明确拒绝' },
+                  { value: 'invalid_contact', label: '联系方式无效' },
+                  { value: 'created_by_error', label: '任务误创建' },
+                  { value: 'no_longer_needed', label: '已无需跟进' },
+                  { value: 'other', label: '其他' },
+                ]}
+                onChange={(value) => {
+                  setClosedReason(value);
+                  setHandlingError('');
+                }}
+              />
+            ) : null}
+          </div>
+        )}
       </Modal>
     </div>
   );

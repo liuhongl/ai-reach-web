@@ -42,6 +42,11 @@ const routes: AiReachRoute[] = [
     'ai_call:agent:manage',
   ),
   protectedRoute(
+    '/ai-call/follow-up-data',
+    './aiCallFollowUpData',
+    'ai_call:agent:manage',
+  ),
+  protectedRoute(
     '/ai-call/statistics',
     './aiCallStatistics',
     'ai_call:agent:manage',

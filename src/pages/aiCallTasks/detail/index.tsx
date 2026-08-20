@@ -371,6 +371,7 @@ const AiCallTaskDetailPage = () => {
         <TableCard title="外呼对象">
           <ProTable<AiCallTaskTarget>
             actionRef={actionRef}
+            className="recov-stable-pagination-table"
             columns={columns}
             options={false}
             pagination={{

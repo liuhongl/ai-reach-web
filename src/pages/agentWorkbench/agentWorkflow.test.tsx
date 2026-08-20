@@ -41,6 +41,9 @@ const handoff = {
   masked_contact: '138****0000',
   request_message: '请转人工',
   requested_at: '2026-07-22T08:00:00Z',
+  follow_up_data_id: '100',
+  follow_up_data_version: 1,
+  classification: 'nurturing' as const,
 };
 
 const credential = {
@@ -189,12 +192,21 @@ describe('agent workbench end-to-end state flow', () => {
     expect(callServices.mediaReady).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole('button', { name: '结束通话' }));
-    await waitFor(() => expect(screen.getByText('快速话后确认')).toBeTruthy());
-    fireEvent.click(screen.getByText('已解决'));
-    fireEvent.click(screen.getByText('无需跟进'));
+    await waitFor(() => expect(screen.getByText('话后结果')).toBeTruthy());
+    fireEvent.change(screen.getByRole('textbox', { name: '沟通结论' }), {
+      target: { value: '客户希望后续继续沟通' },
+    });
     fireEvent.click(screen.getByRole('button', { name: '提交并恢复接听' }));
 
     await waitFor(() => expect(submit).toHaveBeenCalledTimes(1));
+    expect(submit).toHaveBeenCalledWith(
+      'call-1',
+      expect.objectContaining({
+        classification: 'nurturing',
+        conclusion: '客户希望后续继续沟通',
+        scheduleFollowUp: false,
+      }),
+    );
     await waitFor(() =>
       expect(screen.getByTestId('presence').textContent).toBe('available'),
     );

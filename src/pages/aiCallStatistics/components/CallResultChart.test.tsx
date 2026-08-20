@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import * as React from 'react';
 import CallResultChart from './CallResultChart';
 
@@ -20,18 +20,23 @@ describe('CallResultChart', () => {
       <CallResultChart
         data={[
           { result: 'connected', count: 19, rate: 0.792 },
-          { result: 'call_failed', count: 5, rate: 0.208 },
+          { result: 'rejected', count: 5, rate: 0.208 },
         ]}
-        onResultClick={jest.fn()}
       />,
     );
 
     expect(mockPieProps.scale.color.range).toEqual(['#5B8F8B', '#C56A7A']);
+    expect(container.textContent).toContain('24');
     const colorDots = container.querySelectorAll(
       'span[aria-hidden="true"]',
     ) as NodeListOf<HTMLElement>;
     expect(colorDots[0].style.display).toBe('inline-block');
     expect(colorDots[0].style.background).toBe('rgb(91, 143, 139)');
     expect(colorDots[1].style.background).toBe('rgb(197, 106, 122)');
+    const legend = screen.getByTestId('call-result-legend');
+    expect(legend.style.display).toBe('grid');
+    expect(legend.style.gridTemplateColumns).toBe(
+      'repeat(2, minmax(0, 1fr))',
+    );
   });
 });

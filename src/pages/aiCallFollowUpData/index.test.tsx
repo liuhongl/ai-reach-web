@@ -1,0 +1,217 @@
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import * as React from 'react';
+import { listAiCallTasks } from '@/pages/aiCallTasks/service';
+import { startFollowUpDataCall } from '@/services/ruoyi/agent-console';
+import FollowUpDataPage from './index';
+import { getFollowUpData, listFollowUpData } from './service';
+
+jest.mock('@/pages/aiCallTasks/service', () => ({
+  listAiCallTasks: jest.fn(),
+}));
+jest.mock('@/components/Permission', () => ({
+  PermissionButton: ({
+    children,
+    onClick,
+  }: {
+    children: string;
+    onClick?: () => void;
+  }) => (
+    <button type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+}));
+jest.mock('@/pages/agentWorkbench/hooks/useAgentPresence', () => ({
+  useAgentPresence: () => ({
+    phase: 'ready',
+    status: 'available',
+    profile: { agent_identity: 'agent-1', enabled: true },
+    consoleSessionId: 'session-1',
+    errorMessage: '',
+    bootstrap: jest.fn(),
+    goOnline: jest.fn().mockResolvedValue(true),
+  }),
+}));
+jest.mock('@/pages/agentWorkbench/hooks/useFollowUpCallback', () => ({
+  useFollowUpCallback: () => ({
+    phase: 'idle',
+    connectionStage: 'idle',
+    microphoneEnabled: true,
+    remoteAudioReady: false,
+    networkQuality: 'unknown',
+    errorMessage: '',
+    toggleMicrophone: jest.fn(),
+    switchAudioInput: jest.fn(),
+    endCall: jest.fn(),
+  }),
+}));
+jest.mock('@/pages/agentWorkbench/components/CurrentCallPanel', () => ({
+  __esModule: true,
+  default: () => <div>人工外呼通话面板</div>,
+}));
+jest.mock('@/services/ruoyi/agent-console', () => ({
+  endFollowUpDataCall: jest.fn(),
+  startFollowUpDataCall: jest.fn(),
+}));
+jest.mock('./service', () => ({
+  adjustFollowUpDataClassification: jest.fn(),
+  getFollowUpData: jest.fn(),
+  listFollowUpData: jest.fn(),
+  scheduleFollowUpData: jest.fn(),
+}));
+jest.mock('@/pages/aiCallRecords/CallRecordDetailContent', () => ({
+  __esModule: true,
+  default: ({ callId }: { callId: string }) => <div>通话详情 {callId}</div>,
+}));
+
+const row = {
+  follow_up_data_id: '100',
+  tenant_id: 'tenant-a',
+  task_id: '200',
+  target_id: '300',
+  source_call_id: 'call-1',
+  customer_name: '科技公司',
+  masked_contact: '138****1001',
+  task_name: 'SaaS 产品回访',
+  classification: 'interested',
+  classification_reason: '客户要求安排产品演示',
+  classification_source: 'ai',
+  classification_confidence: 'high',
+  suggest_review: false,
+  latest_conclusion: '客户希望下周查看产品演示',
+  last_contact_at: '2026-08-15T10:00:00+08:00',
+  next_follow_up_at: null,
+  active_follow_up_id: null,
+  follow_up_task_status: null,
+  active_follow_up_owner_agent_identity: null,
+  active_follow_up_reason: null,
+  classification_updated_at: '2026-08-15T10:00:00+08:00',
+  classification_updated_by: null,
+  after_call_result_status: 'not_applicable',
+  blocking_human_call_id: null,
+  version: 1,
+};
+
+const findDialogByTitle = async (title: string) => {
+  const titleNode = await screen.findByText(title, {
+    selector: '.ant-drawer-title, .ant-modal-title',
+  });
+  return titleNode.closest('[role="dialog"]') as HTMLElement;
+};
+
+describe('跟进数据页面', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (listAiCallTasks as jest.Mock).mockResolvedValue({ rows: [], total: 0 });
+    (listFollowUpData as jest.Mock).mockResolvedValue({
+      rows: [row],
+      total: 1,
+    });
+    (getFollowUpData as jest.Mock).mockResolvedValue({
+      ...row,
+      timeline: [
+        {
+          type: 'call',
+          call_id: 'call-1',
+          occurred_at: '2026-08-15T10:00:00+08:00',
+          entry_type: 'sip',
+          status: 'completed',
+          duration_ms: 65_000,
+          conclusion: '客户希望下周查看产品演示',
+          after_call_result_status: 'not_applicable',
+        },
+      ],
+    });
+  });
+
+  it('默认查询有意向并支持四类切换和详情时间线', async () => {
+    render(<FollowUpDataPage />);
+
+    await waitFor(() =>
+      expect(listFollowUpData).toHaveBeenCalledWith(
+        expect.objectContaining({ classification: 'interested' }),
+      ),
+    );
+    const searchLabels = Array.from(
+      document.querySelectorAll('.ant-form-item-label'),
+    ).map((item) => item.textContent);
+    expect(searchLabels).toContain('客户姓名');
+    expect(searchLabels).not.toContain('分类可信度');
+    expect(searchLabels).not.toContain('计划跟进时间');
+    for (const label of ['有意向', '持续跟进', '低价值', '已转化']) {
+      expect(screen.getByRole('tab', { name: label })).toBeTruthy();
+    }
+    fireEvent.click(screen.getByRole('tab', { name: '持续跟进' }));
+    await waitFor(() =>
+      expect(listFollowUpData).toHaveBeenCalledWith(
+        expect.objectContaining({ classification: 'nurturing' }),
+      ),
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: '详情' }));
+    expect(getFollowUpData).toHaveBeenCalledWith('100');
+    const drawer = await findDialogByTitle('跟进数据详情');
+    expect(within(drawer).getByText('客户要求安排产品演示')).toBeTruthy();
+    fireEvent.click(
+      within(drawer).getByRole('button', { name: '查看本次通话详情' }),
+    );
+    expect(await screen.findByText('通话详情 call-1')).toBeTruthy();
+  });
+
+  it('提供调整分类和安排回访表单', async () => {
+    render(<FollowUpDataPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '调整分类' }));
+    const classificationDialog = await findDialogByTitle('调整分类');
+    expect(within(classificationDialog).getByText('客户分类')).toBeTruthy();
+    expect(
+      within(classificationDialog).getByDisplayValue('客户要求安排产品演示'),
+    ).toBeTruthy();
+    fireEvent.click(
+      within(classificationDialog).getByRole('button', { name: 'Close' }),
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: '安排回访' }));
+    const scheduleDialog = await findDialogByTitle('安排回访');
+    expect(within(scheduleDialog).getByText('本次回访原因')).toBeTruthy();
+    expect(within(scheduleDialog).getByText('计划回访时间')).toBeTruthy();
+  });
+
+  it('从跟进数据确认客户上下文后发起人工外呼', async () => {
+    (startFollowUpDataCall as jest.Mock).mockResolvedValue({
+      data: {
+        call_id: 'call-manual-1',
+        follow_up_id: null,
+        status: 'accepted',
+        livekit_url: 'wss://livekit.example.com',
+        participant_token: 'token',
+        participant_identity: 'agent-call-manual-1',
+        expires_in_seconds: 60,
+      },
+    });
+    render(<FollowUpDataPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '人工外呼' }));
+    const dialog = await findDialogByTitle('确认人工外呼');
+    expect(within(dialog).getByText('有意向')).toBeTruthy();
+    expect(within(dialog).getByText(row.latest_conclusion)).toBeTruthy();
+    expect(within(dialog).getByText('建议沟通重点')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: '发起外呼' }));
+
+    await waitFor(() =>
+      expect(startFollowUpDataCall).toHaveBeenCalledWith('100', {
+        consoleSessionId: 'session-1',
+        idempotencyKey: expect.any(String),
+        takeover: false,
+        takeoverReason: undefined,
+      }),
+    );
+    expect(await screen.findByText('人工外呼通话面板')).toBeTruthy();
+  });
+});

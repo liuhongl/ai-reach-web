@@ -27,12 +27,11 @@ describe('handoff administration page', () => {
       'AI 交接摘要与待处理事项',
       '转接前对话摘录',
       '本次转人工未保存转接前对话',
-      '录音状态',
+      '通话录音',
+      '暂无可播放录音',
       '快速话后结果',
       '关联跟进任务',
-      '通话配置快照（排查用）',
-      '本次通话未保存配置快照，无法事后还原',
-      '修复异常状态',
+      '重新核对状态',
       '查看详情',
       'getHandoffReasonLabel',
       'getDialogueSpeakerLabel',
@@ -44,17 +43,24 @@ describe('handoff administration page', () => {
     ])
       expect(source).toContain(text);
     expect(source).toContain('failure_stage');
+    expect(source).toContain('terminalHandoffStatuses.has(row.status)');
     expect(source).toContain('reconcileAdminHandoff');
+    expect(source).toContain('核对完成，当前状态无需调整');
+    expect(source).toContain('核对完成，状态已更新为');
+    expect(source).toContain('getAiCallRecordRecording');
+    expect(source).toContain('handoff-recording-player');
+    expect(source).toContain('<audio');
     expect(source).toContain('styles={detailDescriptionStyles}');
     expect(source).not.toContain("title: 'call_id'");
     expect(source).not.toContain("title: '是否生成未接回访'");
     expect(source).not.toContain("label: 'handoff_id'");
-    expect(source).toContain("Reflect.get(executionConfig, 'voiceName')");
-    expect(source).not.toContain("Reflect.get(executionConfig, 'voice'),");
+    expect(source).not.toContain('通话配置快照（排查用）');
+    expect(source).not.toContain('本次通话未保存配置快照');
     expect(source).not.toContain('>三方对话<');
     expect(source).not.toContain("label: '模型与话术配置'");
     expect(source).not.toContain('重新补偿');
     expect(source).not.toContain('修改正常结果');
+    expect(source).not.toContain("row.status === 'failed'");
   });
 
   it('keeps the filter area to common conditions and reuses record dialogue bubbles', () => {

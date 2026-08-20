@@ -7,6 +7,10 @@ import type {
   AiCallTaskTestCapability,
   AiCallTaskTestStatus,
   AnswerMode,
+  ExceptionBatch,
+  ExceptionCategory,
+  ExceptionSummary,
+  ExceptionTarget,
   ExecutionMode,
   LinphoneTestScenario,
   TargetStatus,
@@ -25,6 +29,7 @@ const RUNTIME_CALLS_PATH = `${OUTBOUND_PREFIX}/runtime/calls`;
 const SESSIONS_PATH = `${OUTBOUND_PREFIX}/sessions`;
 const TASK_TESTS_PATH = `${OUTBOUND_PREFIX}/lab/outbound-task-tests`;
 const VALIDATIONS_PATH = `${OUTBOUND_PREFIX}/outbound-validations`;
+const EXCEPTIONS_PATH = `${OUTBOUND_PREFIX}/outbound-exceptions`;
 
 export type PageResult<T> = {
   rows: T[];
@@ -38,6 +43,7 @@ export type AiCallTaskQuery = {
   status?: TaskStatus;
   beginTime?: string;
   endTime?: string;
+  sceneCode?: string;
 };
 
 export type AiCallTaskTargetQuery = {
@@ -46,6 +52,14 @@ export type AiCallTaskTargetQuery = {
   phoneNumber?: string;
   customerName?: string;
   status?: TargetStatus;
+};
+
+export type ExceptionTargetQuery = {
+  category: ExceptionCategory;
+  pageNum: number;
+  pageSize: number;
+  status?: string;
+  keyword?: string;
 };
 
 export type ValidationIssueQuery = {
@@ -170,6 +184,78 @@ export const listAiCallTasks = async (
       params,
     }),
   );
+
+export const getExceptionSummary = async (): Promise<ExceptionSummary> =>
+  unwrapData(
+    await ruoyiRequest<ExceptionSummary>(`${EXCEPTIONS_PATH}/summary`, {
+      ...requestOptions,
+      method: 'get',
+    }),
+  );
+
+export const listExceptionTargets = async (
+  params: ExceptionTargetQuery,
+): Promise<PageResult<ExceptionTarget>> =>
+  unwrapPage(
+    await ruoyiRequest<ExceptionTarget>(EXCEPTIONS_PATH, {
+      ...requestOptions,
+      method: 'get',
+      params,
+    }),
+  );
+
+export const updateExceptionPolicy = async (
+  category: ExceptionCategory,
+  payload: { intervalDays: number; maxRetryCount: number },
+): Promise<void> => {
+  await unwrapData(
+    await ruoyiRequest(`${EXCEPTIONS_PATH}/${category}/policy`, {
+      ...requestOptions,
+      method: 'put',
+      data: payload,
+      repeatSubmit: false,
+    }),
+  );
+};
+
+export const startExceptionBatch = async (
+  category: ExceptionCategory,
+  idempotencyKey: string,
+): Promise<ExceptionBatch> =>
+  unwrapData(
+    await ruoyiRequest<ExceptionBatch>(
+      `${EXCEPTIONS_PATH}/${category}/retry-batches`,
+      {
+        ...requestOptions,
+        method: 'post',
+        headers: { 'Idempotency-Key': idempotencyKey },
+      },
+    ),
+  );
+
+export const downloadExceptionTargets = async (
+  category: ExceptionCategory,
+): Promise<void> => {
+  const response = await ruoyiRequest<Blob>(`${EXCEPTIONS_PATH}/export`, {
+    ...requestOptions,
+    method: 'get',
+    params: { category },
+    responseType: 'blob',
+  });
+  const blob = response as Blob;
+  if (blob.type === 'application/json') {
+    const result = JSON.parse(await blob.text()) as { msg?: string };
+    throw new Error(result.msg || '下载文件失败');
+  }
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `异常呼叫数据-${category}.xlsx`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  window.URL.revokeObjectURL(url);
+};
 
 export const getAiCallTask = async (taskId: string): Promise<AiCallTask> =>
   unwrapData(
@@ -336,10 +422,12 @@ export const reportAiCallTaskBrowserEvent = async (
   );
 };
 
-export const downloadOutboundTargetTemplate = (): Promise<void> =>
+export const downloadOutboundTargetTemplate = (
+  promptProfileId?: string,
+): Promise<void> =>
   ruoyiDownload(
     `${OUTBOUND_PREFIX}/outbound-targets/import-template`,
-    {},
+    promptProfileId ? { promptProfileId } : {},
     '外呼名单导入模板.xlsx',
     requestOptions,
   );

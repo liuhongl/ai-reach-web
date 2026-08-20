@@ -1,7 +1,6 @@
 import { PlusOutlined, ReloadOutlined } from '@ant-design/icons';
 import {
   type ActionType,
-  PageContainer,
   type ProColumns,
   ProTable,
 } from '@ant-design/pro-components';
@@ -19,6 +18,7 @@ import {
 } from 'antd';
 import * as React from 'react';
 import { useMemo, useRef, useState } from 'react';
+import { ListPage } from '@/components/ListLayout';
 import TableActions from '@/components/TableActions';
 import {
   type AdminAgentDto,
@@ -197,10 +197,11 @@ const AgentAdminPage = () => {
         title: '操作',
         valueType: 'option',
         fixed: 'right',
-        width: 150,
+        width: 190,
         render: (_, row) => (
           <TableActions
-            maxVisible={3}
+            maxVisible={2}
+            showLabels
             actions={[
               {
                 key: 'detail',
@@ -241,7 +242,7 @@ const AgentAdminPage = () => {
   );
 
   return (
-    <PageContainer className="agent-admin-page" title="坐席管理">
+    <ListPage className="agent-admin-page" title="坐席管理">
       <AdminMetricRow
         items={[
           {
@@ -277,6 +278,7 @@ const AgentAdminPage = () => {
         ]}
       />
       <ProTable<AdminAgentDto>
+        className="recov-stable-pagination-table"
         actionRef={actionRef}
         rowKey={(row) => String(row.id)}
         columns={columns}
@@ -284,6 +286,7 @@ const AgentAdminPage = () => {
         scroll={{ x: 1100 }}
         pagination={{
           defaultPageSize: 10,
+          showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条`,
         }}
         request={async ({ current, pageSize, ...filters }) => {
@@ -413,7 +416,10 @@ const AgentAdminPage = () => {
             {
               key: 'agent',
               label: '坐席',
-              children: detailRecord?.agent_identity,
+              children:
+                detailRecord?.nick_name ||
+                detailRecord?.user_name ||
+                detailRecord?.agent_identity,
             },
             {
               key: 'status',
@@ -447,7 +453,7 @@ const AgentAdminPage = () => {
           ]}
         />
       </Drawer>
-    </PageContainer>
+    </ListPage>
   );
 };
 

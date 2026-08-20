@@ -51,13 +51,13 @@ const analysisPresentations = {
 
 const followUpPresentations = {
   pending: {
-    text: '待跟进',
+    text: '待处理',
     color: 'warning',
     tooltip: '已生成正式跟进任务，等待坐席领取',
     target: 'follow_up',
   },
   processing: {
-    text: '跟进中',
+    text: '处理中',
     color: 'processing',
     tooltip: '正式跟进任务正在处理',
     target: 'follow_up',
@@ -162,9 +162,6 @@ export const getFollowUpPresentation = (
     | 'taskId'
     | 'followUpId'
     | 'followUpStatus'
-    | 'followUpReviewStatus'
-    | 'followUpSuggested'
-    | 'followUpRequiresReview'
   >,
 ): StatusPresentation | null => {
   if (!isFormalOutboundRecord(record)) {
@@ -192,19 +189,29 @@ export const getFollowUpPresentation = (
       target: null,
     };
   }
-  if (record.followUpReviewStatus === 'dismissed') {
+  return null;
+};
+
+export const getClassificationReviewPresentation = (
+  record: Pick<
+    AiCallRecord,
+    'entryType' | 'taskId' | 'classificationReviewStatus'
+  >,
+): StatusPresentation | null => {
+  if (!isFormalOutboundRecord(record)) return null;
+  if (record.classificationReviewStatus === 'suggested') {
     return {
-      text: '无需跟进',
-      color: 'default',
-      tooltip: '人工已确认无需创建跟进任务',
+      text: '建议复核',
+      color: 'warning',
+      tooltip: '本次 AI 分类置信度较低或证据存在冲突，可人工复核',
       target: 'record',
     };
   }
-  if (record.followUpRequiresReview) {
+  if (record.classificationReviewStatus === 'reviewed') {
     return {
-      text: '待人工确认',
-      color: 'warning',
-      tooltip: 'AI 分析已完成，等待人工确认是否创建正式任务',
+      text: '已复核',
+      color: 'success',
+      tooltip: '本次 AI 分类已经人工确认或修改',
       target: 'record',
     };
   }

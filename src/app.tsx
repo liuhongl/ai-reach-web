@@ -1,13 +1,13 @@
 import * as React from 'react';
+import { UserOutlined } from '@ant-design/icons';
 import type { RequestConfig, RunTimeLayoutConfig } from '@umijs/max';
 import { history } from '@umijs/max';
-import { App as AntdApp } from 'antd';
+import { App as AntdApp, Avatar } from 'antd';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { setRuoyiMessage } from '@/adapters/ruoyi/message';
 import { getToken } from '@/adapters/ruoyi/token';
 import { buildAiCallMenu } from '@/aiCallNavigation';
-import Footer from '@/components/Footer';
 import NotificationCenter from '@/components/NotificationCenter';
 import PreferencesDrawer from '@/components/PreferencesDrawer';
 import SseBootstrap from '@/components/SseBootstrap';
@@ -129,7 +129,10 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
           title: initialState.currentUser.name,
           render: () => (
             <UserMenu>
-              <span>{initialState.currentUser?.name || '用户'}</span>
+              <span className="recov-user-menu-trigger">
+                <Avatar icon={<UserOutlined />} size={24} />
+                <span>{initialState.currentUser?.name || '用户'}</span>
+              </span>
             </UserMenu>
           ),
         }
@@ -141,7 +144,6 @@ export const layout: RunTimeLayoutConfig = ({ initialState }) => {
         {children}
       </>
     ),
-    footerRender: () => <Footer />,
     menuDataRender: () =>
       buildAiCallMenu(initialState?.currentUser?.permissions ?? []),
     onPageChange: () => {

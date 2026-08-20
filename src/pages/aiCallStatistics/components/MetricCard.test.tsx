@@ -1,12 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ConfigProvider } from 'antd';
 import React from 'react';
 import MetricCard from './MetricCard';
 
 describe('MetricCard', () => {
-  it('强调态使用主题色并保持鼠标与键盘操作', () => {
-    const onClick = jest.fn();
-
+  it('强调态使用主题色且卡片不提供下钻操作', () => {
     render(
       <ConfigProvider theme={{ token: { colorPrimary: '#722ED1' } }}>
         <MetricCard
@@ -17,7 +15,6 @@ describe('MetricCard', () => {
           icon={<span />}
           tone="error"
           emphasized
-          onClick={onClick}
         />
       </ConfigProvider>,
     );
@@ -27,10 +24,6 @@ describe('MetricCard', () => {
     );
     expect(screen.getByText('条').style.color).toBe('rgb(114, 46, 209)');
 
-    const card = screen.getByRole('button', { name: '待跟进 7条' });
-    fireEvent.click(card);
-    fireEvent.keyDown(card, { key: 'Enter' });
-    fireEvent.keyDown(card, { key: ' ' });
-    expect(onClick).toHaveBeenCalledTimes(3);
+    expect(screen.queryByRole('button', { name: '待跟进 7条' })).toBeNull();
   });
 });

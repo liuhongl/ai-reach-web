@@ -44,11 +44,24 @@ export type FollowUpStatus =
 export type FollowUpSourceType =
   | 'after_call_work'
   | 'handoff_unanswered'
-  | 'ai_post_call';
+  | 'ai_post_call'
+  | 'manual_schedule';
 export type DispositionCode =
   | 'resolved'
   | 'follow_up_required'
   | 'customer_refused'
+  | 'invalid_contact'
+  | 'other';
+export type CustomerClassification =
+  | 'interested'
+  | 'nurturing'
+  | 'low_value'
+  | 'converted';
+export type CustomerLowValueReason =
+  | 'explicit_rejection'
+  | 'no_current_need'
+  | 'customer_mismatch'
+  | 'non_target_customer'
   | 'invalid_contact'
   | 'other';
 export type ClosedReason =
@@ -142,6 +155,10 @@ export type HandoffDto = {
   masked_contact?: string;
   business_type?: string | null;
   business_id?: string | null;
+  follow_up_data_id?: BigintString | null;
+  follow_up_data_version?: number;
+  classification?: CustomerClassification | null;
+  classification_reason?: string | null;
   handoff_summary?: string | null;
   pending_items?: PendingItemDto[];
   recent_dialogue?: DialogueTurnDto[];
@@ -181,6 +198,7 @@ export type MediaCredentialDto = {
 
 export type FollowUpCallbackCredentialDto = {
   call_id: string;
+  follow_up_id?: BigintString | null;
   status: 'accepted';
   livekit_url: string;
   participant_token: string;
@@ -194,9 +212,14 @@ export type AfterCallWorkDto = {
   call_id: string;
   handoff_id: BigintString;
   agent_identity: string;
-  disposition_code: DispositionCode;
+  follow_up_data_id?: BigintString | null;
+  disposition_code?: DispositionCode | null;
   summary?: string | null;
-  needs_follow_up: boolean;
+  needs_follow_up?: boolean | null;
+  classification?: Exclude<CustomerClassification, 'converted'> | null;
+  low_value_reason?: CustomerLowValueReason | null;
+  next_follow_up_at?: string | null;
+  result_version?: number | null;
   submitted_at: string;
 };
 
@@ -218,14 +241,18 @@ export type FollowUpNextAction = 'continue' | 'complete' | 'close';
 
 export type FollowUpHandlingResultDto = {
   id: BigintString;
-  follow_up_id: BigintString;
+  follow_up_id?: BigintString | null;
   related_call_id?: string | null;
   contact_channel: Exclude<ContactChannel, 'system_callback'>;
   contact_result: AttemptResult;
-  remark: string;
-  next_action: FollowUpNextAction;
+  follow_up_data_id?: BigintString | null;
+  remark?: string | null;
+  next_action?: FollowUpNextAction | null;
   next_follow_up_at?: string | null;
   closed_reason?: ClosedReason | null;
+  classification?: CustomerClassification | null;
+  low_value_reason?: CustomerLowValueReason | null;
+  result_version?: number | null;
   agent_identity: string;
   handled_at: string;
 };
@@ -244,6 +271,10 @@ export type FollowUpRecordDto = {
 
 export type FollowUpTaskDto = {
   id: BigintString;
+  follow_up_data_id?: BigintString | null;
+  classification?: CustomerClassification | null;
+  low_value_reason?: CustomerLowValueReason | null;
+  follow_up_data_version?: number | null;
   source_type: FollowUpSourceType;
   source_call_id: string;
   source_handoff_id: BigintString | null;
@@ -315,7 +346,7 @@ export type MediaReadyInput = IdempotentSessionInput & {
   participantIdentity: string;
 };
 
-export type AfterCallWorkInput = {
+type LegacyAfterCallWorkInput = {
   handoffId: BigintString;
   dispositionCode: DispositionCode;
   needsFollowUp: boolean;
@@ -323,6 +354,21 @@ export type AfterCallWorkInput = {
   customerCallbackAt?: string;
   idempotencyKey: string;
 };
+
+type ClassifiedAfterCallWorkInput = {
+  handoffId: BigintString;
+  classification: Exclude<CustomerClassification, 'converted'>;
+  lowValueReason?: Exclude<CustomerLowValueReason, 'invalid_contact'>;
+  conclusion: string;
+  scheduleFollowUp: boolean;
+  nextFollowUpAt?: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+};
+
+export type AfterCallWorkInput =
+  | LegacyAfterCallWorkInput
+  | ClassifiedAfterCallWorkInput;
 
 export type FollowUpAttemptInput = {
   contactChannel: ContactChannel;
@@ -342,7 +388,7 @@ export type CloseFollowUpInput = {
   idempotencyKey: string;
 };
 
-export type SubmitFollowUpHandlingResultInput = {
+type LegacyFollowUpHandlingResultInput = {
   callId?: string;
   contactChannel?: Exclude<
     ContactChannel,
@@ -354,6 +400,32 @@ export type SubmitFollowUpHandlingResultInput = {
   nextFollowUpAt?: string;
   closedReason?: ClosedReason;
   idempotencyKey: string;
+};
+
+export type ClassifiedFollowUpHandlingResultInput = {
+  callId?: string;
+  contactChannel?: Exclude<
+    ContactChannel,
+    'system_callback' | 'manual_phone'
+  >;
+  contactResult: AttemptResult;
+  remark?: string;
+  classification?: CustomerClassification;
+  lowValueReason?: CustomerLowValueReason;
+  conclusion?: string;
+  scheduleFollowUp: boolean;
+  nextFollowUpAt?: string;
+  expectedVersion: number;
+  idempotencyKey: string;
+};
+
+export type SubmitFollowUpHandlingResultInput =
+  | LegacyFollowUpHandlingResultInput
+  | ClassifiedFollowUpHandlingResultInput;
+
+export type FollowUpDataCallInput = IdempotentSessionInput & {
+  takeover?: boolean;
+  takeoverReason?: string;
 };
 
 export type AdminAgentCreateInput = {
@@ -520,13 +592,24 @@ export const submitAfterCallWork = (
     {
       method: 'put',
       headers: idempotencyHeaders(input.idempotencyKey),
-      data: {
-        handoff_id: input.handoffId,
-        disposition_code: input.dispositionCode,
-        needs_follow_up: input.needsFollowUp,
-        summary: input.summary,
-        customer_callback_at: input.customerCallbackAt,
-      },
+      data:
+        'classification' in input
+          ? {
+              handoff_id: input.handoffId,
+              classification: input.classification,
+              low_value_reason: input.lowValueReason,
+              conclusion: input.conclusion,
+              schedule_follow_up: input.scheduleFollowUp,
+              next_follow_up_at: input.nextFollowUpAt,
+              expected_version: input.expectedVersion,
+            }
+          : {
+              handoff_id: input.handoffId,
+              disposition_code: input.dispositionCode,
+              needs_follow_up: input.needsFollowUp,
+              summary: input.summary,
+              customer_callback_at: input.customerCallbackAt,
+            },
     },
   );
 
@@ -579,16 +662,61 @@ export const submitFollowUpHandlingResult = (
     {
       method: 'post',
       headers: idempotencyHeaders(input.idempotencyKey),
+      data:
+        'scheduleFollowUp' in input
+          ? {
+              call_id: input.callId,
+              ...(input.contactChannel
+                ? { contact_channel: input.contactChannel }
+                : {}),
+              contact_result: input.contactResult,
+              remark: input.remark,
+              classification: input.classification,
+              low_value_reason: input.lowValueReason,
+              conclusion: input.conclusion,
+              schedule_follow_up: input.scheduleFollowUp,
+              next_follow_up_at: input.nextFollowUpAt,
+              expected_version: input.expectedVersion,
+            }
+          : {
+              call_id: input.callId,
+              ...(input.contactChannel
+                ? { contact_channel: input.contactChannel }
+                : {}),
+              contact_result: input.contactResult,
+              remark: input.remark,
+              next_action: input.nextAction,
+              next_follow_up_at: input.nextFollowUpAt,
+              closed_reason: input.closedReason,
+            },
+    },
+  );
+
+export const submitFollowUpDataHandlingResult = (
+  followUpDataId: BigintString,
+  input: ClassifiedFollowUpHandlingResultInput,
+) =>
+  agentConsoleRequest<{
+    follow_up_data_id: BigintString;
+    classification: CustomerClassification;
+    version: number;
+    follow_up?: FollowUpTaskDto | null;
+    handling_result: FollowUpHandlingResultDto;
+  }>(
+    `${AGENT_CONSOLE_API_PREFIX}/follow-up-data/${encodeId(followUpDataId)}/handling-results`,
+    {
+      method: 'post',
+      headers: idempotencyHeaders(input.idempotencyKey),
       data: {
         call_id: input.callId,
-        ...(input.contactChannel
-          ? { contact_channel: input.contactChannel }
-          : {}),
         contact_result: input.contactResult,
         remark: input.remark,
-        next_action: input.nextAction,
+        classification: input.classification,
+        low_value_reason: input.lowValueReason,
+        conclusion: input.conclusion,
+        schedule_follow_up: input.scheduleFollowUp,
         next_follow_up_at: input.nextFollowUpAt,
-        closed_reason: input.closedReason,
+        expected_version: input.expectedVersion,
       },
     },
   );
@@ -626,6 +754,25 @@ export const startFollowUpCall = (
     },
   );
 
+export const startFollowUpDataCall = (
+  followUpDataId: BigintString,
+  input: FollowUpDataCallInput,
+) =>
+  agentConsoleRequest<FollowUpCallbackCredentialDto>(
+    `${AGENT_CONSOLE_API_PREFIX}/follow-up-data/${encodeId(followUpDataId)}/call`,
+    {
+      method: 'post',
+      headers: idempotencyHeaders(input.idempotencyKey),
+      data: {
+        ...presenceData(input),
+        takeover: input.takeover ?? false,
+        ...(input.takeoverReason
+          ? { takeover_reason: input.takeoverReason }
+          : {}),
+      },
+    },
+  );
+
 export const endFollowUpCall = (
   followUpId: BigintString,
   callId: string,
@@ -633,6 +780,20 @@ export const endFollowUpCall = (
 ) =>
   agentConsoleRequest<{ call_id: string; status: 'completed'; end_reason: string }>(
     `${AGENT_CONSOLE_API_PREFIX}/follow-ups/${encodeId(followUpId)}/call/${encodeId(callId)}/end`,
+    {
+      method: 'post',
+      headers: idempotencyHeaders(input.idempotencyKey),
+      data: presenceData(input),
+    },
+  );
+
+export const endFollowUpDataCall = (
+  followUpDataId: BigintString,
+  callId: string,
+  input: IdempotentSessionInput,
+) =>
+  agentConsoleRequest<{ call_id: string; status: 'completed'; end_reason: string }>(
+    `${AGENT_CONSOLE_API_PREFIX}/follow-up-data/${encodeId(followUpDataId)}/call/${encodeId(callId)}/end`,
     {
       method: 'post',
       headers: idempotencyHeaders(input.idempotencyKey),
@@ -729,7 +890,14 @@ export const reconcileAdminHandoff = (
 ) =>
   agentConsoleRequest<HandoffDto>(
     `${AGENT_CONSOLE_ADMIN_API_PREFIX}/handoffs/${encodeId(handoffId)}/reconcile`,
-    { method: 'post', headers: idempotencyHeaders(idempotencyKey) },
+    {
+      method: 'post',
+      headers: idempotencyHeaders(idempotencyKey),
+      data: {
+        confirmed: true,
+        reason: '管理员手动重新核对异常转人工状态',
+      },
+    },
   );
 
 export const listAdminFollowUps = (params: PageQuery = {}) =>

@@ -10,7 +10,7 @@ const metadata: AiCallRuleMetadata = {
   retryableResults: [
     { value: 'no_answer', label: '无人接听' },
     { value: 'busy', label: '忙线' },
-    { value: 'call_failed', label: '呼叫失败' },
+    { value: 'rejected', label: '拒接' },
   ],
 };
 
@@ -25,7 +25,7 @@ let rules: AiCallRule[] = [
     ],
     retryCount: 2,
     retryIntervalsMinutes: [30, 60],
-    retryableResults: ['no_answer', 'busy', 'call_failed'],
+    retryableResults: ['no_answer', 'busy'],
     updatedAt: '2026-07-27 10:00:00',
   },
   {

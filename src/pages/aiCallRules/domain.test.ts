@@ -9,7 +9,7 @@ const metadata: AiCallRuleMetadata = {
   retryableResults: [
     { value: 'no_answer', label: '无人接听' },
     { value: 'busy', label: '忙线' },
-    { value: 'call_failed', label: '呼叫失败' },
+    { value: 'rejected', label: '拒接' },
   ],
 };
 
@@ -64,7 +64,7 @@ describe('AI Call rule domain', () => {
         buildRule({
           retryCount: 6,
           retryIntervalsMinutes: [30, 0, 60, 90, 120, 150],
-          retryableResults: ['rejected'],
+          retryableResults: ['invalid_number'],
         }),
         metadata,
       ),

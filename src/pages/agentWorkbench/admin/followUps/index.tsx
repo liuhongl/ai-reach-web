@@ -1,13 +1,11 @@
-import {
-  PageContainer,
-  type ProColumns,
-  ProTable,
-} from '@ant-design/pro-components';
+import { type ProColumns, ProTable } from '@ant-design/pro-components';
 import { useSearchParams } from '@umijs/max';
 import { Button, Tag } from 'antd';
 import dayjs from 'dayjs';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ListPage } from '@/components/ListLayout';
+import AgentName from '@/pages/agentWorkbench/components/AgentName';
 import {
   type FollowUpTaskDto,
   getAdminFollowUp,
@@ -184,7 +182,9 @@ export const FollowUpOverviewPage = () => {
         dataIndex: 'owner_agent_identity',
         hideInSearch: true,
         search: false,
-        renderText: (value) => value || '待认领',
+        render: (_, row) => (
+          <AgentName identity={row.owner_agent_identity} emptyText="待认领" />
+        ),
       },
       {
         title: '客户预约时间',
@@ -232,7 +232,7 @@ export const FollowUpOverviewPage = () => {
   );
 
   return (
-    <PageContainer className="agent-admin-page" title="跟进总览">
+    <ListPage className="agent-admin-page" title="跟进总览">
       <AdminMetricRow
         items={[
           {
@@ -262,12 +262,14 @@ export const FollowUpOverviewPage = () => {
         ]}
       />
       <ProTable<FollowUpTaskDto>
+        className="recov-stable-pagination-table"
         rowKey={(row) => String(row.id)}
         columns={columns}
         search={{ labelWidth: 112, defaultCollapsed: false }}
         scroll={{ x: 1300 }}
         pagination={{
           defaultPageSize: 10,
+          showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条`,
         }}
         request={async ({
@@ -322,6 +324,6 @@ export const FollowUpOverviewPage = () => {
           setDetailError(undefined);
         }}
       />
-    </PageContainer>
+    </ListPage>
   );
 };

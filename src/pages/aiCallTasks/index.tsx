@@ -21,6 +21,7 @@ import {
   TableCard,
 } from '@/components/ListLayout';
 import TaskActions from './components/TaskActions';
+import ExceptionRetryPanel from './components/ExceptionRetryPanel';
 import TaskStatusTag from './components/TaskStatusTag';
 import {
   type AiCallTask,
@@ -364,7 +365,7 @@ const AiCallTasksPage = () => {
             columns={columns}
             options={false}
             pagination={{
-              defaultPageSize: 20,
+              defaultPageSize: 10,
               showSizeChanger: true,
               showTotal: (total) => `共 ${total} 条`,
             }}
@@ -374,7 +375,7 @@ const AiCallTasksPage = () => {
                 | undefined;
               const result = await listAiCallTasks({
                 pageNum: params.current || 1,
-                pageSize: params.pageSize || 20,
+                pageSize: params.pageSize || 10,
                 taskName: params.taskName,
                 status: params.status,
                 beginTime: createdAt?.[0],
@@ -394,6 +395,7 @@ const AiCallTasksPage = () => {
             search={{ labelWidth: 'auto' }}
           />
         </TableCard>
+        <ExceptionRetryPanel />
       </ListStack>
 
       <Modal

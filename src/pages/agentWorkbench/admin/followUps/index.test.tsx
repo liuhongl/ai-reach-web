@@ -7,7 +7,7 @@ describe('follow-up processing page', () => {
   it('only exposes the agent work queue and its closed-loop actions', () => {
     const source = fs.readFileSync(sourcePath, 'utf8');
     for (const text of [
-      'title="跟进处理"',
+      'title="回访任务"',
       'FollowUpPanel',
       'useAgentPresence',
       'useFollowUpCallback',

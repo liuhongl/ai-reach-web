@@ -1,8 +1,6 @@
 import dayjs from 'dayjs';
 import {
   buildAppliedQuery,
-  buildFollowUpsUrl,
-  buildRecordsUrl,
   getDefaultDateRange,
   validateDateRange,
 } from './domain';
@@ -38,6 +36,17 @@ describe('AI Call 外呼统计领域规则', () => {
     expect(query.granularity).toBe('hour');
   });
 
+  it('把已选择的场景和任务加入统计查询', () => {
+    const query = buildAppliedQuery(
+      [dayjs('2026-07-31'), dayjs('2026-07-31')],
+      'Asia/Shanghai',
+      { sceneCode: 'product_intro', taskId: '100' },
+    );
+
+    expect(query.sceneCode).toBe('product_intro');
+    expect(query.taskId).toBe('100');
+  });
+
   it('拒绝超过九十个自然日和未来日期', () => {
     expect(
       validateDateRange([dayjs('2026-05-02'), dayjs('2026-07-31')], now),
@@ -47,30 +56,4 @@ describe('AI Call 外呼统计领域规则', () => {
     ).toBe('不能选择未来日期');
   });
 
-  it('构造正式外呼记录和待跟进深链', () => {
-    const range = {
-      startedAtBegin: '2026-07-25T00:00:00+08:00',
-      startedAtEnd: '2026-08-01T00:00:00+08:00',
-    };
-    const records = new URL(
-      buildRecordsUrl({ ...range, callResult: 'connected' }),
-      'http://localhost',
-    );
-    const followUps = new URL(buildFollowUpsUrl(range), 'http://localhost');
-
-    expect(records.pathname).toBe('/ai-call/records');
-    expect(followUps.pathname).toBe('/ai-call/follow-up-overview');
-    expect(Object.fromEntries(records.searchParams)).toEqual({
-      formalOutboundOnly: 'true',
-      startedAtBegin: range.startedAtBegin,
-      startedAtEnd: range.startedAtEnd,
-      callResult: 'connected',
-    });
-    expect(Object.fromEntries(followUps.searchParams)).toEqual({
-      status: 'pending',
-      formalOutboundOnly: 'true',
-      sourceStartedAtBegin: range.startedAtBegin,
-      sourceStartedAtEnd: range.startedAtEnd,
-    });
-  });
 });

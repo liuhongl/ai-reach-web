@@ -2,49 +2,93 @@ import {
   AI_CALL_NAV_ITEMS,
   buildAiCallMenu,
   getFirstAiCallPath,
+  getFirstAiCallSystemPath,
 } from './aiCallNavigation';
 
-const expected = [
-  ['外呼任务', '/ai-call/tasks', 'ai_call:agent:manage'],
-  ['通话记录', '/ai-call/records', 'ai_call:agent:manage'],
-  ['音色管理', '/ai-call/voices', 'ai_call:voice:manage'],
-  ['线路配置', '/ai-call/lines', 'ai_call:agent:manage'],
-  ['呼叫规则', '/ai-call/rules', 'ai_call:agent:manage'],
-  ['跟进处理', '/ai-call/follow-ups', 'ai_call:agent:console'],
-  ['跟进总览', '/ai-call/follow-up-overview', 'ai_call:agent:manage'],
-  ['外呼统计', '/ai-call/statistics', 'ai_call:agent:manage'],
-  ['知识资产', '/ai-call/knowledge', 'ai_call:knowledge:view'],
-  ['坐席工作台', '/ai-call/agent-workbench', 'ai_call:agent:console'],
-  ['坐席管理', '/ai-call/agents', 'ai_call:agent:manage'],
-  ['转人工记录', '/ai-call/handoffs', 'ai_call:agent:manage'],
-  ['通话测试台', '/ai-call-lab/customer', 'ai_call:lab:use'],
-  ['提示词配置', '/ai-call-lab/prompt-config', 'ai_call:prompt:manage'],
-] as const;
-
 describe('AI Call navigation', () => {
-  it('固定维护 14 个入口及权限', () => {
+  it('按原型分组已有业务入口', () => {
+    const menu = buildAiCallMenu(['*:*:*']);
+
+    expect(menu.map((item) => item.name)).toEqual([
+      '数据看板',
+      '知识库',
+      '外呼',
+      '坐席',
+      '跟进',
+      '规则配置',
+      '线路',
+    ]);
     expect(
-      AI_CALL_NAV_ITEMS.map(({ name, path, permission }) => [
-        name,
-        path,
-        permission,
-      ]),
-    ).toEqual(expected);
+      menu
+        .find((item) => item.name === '知识库')
+        ?.children?.map((item) => item.name),
+    ).toEqual(['知识资产', '提示词']);
+    expect(
+      menu
+        .find((item) => item.name === '外呼')
+        ?.children?.map((item) => item.name),
+    ).toEqual(['外呼任务', '通话记录']);
+    expect(
+      menu
+        .find((item) => item.name === '坐席')
+        ?.children?.map((item) => item.name),
+    ).toEqual(['坐席工作台', '回访任务', '坐席管理', '转人工记录']);
+    expect(
+      menu
+        .find((item) => item.name === '跟进')
+        ?.children?.map((item) => item.name),
+    ).toEqual(['跟进总览', '跟进数据']);
+    expect(
+      menu
+        .find((item) => item.name === '规则配置')
+        ?.children?.map((item) => item.name),
+    ).toEqual(['呼叫规则', '音色管理']);
+    expect(JSON.stringify(menu)).not.toMatch(/呼入管理|邮件管理|短信管理/);
   });
 
-  it('只返回当前用户有权访问的入口', () => {
-    expect(buildAiCallMenu(['ai_call:voice:manage']).map((item) => item.name)).toEqual([
-      '音色管理',
+  it('按权限过滤菜单和空分组', () => {
+    expect(buildAiCallMenu(['ai_call:knowledge:view'])).toEqual([
+      {
+        name: '知识库',
+        children: [
+          expect.objectContaining({
+            name: '知识资产',
+            path: '/ai-call/knowledge',
+          }),
+        ],
+      },
     ]);
-    expect(buildAiCallMenu(['*:*:*'])).toHaveLength(14);
+    expect(buildAiCallMenu(['ai_call:voice:manage'])).toEqual([
+      {
+        name: '规则配置',
+        children: [
+          expect.objectContaining({
+            name: '音色管理',
+            path: '/ai-call/voices',
+          }),
+        ],
+      },
+    ]);
     expect(buildAiCallMenu([])).toEqual([]);
   });
 
-  it('返回第一个有权访问的入口', () => {
+  it('保留隐藏测试台并返回首个可访问入口', () => {
+    expect(
+      AI_CALL_NAV_ITEMS.find((item) => item.name === '通话测试台'),
+    ).toMatchObject({
+      hideInMenu: true,
+      path: '/ai-call-lab/customer',
+    });
     expect(getFirstAiCallPath(['ai_call:lab:use'])).toBe(
       '/ai-call-lab/customer',
     );
-    expect(getFirstAiCallPath(['*:*:*'])).toBe('/ai-call/tasks');
+    expect(getFirstAiCallPath(['ai_call:voice:manage'])).toBe(
+      '/ai-call/voices',
+    );
+    expect(getFirstAiCallPath(['*:*:*'])).toBe('/ai-call/statistics');
     expect(getFirstAiCallPath([])).toBeUndefined();
+    expect(getFirstAiCallSystemPath(['ai_call:knowledge:view'])).toBe(
+      '/ai-call/knowledge',
+    );
   });
 });

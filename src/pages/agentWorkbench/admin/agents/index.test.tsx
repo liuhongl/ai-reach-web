@@ -50,6 +50,7 @@ describe('agent administration page', () => {
       expect(source).toContain(text);
     expect(source).toContain('releaseStaleAgent');
     expect(source).toContain('Modal.confirm');
+    expect(source).toContain('showLabels');
     expect(source).not.toContain('最大并发');
     expect(source).not.toContain('编辑手机号');
   });

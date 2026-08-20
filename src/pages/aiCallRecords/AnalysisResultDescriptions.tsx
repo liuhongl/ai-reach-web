@@ -1,5 +1,4 @@
 import { Descriptions, Flex, Tag, Typography } from 'antd';
-import dayjs from 'dayjs';
 import * as React from 'react';
 
 const { Text } = Typography;
@@ -37,7 +36,11 @@ const analysisFieldLabels: Record<string, string> = {
   time_hint: '客户期望联系时间',
   tags: '分析标签',
   customer_intent: '客户意向',
-  follow_up: '后续跟进结论',
+  classification: 'AI 建议分类',
+  reason: '分类原因',
+  evidence: '判断依据',
+  confidence: '分类置信度',
+  evidence_conflict: '证据冲突',
 };
 
 const analysisFieldOrder = [
@@ -47,7 +50,11 @@ const analysisFieldOrder = [
   'time_hint',
   'tags',
   'customer_intent',
-  'follow_up',
+  'classification',
+  'reason',
+  'evidence',
+  'confidence',
+  'evidence_conflict',
 ];
 
 const feedbackTagColors: Record<string, string> = {
@@ -72,10 +79,18 @@ const customerIntentLabels: Record<string, string> = {
   negative: '负向',
 };
 
-const followUpConsentLabels: Record<string, string> = {
-  explicit: '明确同意',
-  refused: '明确拒绝',
-  missing: '未表达',
+const classificationLabels: Record<string, string> = {
+  interested: '有意向',
+  nurturing: '持续跟进',
+  low_value: '低价值',
+  converted: '已转化',
+};
+
+const classificationTagColors: Record<string, string> = {
+  interested: 'gold',
+  nurturing: 'blue',
+  low_value: 'default',
+  converted: 'success',
 };
 
 const followUpConfidenceLabels: Record<string, string> = {
@@ -157,77 +172,32 @@ const renderAnalysisValue = (key: string, value: unknown) => {
     const intent = String(value || '');
     return customerIntentLabels[intent] || intent || '-';
   }
-  if (key === 'follow_up' && value && typeof value === 'object') {
-    const followUp = value as {
-      required?: unknown;
-      consent?: unknown;
-      reason?: unknown;
-      preferred_time?: unknown;
-      confidence?: unknown;
-    };
-    const consent = String(followUp.consent || 'missing');
-    const confidence = String(followUp.confidence || '');
-    const preferredAt = String(followUp.preferred_time || '').trim();
-    const decision = followUp.required
-      ? consent === 'explicit'
-        ? '客户已明确同意后续联系'
-        : '存在后续跟进线索，客户尚未明确同意'
-      : consent === 'refused'
-        ? '客户明确拒绝后续联系'
-        : '未识别到明确的后续联系需求';
+  if (key === 'classification') {
+    const classification = String(value || '');
     return (
-      <Descriptions
-        column={1}
-        size="small"
-        styles={detailDescriptionStyles}
-        items={[
-          {
-            key: 'suggested',
-            label: '处理建议',
-            children: (
-              <Tag
-                color={
-                  followUp.required
-                    ? 'warning'
-                    : consent === 'refused'
-                      ? 'default'
-                      : 'purple'
-                }
-              >
-                {followUp.required
-                  ? '建议跟进'
-                  : consent === 'refused'
-                    ? '无需跟进'
-                    : 'AI 建议：无需跟进'}
-              </Tag>
-            ),
-          },
-          { key: 'decision', label: '跟进判断', children: decision },
-          {
-            key: 'consent',
-            label: '客户态度',
-            children: followUpConsentLabels[consent] || consent,
-          },
-          {
-            key: 'reason',
-            label: '判断依据',
-            children: String(followUp.reason || '').trim() || '-',
-          },
-          {
-            key: 'preferredAt',
-            label: '期望时间',
-            children: preferredAt
-              ? dayjs(preferredAt).format('YYYY-MM-DD HH:mm:ss')
-              : '-',
-          },
-          {
-            key: 'confidence',
-            label: '置信度',
-            children: followUpConfidenceLabels[confidence] || confidence || '-',
-          },
-        ]}
-      />
+      <Tag color={classificationTagColors[classification] || 'default'}>
+        {classificationLabels[classification] || classification || '-'}
+      </Tag>
     );
+  }
+  if (key === 'evidence' && Array.isArray(value)) {
+    const evidence = Array.from(new Set(value.map(String)));
+    return evidence.length ? (
+      <Flex vertical gap={4}>
+        {evidence.map((item) => (
+          <Text key={item}>{item}</Text>
+        ))}
+      </Flex>
+    ) : (
+      '-'
+    );
+  }
+  if (key === 'confidence') {
+    const confidence = String(value || '');
+    return followUpConfidenceLabels[confidence] || confidence || '-';
+  }
+  if (key === 'evidence_conflict') {
+    return value === true ? '有冲突，建议人工复核' : '无';
   }
   return value && typeof value === 'object'
     ? JSON.stringify(value)

@@ -1,5 +1,5 @@
 import { Pie } from '@ant-design/plots';
-import { Button, Empty, Flex, Space, Typography } from 'antd';
+import { Empty, Flex, Space, Typography } from 'antd';
 import React from 'react';
 import type { CallResultGroup, OutboundStatistics } from '../domain';
 
@@ -7,25 +7,23 @@ const { Text } = Typography;
 
 const RESULT_META: Record<
   CallResultGroup,
-  { label: string; color: string; drillable: boolean }
+  { label: string; color: string }
 > = {
-  connected: { label: '已接通', color: '#5B8F8B', drillable: true },
-  no_answer: { label: '无人接听', color: '#C49A5A', drillable: true },
-  busy: { label: '占线', color: '#B9855B', drillable: true },
-  invalid_number: { label: '空号', color: '#8A93A3', drillable: true },
-  call_failed: { label: '呼叫失败', color: '#C56A7A', drillable: true },
-  processing: { label: '处理中', color: '#6487B8', drillable: false },
-  other: { label: '其他', color: '#8B7FB3', drillable: false },
+  connected: { label: '接通', color: '#5B8F8B' },
+  no_answer: { label: '无人接听', color: '#C49A5A' },
+  rejected: { label: '拒接', color: '#C56A7A' },
+  early_hangup: { label: '主动挂断', color: '#B9855B' },
+  invalid_number: { label: '空号停机类', color: '#8A93A3' },
+  other: { label: '其他', color: '#8B7FB3' },
 };
 
 type ResultItem = OutboundStatistics['results'][number];
 
 type CallResultChartProps = {
   data: ResultItem[];
-  onResultClick: (result: CallResultGroup) => void;
 };
 
-const CallResultChart = ({ data, onResultClick }: CallResultChartProps) => {
+const CallResultChart = ({ data }: CallResultChartProps) => {
   if (data.length === 0) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
@@ -35,55 +33,67 @@ const CallResultChart = ({ data, onResultClick }: CallResultChartProps) => {
     label: RESULT_META[item.result].label,
   }));
 
-  const handleResultClick = (result: CallResultGroup) => {
-    if (RESULT_META[result].drillable) {
-      onResultClick(result);
-    }
-  };
+  const total = data.reduce((sum, item) => sum + item.count, 0);
 
   return (
     <Flex vertical gap={12}>
-      <Pie
-        height={220}
-        data={chartData}
-        angleField="count"
-        colorField="label"
-        innerRadius={0.64}
-        scale={{
-          color: {
-            range: chartData.map((item) => RESULT_META[item.result].color),
-          },
-        }}
-        legend={false}
-        label={{
-          text: (datum: ResultItem) =>
-            datum.rate >= 0.05 ? `${(datum.rate * 100).toFixed(1)}%` : '',
-          position: 'outside',
-        }}
-        tooltip={{
-          title: 'label',
-          items: [
-            { field: 'count', name: '数量' },
-            {
-              field: 'rate',
-              name: '占比',
-              valueFormatter: (value: number) => `${(value * 100).toFixed(1)}%`,
+      <div style={{ position: 'relative' }}>
+        <Pie
+          height={220}
+          data={chartData}
+          angleField="count"
+          colorField="label"
+          innerRadius={0.64}
+          scale={{
+            color: {
+              range: chartData.map((item) => RESULT_META[item.result].color),
             },
-          ],
+          }}
+          legend={false}
+          label={{
+            text: (datum: ResultItem) =>
+              datum.rate >= 0.05 ? `${(datum.rate * 100).toFixed(1)}%` : '',
+            position: 'outside',
+          }}
+          tooltip={{
+            title: 'label',
+            items: [
+              { field: 'count', name: '数量' },
+              {
+                field: 'rate',
+                name: '占比',
+                valueFormatter: (value: number) => `${(value * 100).toFixed(1)}%`,
+              },
+            ],
+          }}
+        />
+        <Flex
+          vertical
+          align="center"
+          style={{
+            left: '50%',
+            pointerEvents: 'none',
+            position: 'absolute',
+            top: '50%',
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <Text strong style={{ fontSize: 22 }}>
+            {total.toLocaleString()}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            外呼次数
+          </Text>
+        </Flex>
+      </div>
+      <div
+        data-testid="call-result-legend"
+        style={{
+          display: 'grid',
+          gap: '4px 12px',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
         }}
-        onEvent={(_, event) => {
-          if (event.type !== 'element:click') {
-            return;
-          }
-          const result = event.data?.data?.result as
-            | CallResultGroup
-            | undefined;
-          if (result) {
-            handleResultClick(result);
-          }
-        }}
-      />
-      <Flex vertical gap={4}>
+      >
         {data.map((item) => {
           const meta = RESULT_META[item.result];
           const content = (
@@ -113,22 +123,13 @@ const CallResultChart = ({ data, onResultClick }: CallResultChartProps) => {
             </Flex>
           );
 
-          return meta.drillable ? (
-            <Button
-              key={item.result}
-              type="text"
-              onClick={() => handleResultClick(item.result)}
-              style={{ height: 'auto', padding: '4px 8px', textAlign: 'left' }}
-            >
-              {content}
-            </Button>
-          ) : (
+          return (
             <div key={item.result} style={{ padding: '4px 8px' }}>
               {content}
             </div>
           );
         })}
-      </Flex>
+      </div>
     </Flex>
   );
 };

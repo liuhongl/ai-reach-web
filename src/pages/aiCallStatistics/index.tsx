@@ -1,12 +1,13 @@
 import {
   CheckCircleOutlined,
+  ClockCircleOutlined,
   PercentageOutlined,
   PhoneOutlined,
   ReloadOutlined,
   ScheduleOutlined,
+  UserAddOutlined,
 } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
-import { history } from '@umijs/max';
 import {
   Button,
   Card,
@@ -16,6 +17,7 @@ import {
   message,
   Result,
   Row,
+  Select,
   Skeleton,
   Space,
   Typography,
@@ -28,14 +30,13 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { getAiCallLabPromptProfiles } from '@/services/ruoyi/ai-call-lab';
+import { listAiCallTasks } from '../aiCallTasks/service';
 import CallResultChart from './components/CallResultChart';
 import MetricCard from './components/MetricCard';
 import OutboundTrendChart from './components/OutboundTrendChart';
 import {
   buildAppliedQuery,
-  buildFollowUpsUrl,
-  buildRecordsUrl,
-  type CallResultGroup,
   type DateRange,
   getDefaultDateRange,
   type OutboundStatistics,
@@ -51,6 +52,15 @@ const percentFormatter = new Intl.NumberFormat('zh-CN', {
   minimumFractionDigits: 1,
   maximumFractionDigits: 1,
 });
+
+type ComparisonTone = 'positive' | 'negative' | 'neutral';
+
+const comparisonTone = (value: number | null): ComparisonTone =>
+  value === null || value === 0
+    ? 'neutral'
+    : value > 0
+      ? 'positive'
+      : 'negative';
 
 const formatChangeRate = (value: number | null) => {
   if (value === null) {
@@ -75,9 +85,22 @@ const formatChangePoints = (value: number | null) => {
 const getTimeZone = () =>
   Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Shanghai';
 
+const durationMinutes = (durationMs: number) =>
+  percentFormatter.format(durationMs / 60_000);
+
 const AiCallStatisticsPage = () => {
   const defaultRange = useMemo(() => getDefaultDateRange(), []);
   const [draftRange, setDraftRange] = useState<DateRange>(defaultRange);
+  const [draftSceneCode, setDraftSceneCode] = useState<string>();
+  const [draftTaskId, setDraftTaskId] = useState<string>();
+  const [sceneOptions, setSceneOptions] = useState<
+    Array<{ label: string; value: string }>
+  >([]);
+  const [taskOptions, setTaskOptions] = useState<
+    Array<{ label: string; value: string }>
+  >([]);
+  const [sceneLoading, setSceneLoading] = useState(false);
+  const [taskLoading, setTaskLoading] = useState(false);
   const [appliedQuery, setAppliedQuery] = useState<StatisticsQuery>(() =>
     buildAppliedQuery(defaultRange, getTimeZone()),
   );
@@ -85,6 +108,63 @@ const AiCallStatisticsPage = () => {
   const [loading, setLoading] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const requestIdRef = useRef(0);
+
+  useEffect(() => {
+    let active = true;
+    setSceneLoading(true);
+    void getAiCallLabPromptProfiles()
+      .then(({ rows }) => {
+        if (!active) return;
+        const unique = new Map<string, string>();
+        rows.forEach((profile) => {
+          if (!unique.has(profile.sceneCode)) {
+            unique.set(profile.sceneCode, profile.name);
+          }
+        });
+        setSceneOptions(
+          Array.from(unique, ([value, label]) => ({ label, value })),
+        );
+      })
+      .catch(() => {
+        if (active) void message.error('业务场景加载失败');
+      })
+      .finally(() => {
+        if (active) setSceneLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draftSceneCode) {
+      setTaskOptions([]);
+      return;
+    }
+    let active = true;
+    setTaskLoading(true);
+    void listAiCallTasks({
+      pageNum: 1,
+      pageSize: 200,
+      sceneCode: draftSceneCode,
+    })
+      .then(({ rows }) => {
+        if (active) {
+          setTaskOptions(
+            rows.map((task) => ({ label: task.taskName, value: task.taskId })),
+          );
+        }
+      })
+      .catch(() => {
+        if (active) void message.error('外呼任务加载失败');
+      })
+      .finally(() => {
+        if (active) setTaskLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [draftSceneCode]);
 
   const loadStatistics = useCallback(async () => {
     const requestId = requestIdRef.current + 1;
@@ -112,50 +192,27 @@ const AiCallStatisticsPage = () => {
     void loadStatistics();
   }, [loadStatistics]);
 
-  const applyRange = () => {
+  const applyFilters = () => {
     const error = validateDateRange(draftRange);
     if (error) {
       void message.warning(error);
       return;
     }
-    setAppliedQuery(buildAppliedQuery(draftRange, getTimeZone()));
-  };
-
-  const resetRange = () => {
-    const nextRange = getDefaultDateRange();
-    setDraftRange(nextRange);
-    setAppliedQuery(buildAppliedQuery(nextRange, getTimeZone()));
-  };
-
-  const getEffectiveRange = () => ({
-    startedAtBegin:
-      statistics?.period.currentStartedAt ?? appliedQuery.startedAtBegin,
-    startedAtEnd:
-      statistics?.period.currentEndedAt ?? appliedQuery.startedAtEnd,
-  });
-
-  const openRecords = (callResult?: CallResultGroup) => {
-    history.push(buildRecordsUrl({ ...getEffectiveRange(), callResult }));
-  };
-
-  const openFollowUps = () => {
-    history.push(buildFollowUpsUrl(getEffectiveRange()));
-  };
-
-  const openTrendBucket = (bucketStart: string) => {
-    const nextBucket = dayjs(bucketStart)
-      .add(1, appliedQuery.granularity)
-      .toISOString();
-    const effectiveEnd =
-      statistics?.period.currentEndedAt ?? appliedQuery.startedAtEnd;
-    history.push(
-      buildRecordsUrl({
-        startedAtBegin: bucketStart,
-        startedAtEnd: dayjs(nextBucket).isAfter(dayjs(effectiveEnd))
-          ? effectiveEnd
-          : nextBucket,
+    setAppliedQuery(
+      buildAppliedQuery(draftRange, getTimeZone(), {
+        sceneCode: draftSceneCode,
+        taskId: draftTaskId,
       }),
     );
+  };
+
+  const resetFilters = () => {
+    const nextRange = getDefaultDateRange();
+    setDraftRange(nextRange);
+    setDraftSceneCode(undefined);
+    setDraftTaskId(undefined);
+    setTaskOptions([]);
+    setAppliedQuery(buildAppliedQuery(nextRange, getTimeZone()));
   };
 
   return (
@@ -164,6 +221,35 @@ const AiCallStatisticsPage = () => {
         <Card size="small" styles={{ body: { padding: 16 } }}>
           <Flex justify="space-between" align="center" gap={12} wrap>
             <Space wrap>
+              <Select
+                aria-label="业务场景"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder="全部场景"
+                loading={sceneLoading}
+                options={sceneOptions}
+                value={draftSceneCode}
+                style={{ width: 200 }}
+                onChange={(value) => {
+                  setDraftSceneCode(value);
+                  setDraftTaskId(undefined);
+                  setTaskOptions([]);
+                }}
+              />
+              <Select
+                aria-label="外呼任务"
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder={draftSceneCode ? '全部任务' : '请先选择场景'}
+                disabled={!draftSceneCode}
+                loading={taskLoading}
+                options={taskOptions}
+                value={draftTaskId}
+                style={{ width: 220 }}
+                onChange={setDraftTaskId}
+              />
               <RangePicker
                 value={draftRange}
                 allowClear={false}
@@ -191,10 +277,10 @@ const AiCallStatisticsPage = () => {
                   }
                 }}
               />
-              <Button type="primary" onClick={applyRange}>
+              <Button type="primary" onClick={applyFilters}>
                 查询
               </Button>
-              <Button onClick={resetRange}>重置</Button>
+              <Button onClick={resetFilters}>重置</Button>
             </Space>
             <Button
               icon={<ReloadOutlined />}
@@ -245,20 +331,22 @@ const AiCallStatisticsPage = () => {
         {statistics ? (
           <>
             <Row gutter={[16, 16]}>
-              <Col xs={24} sm={12} xl={6}>
+              <Col xs={24} sm={12} lg={8} xl={4}>
                 <MetricCard
-                  title="拨打次数"
+                  title="外呼次数"
                   value={statistics.overview.dialAttempts.toLocaleString()}
                   unit="次"
                   comparison={formatChangeRate(
                     statistics.comparison.dialAttemptsChangeRate,
                   )}
+                  comparisonTone={comparisonTone(
+                    statistics.comparison.dialAttemptsChangeRate,
+                  )}
                   icon={<PhoneOutlined />}
                   tone="info"
-                  onClick={() => openRecords()}
                 />
               </Col>
-              <Col xs={24} sm={12} xl={6}>
+              <Col xs={24} sm={12} lg={8} xl={4}>
                 <MetricCard
                   title="接通通话"
                   value={statistics.overview.connectedCalls.toLocaleString()}
@@ -266,24 +354,58 @@ const AiCallStatisticsPage = () => {
                   comparison={formatChangeRate(
                     statistics.comparison.connectedCallsChangeRate,
                   )}
+                  comparisonTone={comparisonTone(
+                    statistics.comparison.connectedCallsChangeRate,
+                  )}
                   icon={<CheckCircleOutlined />}
                   tone="success"
-                  onClick={() => openRecords('connected')}
                 />
               </Col>
-              <Col xs={24} sm={12} xl={6}>
+              <Col xs={24} sm={12} lg={8} xl={4}>
                 <MetricCard
                   title="接通率"
                   value={`${percentFormatter.format(statistics.overview.connectRate * 100)}%`}
                   comparison={formatChangePoints(
                     statistics.comparison.connectRateChangePoints,
                   )}
+                  comparisonTone={comparisonTone(
+                    statistics.comparison.connectRateChangePoints,
+                  )}
                   icon={<PercentageOutlined />}
                   tone="warning"
-                  onClick={() => openRecords('connected')}
                 />
               </Col>
-              <Col xs={24} sm={12} xl={6}>
+              <Col xs={24} sm={12} lg={8} xl={4}>
+                <MetricCard
+                  title="通话总时长"
+                  value={durationMinutes(statistics.overview.totalDurationMs)}
+                  unit="分钟"
+                  comparison={formatChangeRate(
+                    statistics.comparison.totalDurationChangeRate,
+                  )}
+                  comparisonTone={comparisonTone(
+                    statistics.comparison.totalDurationChangeRate,
+                  )}
+                  icon={<ClockCircleOutlined />}
+                  tone="info"
+                />
+              </Col>
+              <Col xs={24} sm={12} lg={8} xl={4}>
+                <MetricCard
+                  title="意向线索"
+                  value={statistics.overview.intentLeads.toLocaleString()}
+                  unit="个"
+                  comparison={formatChangeRate(
+                    statistics.comparison.intentLeadsChangeRate,
+                  )}
+                  comparisonTone={comparisonTone(
+                    statistics.comparison.intentLeadsChangeRate,
+                  )}
+                  icon={<UserAddOutlined />}
+                  tone="success"
+                />
+              </Col>
+              <Col xs={24} sm={12} lg={8} xl={4}>
                 <MetricCard
                   title="待跟进"
                   value={statistics.overview.pendingFollowUps.toLocaleString()}
@@ -292,7 +414,6 @@ const AiCallStatisticsPage = () => {
                   icon={<ScheduleOutlined />}
                   tone="error"
                   emphasized
-                  onClick={openFollowUps}
                 />
               </Col>
             </Row>
@@ -303,16 +424,12 @@ const AiCallStatisticsPage = () => {
                   <OutboundTrendChart
                     data={statistics.trend}
                     granularity={appliedQuery.granularity}
-                    onBucketClick={openTrendBucket}
                   />
                 </Card>
               </Col>
               <Col xs={24} xl={8}>
-                <Card title="通话结果" style={{ height: '100%' }}>
-                  <CallResultChart
-                    data={statistics.results}
-                    onResultClick={openRecords}
-                  />
+                <Card title="呼叫结果分布" style={{ height: '100%' }}>
+                  <CallResultChart data={statistics.results} />
                 </Card>
               </Col>
             </Row>

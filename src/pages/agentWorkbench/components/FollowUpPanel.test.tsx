@@ -64,6 +64,13 @@ const createServices = () => ({
   submitResult: jest.fn().mockResolvedValue({ code: 200 }),
 });
 
+const findDialogByTitle = async (title: string) => {
+  const titleNode = await screen.findByText(title, {
+    selector: '.ant-drawer-title, .ant-modal-title',
+  });
+  return titleNode.closest('[role="dialog"]') as HTMLElement;
+};
+
 describe('FollowUpPanel', () => {
   afterEach(() => {
     cleanup();
@@ -80,7 +87,7 @@ describe('FollowUpPanel', () => {
     ).toBeTruthy();
   });
 
-  it('展示待认领和我的跟进的实时数量', async () => {
+  it('展示待认领和我的任务的实时数量', async () => {
     const services = createServices();
     services.list.mockImplementation((params) => {
       if (params?.pageSize === 1 && params.ownership === 'unassigned') {
@@ -223,7 +230,7 @@ describe('FollowUpPanel', () => {
         onCallAccepted={onCallAccepted}
       />,
     );
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     expect(await screen.findByText('138****0000')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: /呼叫客户/ }));
     expect(
@@ -259,7 +266,7 @@ describe('FollowUpPanel', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     const callbackButton = await screen.findByRole('button', {
       name: /上线并呼叫/,
     });
@@ -293,7 +300,7 @@ describe('FollowUpPanel', () => {
       />,
     );
 
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     fireEvent.click(await screen.findByRole('button', { name: /呼叫客户/ }));
 
     await waitFor(() => expect(onPrepareCallback).toHaveBeenCalledTimes(1));
@@ -336,17 +343,13 @@ describe('FollowUpPanel', () => {
       />,
     );
 
-    expect(
-      await screen.findByRole('dialog', { name: '提交处理结果' }),
-    ).toBeTruthy();
+    expect(await findDialogByTitle('提交话后结果')).toBeTruthy();
     expect(services.detail).toHaveBeenCalledWith(task.id);
-    expect(screen.getByText('无人接听')).toBeTruthy();
+    expect(screen.getByText('本次联系结果：无人接听')).toBeTruthy();
     expect(
       (screen.getByLabelText('处理备注') as HTMLTextAreaElement).value,
     ).toBe('本次回拨未接通');
-    expect(
-      screen.getByLabelText('联系结果').closest('.ant-select')?.className,
-    ).toContain('ant-select-disabled');
+    expect(screen.queryByLabelText('联系结果')).toBeNull();
     expect(onHandlingTaskOpened).toHaveBeenCalledTimes(1);
   });
 
@@ -384,7 +387,7 @@ describe('FollowUpPanel', () => {
 
     render(<FollowUpPanel services={services} />);
     await screen.findAllByText('138****0000');
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     expect(await screen.findByText('138****0000')).toBeTruthy();
     expect(screen.queryByRole('button', { name: /呼叫客户/ })).toBeNull();
   });
@@ -410,7 +413,7 @@ describe('FollowUpPanel', () => {
     expect(await screen.findByText('138****0000')).toBeTruthy();
     expect(screen.queryByText('139****0000')).toBeNull();
 
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     expect(await screen.findByText('139****0000')).toBeTruthy();
     expect(screen.queryByText('138****0000')).toBeNull();
   });
@@ -433,7 +436,7 @@ describe('FollowUpPanel', () => {
 
     render(<FollowUpPanel agentStatus="in_call" services={services} />);
     await screen.findAllByText('138****0000');
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     expect(await screen.findByText('张三')).toBeTruthy();
     expect(screen.getByText('GEO 产品回访')).toBeTruthy();
     expect(screen.getByText('处理中')).toBeTruthy();
@@ -462,7 +465,7 @@ describe('FollowUpPanel', () => {
 
     render(<FollowUpPanel agentStatus="available" services={services} />);
     await screen.findAllByText('138****0000');
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
 
     expect(
       await screen.findByRole('button', { name: '提交处理结果' }),
@@ -496,7 +499,7 @@ describe('FollowUpPanel', () => {
 
     render(<FollowUpPanel services={services} />);
     await screen.findByText('138****0000');
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
 
     expect(await screen.findByText('已办结')).toBeTruthy();
     expect(screen.getByText('已终止')).toBeTruthy();
@@ -518,9 +521,7 @@ describe('FollowUpPanel', () => {
 
     expect(await screen.findByText('138****0000')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '查看详情' }));
-    const drawer = await screen.findByRole('dialog', {
-      name: '跟进任务详情',
-    });
+    const drawer = await findDialogByTitle('跟进任务详情');
     expect(within(drawer).getByText('等待超时未接入人工')).toBeTruthy();
     expect(within(drawer).getByText('未约定回访时间')).toBeTruthy();
   });
@@ -654,13 +655,11 @@ describe('FollowUpPanel', () => {
     });
 
     render(<FollowUpPanel services={services} />);
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     expect(await screen.findByText('138****0000')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '查看详情' }));
 
-    const drawer = await screen.findByRole('dialog', {
-      name: '跟进任务详情',
-    });
+    const drawer = await findDialogByTitle('跟进任务详情');
     expect(services.detail).toHaveBeenCalledWith('1');
     expect(await within(drawer).findByText('关联通话与处理记录')).toBeTruthy();
     expect(within(drawer).getByText('原始通话')).toBeTruthy();
@@ -690,9 +689,7 @@ describe('FollowUpPanel', () => {
       within(drawer).getByRole('button', { name: '查看本次通话详情' }),
     );
 
-    const callDrawer = await screen.findByRole('dialog', {
-      name: '回拨通话详情',
-    });
+    const callDrawer = await findDialogByTitle('回拨通话详情');
     expect(getAiCallRecordDetail).toHaveBeenCalledWith('callback-1');
     expect(within(callDrawer).getByText('关联通话与处理记录')).toBeTruthy();
     expect(within(callDrawer).getByText('原始通话')).toBeTruthy();
@@ -716,16 +713,12 @@ describe('FollowUpPanel', () => {
     fireEvent.click(
       within(callDrawer).getByRole('button', { name: '返回跟进任务详情' }),
     );
-    expect(
-      await screen.findByRole('dialog', { name: '跟进任务详情' }),
-    ).toBeTruthy();
+    expect(await findDialogByTitle('跟进任务详情')).toBeTruthy();
 
     fireEvent.click(
       within(drawer).getByRole('button', { name: '查看原始通话详情' }),
     );
-    const sourceCallDrawer = await screen.findByRole('dialog', {
-      name: '通话记录详情',
-    });
+    const sourceCallDrawer = await findDialogByTitle('通话记录详情');
     expect(getAiCallRecordDetail).toHaveBeenCalledWith('call-1');
     expect(await within(sourceCallDrawer).findByText('基本信息')).toBeTruthy();
     fireEvent.click(
@@ -733,9 +726,7 @@ describe('FollowUpPanel', () => {
         name: '返回跟进任务详情',
       }),
     );
-    expect(
-      await screen.findByRole('dialog', { name: '跟进任务详情' }),
-    ).toBeTruthy();
+    expect(await findDialogByTitle('跟进任务详情')).toBeTruthy();
   });
 
   it('submits a connected result and completes the task atomically', async () => {
@@ -749,7 +740,7 @@ describe('FollowUpPanel', () => {
     });
 
     render(<FollowUpPanel services={services} />);
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     expect(await screen.findByText('138****0000')).toBeTruthy();
     fireEvent.click(
       await screen.findByRole('button', { name: '提交处理结果' }),
@@ -773,7 +764,7 @@ describe('FollowUpPanel', () => {
     );
   });
 
-  it('requires a technical failure reason and the next follow-up time', async () => {
+  it('requires a technical failure reason and an explicit callback time', async () => {
     const services = createServices();
     services.list.mockResolvedValue({
       code: 200,
@@ -810,33 +801,38 @@ describe('FollowUpPanel', () => {
 
     render(<FollowUpPanel services={services} />);
     await screen.findByText('138****0000');
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     fireEvent.click(
       await screen.findByRole('button', { name: '提交处理结果' }),
     );
-    await screen.findByRole('dialog', { name: '提交处理结果' });
-    fireEvent.click(screen.getByRole('button', { name: '提交结果' }));
+    await findDialogByTitle('提交话后结果');
+    fireEvent.click(screen.getByRole('button', { name: '提交话后结果' }));
     expect(await screen.findByText('请补充技术失败原因')).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText('处理备注'), {
       target: { value: '本次回拨技术失败：本地网络中断' },
     });
-    fireEvent.click(screen.getByRole('button', { name: '提交结果' }));
-    expect(await screen.findByText('请选择下次跟进时间')).toBeTruthy();
+    const scheduleRadio = screen.getByRole('radio', { name: '安排再次回访' });
+    fireEvent.click(scheduleRadio);
+    await waitFor(() =>
+      expect((scheduleRadio as HTMLInputElement).checked).toBe(true),
+    );
+    const followUpAt = await screen.findByLabelText('计划回访时间');
+    fireEvent.click(screen.getByRole('button', { name: '提交话后结果' }));
+    expect(await screen.findByText('请选择计划回访时间')).toBeTruthy();
 
-    const followUpAt = screen.getByLabelText('下次跟进时间');
     fireEvent.change(followUpAt, {
       target: { value: dayjs().add(1, 'day').format('YYYY-MM-DD HH:mm') },
     });
     fireEvent.keyDown(followUpAt, { key: 'Enter', code: 'Enter' });
-    fireEvent.click(screen.getByRole('button', { name: '提交结果' }));
+    fireEvent.click(screen.getByRole('button', { name: '提交话后结果' }));
 
     await waitFor(() =>
       expect(services.submitResult).toHaveBeenCalledWith(
         unanswered.id,
         expect.objectContaining({
           contactResult: 'technical_failure',
-          nextAction: 'continue',
+          scheduleFollowUp: true,
         }),
       ),
     );
@@ -861,7 +857,7 @@ describe('FollowUpPanel', () => {
     });
     render(<FollowUpPanel services={services} />);
     await screen.findByText('138****0000');
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     expect(await screen.findByText('未约定回访时间')).toBeTruthy();
     expect(screen.queryByText('30 分钟后')).toBeNull();
     expect(screen.queryByText('2 小时后')).toBeNull();
@@ -904,7 +900,7 @@ describe('FollowUpPanel', () => {
     });
     render(<FollowUpPanel services={services} />);
     await screen.findByText('138****0000');
-    fireEvent.click(screen.getByRole('tab', { name: /我的跟进/ }));
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     fireEvent.click(
       await screen.findByRole('button', { name: '提交处理结果' }),
     );

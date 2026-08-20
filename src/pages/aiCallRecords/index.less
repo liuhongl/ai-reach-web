@@ -1,0 +1,85 @@
+.ai-call-quality-review-options {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.ai-call-quality-review-option.ant-radio-button-wrapper {
+  position: relative;
+  display: flex;
+  height: auto;
+  min-height: 72px;
+  align-items: center;
+  padding: 12px 40px 12px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  color: #1f1f1f;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.ai-call-quality-review-option.ant-radio-button-wrapper::before {
+  display: none;
+}
+
+.ai-call-quality-review-option.ant-radio-button-wrapper:hover {
+  border-color: #722ed1;
+  color: #1f1f1f;
+}
+
+.ai-call-quality-review-option.ant-radio-button-wrapper-checked:not(
+    .ant-radio-button-wrapper-disabled
+  ) {
+  border-color: #722ed1;
+  background: #f9f5ff;
+  box-shadow: none;
+  color: #1f1f1f;
+}
+
+.ai-call-quality-review-option--fail.ant-radio-button-wrapper-checked:not(
+    .ant-radio-button-wrapper-disabled
+  ) {
+  border-color: #ff4d4f;
+  background: #fff6f5;
+}
+
+.ai-call-quality-review-option-copy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ai-call-quality-review-option-title {
+  font-weight: 500;
+}
+
+.ai-call-quality-review-option-description {
+  color: #8c8c8c;
+  font-size: 12px;
+}
+
+.ai-call-quality-review-option-check {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  display: none;
+  color: #722ed1;
+}
+
+.ai-call-quality-review-option.ant-radio-button-wrapper-checked
+  .ai-call-quality-review-option-check {
+  display: inline-flex;
+}
+
+.ai-call-quality-review-option--fail.ant-radio-button-wrapper-checked
+  .ai-call-quality-review-option-check {
+  color: #ff4d4f;
+}
+
+@media (max-width: 575px) {
+  .ai-call-quality-review-options {
+    grid-template-columns: 1fr;
+  }
+}

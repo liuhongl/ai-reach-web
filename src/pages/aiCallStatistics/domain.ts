@@ -5,10 +5,9 @@ export type StatisticsGranularity = 'hour' | 'day';
 export type CallResultGroup =
   | 'connected'
   | 'no_answer'
-  | 'busy'
+  | 'rejected'
+  | 'early_hangup'
   | 'invalid_number'
-  | 'call_failed'
-  | 'processing'
   | 'other';
 
 export type StatisticsQuery = {
@@ -16,6 +15,8 @@ export type StatisticsQuery = {
   startedAtEnd: string;
   timeZone: string;
   granularity: StatisticsGranularity;
+  sceneCode?: string;
+  taskId?: string;
 };
 
 export type OutboundStatistics = {
@@ -31,12 +32,16 @@ export type OutboundStatistics = {
     dialAttempts: number;
     connectedCalls: number;
     connectRate: number;
+    totalDurationMs: number;
+    intentLeads: number;
     pendingFollowUps: number;
   };
   comparison: {
     dialAttemptsChangeRate: number | null;
     connectedCallsChangeRate: number | null;
     connectRateChangePoints: number | null;
+    totalDurationChangeRate: number | null;
+    intentLeadsChangeRate: number | null;
   };
   trend: Array<{
     bucketStart: string;
@@ -50,8 +55,6 @@ export type OutboundStatistics = {
     rate: number;
   }>;
 };
-
-type DrillDownRange = Pick<StatisticsQuery, 'startedAtBegin' | 'startedAtEnd'>;
 
 export const getDefaultDateRange = (now = dayjs()): DateRange => [
   now.subtract(6, 'day').startOf('day'),
@@ -79,33 +82,11 @@ export const validateDateRange = (
 export const buildAppliedQuery = (
   range: DateRange,
   timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone,
+  filters: Pick<StatisticsQuery, 'sceneCode' | 'taskId'> = {},
 ): StatisticsQuery => ({
   startedAtBegin: range[0].startOf('day').toISOString(),
   startedAtEnd: range[1].add(1, 'day').startOf('day').toISOString(),
   timeZone,
   granularity: range[0].isSame(range[1], 'day') ? 'hour' : 'day',
+  ...filters,
 });
-
-export const buildRecordsUrl = (
-  params: DrillDownRange & { callResult?: CallResultGroup },
-) => {
-  const search = new URLSearchParams({
-    formalOutboundOnly: 'true',
-    startedAtBegin: params.startedAtBegin,
-    startedAtEnd: params.startedAtEnd,
-  });
-  if (params.callResult) {
-    search.set('callResult', params.callResult);
-  }
-  return `/ai-call/records?${search.toString()}`;
-};
-
-export const buildFollowUpsUrl = (params: DrillDownRange) => {
-  const search = new URLSearchParams({
-    status: 'pending',
-    formalOutboundOnly: 'true',
-    sourceStartedAtBegin: params.startedAtBegin,
-    sourceStartedAtEnd: params.startedAtEnd,
-  });
-  return `/ai-call/follow-up-overview?${search.toString()}`;
-};

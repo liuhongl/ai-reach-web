@@ -6,6 +6,7 @@ import {
   getHandoffReasonLabel,
   statusLabels as handoffStatusLabels,
 } from '@/pages/agentWorkbench/admin/_shared';
+import AgentName from '@/pages/agentWorkbench/components/AgentName';
 import AnalysisResultDescriptions, {
   describeBusinessScene,
   describeEndReason,
@@ -332,7 +333,7 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
                         afterCallWork.needsFollowUp ? 'warning' : 'success'
                       }
                     >
-                      {dispositionLabels[afterCallWork.dispositionCode] ||
+                      {dispositionLabels[afterCallWork.dispositionCode || ''] ||
                         afterCallWork.dispositionCode}
                     </Tag>
                   ),
@@ -345,7 +346,9 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
                 {
                   key: 'agent',
                   label: '提交坐席',
-                  children: afterCallWork.agentIdentity,
+                  children: (
+                    <AgentName identity={afterCallWork.agentIdentity} />
+                  ),
                 },
                 {
                   key: 'time',
@@ -411,7 +414,9 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
                   {
                     key: 'agent',
                     label: '接听坐席',
-                    children: handoff.humanAgentIdentity || '-',
+                    children: (
+                      <AgentName identity={handoff.humanAgentIdentity} />
+                    ),
                   },
                   {
                     key: 'reason',

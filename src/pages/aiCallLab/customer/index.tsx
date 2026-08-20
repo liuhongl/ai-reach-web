@@ -19,11 +19,8 @@ import {
   Typography,
 } from 'antd';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ListPage,
-  ListStack,
-  TableCard,
-} from '@/components/ListLayout';
+import { ListPage, ListStack, TableCard } from '@/components/ListLayout';
+import AgentName from '@/pages/agentWorkbench/components/AgentName';
 import {
   AiCallBrowserRuntimeStartError,
   type AiCallBrowserSession,
@@ -624,7 +621,9 @@ const AiCallLabCustomerPage = () => {
                   {handoff?.humanAgentIdentity && (
                     <MetricItem
                       label="转人工坐席"
-                      value={handoff.humanAgentIdentity}
+                      value={
+                        <AgentName identity={handoff.humanAgentIdentity} />
+                      }
                     />
                   )}
                   {handoff?.requestReason && (

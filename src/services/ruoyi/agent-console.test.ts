@@ -202,6 +202,106 @@ describe('agent console service contract', () => {
     });
   });
 
+  it('maps classified after-call results without legacy fields', async () => {
+    await call('submitAfterCallWork', 'call-1', {
+      handoffId: 'handoff-1',
+      classification: 'interested',
+      conclusion: '客户希望安排产品演示',
+      scheduleFollowUp: false,
+      expectedVersion: 2,
+      idempotencyKey: 'classified-acw-1',
+    });
+    await call('submitFollowUpHandlingResult', 'follow-up-1', {
+      callId: 'call-2',
+      contactResult: 'connected',
+      classification: 'converted',
+      conclusion: '坐席确认客户已完成转化',
+      scheduleFollowUp: false,
+      expectedVersion: 3,
+      idempotencyKey: 'classified-handling-1',
+    });
+
+    expect(mockedRequest.mock.calls[0][1]).toMatchObject({
+      headers: { 'Idempotency-Key': 'classified-acw-1' },
+      data: {
+        handoff_id: 'handoff-1',
+        classification: 'interested',
+        conclusion: '客户希望安排产品演示',
+        schedule_follow_up: false,
+        expected_version: 2,
+      },
+    });
+    expect(mockedRequest.mock.calls[0][1]?.data).not.toHaveProperty(
+      'disposition_code',
+    );
+    expect(mockedRequest.mock.calls[1][1]).toMatchObject({
+      headers: { 'Idempotency-Key': 'classified-handling-1' },
+      data: {
+        call_id: 'call-2',
+        contact_result: 'connected',
+        classification: 'converted',
+        conclusion: '坐席确认客户已完成转化',
+        schedule_follow_up: false,
+        expected_version: 3,
+      },
+    });
+    expect(mockedRequest.mock.calls[1][1]?.data).not.toHaveProperty(
+      'next_action',
+    );
+  });
+
+  it('maps follow-up-data manual calls and after-call results', async () => {
+    await call('startFollowUpDataCall', 'data-1', {
+      consoleSessionId: 'session-1',
+      idempotencyKey: 'data-call-1',
+      takeover: true,
+      takeoverReason: '负责人已调整，由当前坐席继续处理',
+    });
+    await call('endFollowUpDataCall', 'data-1', 'call-1', {
+      consoleSessionId: 'session-1',
+      idempotencyKey: 'data-end-1',
+    });
+    await call('submitFollowUpDataHandlingResult', 'data-1', {
+      callId: 'call-1',
+      contactResult: 'connected',
+      classification: 'nurturing',
+      conclusion: '客户希望下月再沟通',
+      scheduleFollowUp: false,
+      expectedVersion: 2,
+      idempotencyKey: 'data-result-1',
+    });
+
+    expect(mockedRequest.mock.calls.map(([url]) => url)).toEqual([
+      '/ai-call/agent-console/follow-up-data/data-1/call',
+      '/ai-call/agent-console/follow-up-data/data-1/call/call-1/end',
+      '/ai-call/agent-console/follow-up-data/data-1/handling-results',
+    ]);
+    expect(mockedRequest.mock.calls[0][1]).toMatchObject({
+      method: 'post',
+      headers: { 'Idempotency-Key': 'data-call-1' },
+      data: {
+        console_session_id: 'session-1',
+        takeover: true,
+        takeover_reason: '负责人已调整，由当前坐席继续处理',
+      },
+    });
+    expect(mockedRequest.mock.calls[1][1]).toMatchObject({
+      headers: { 'Idempotency-Key': 'data-end-1' },
+      data: { console_session_id: 'session-1' },
+    });
+    expect(mockedRequest.mock.calls[2][1]).toMatchObject({
+      headers: { 'Idempotency-Key': 'data-result-1' },
+      data: {
+        call_id: 'call-1',
+        contact_result: 'connected',
+        classification: 'nurturing',
+        conclusion: '客户希望下月再沟通',
+        schedule_follow_up: false,
+        expected_version: 2,
+      },
+    });
+  });
+
   it('loads one handoff full context without expanding the waiting pool payload', async () => {
     await call('getHandoffContext', 'handoff-1', 'session-1');
 
@@ -251,6 +351,14 @@ describe('agent console service contract', () => {
     expect(mockedRequest.mock.calls[5][1]).toMatchObject({
       method: 'post',
       headers: { 'Idempotency-Key': 'release-1' },
+    });
+    expect(mockedRequest.mock.calls[8][1]).toMatchObject({
+      method: 'post',
+      headers: { 'Idempotency-Key': 'reconcile-1' },
+      data: {
+        confirmed: true,
+        reason: '管理员手动重新核对异常转人工状态',
+      },
     });
     expect(mockedRequest.mock.calls[1][1]).toMatchObject({
       method: 'post',

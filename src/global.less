@@ -16,7 +16,7 @@ body {
 }
 
 .ant-pro-page-container {
-  --recov-page-content-top-gap: 24px;
+  --recov-page-content-gap: 24px;
 
   .ant-pro-page-container-warp,
   .ant-page-header,
@@ -26,7 +26,7 @@ body {
   }
 
   .ant-pro-page-container-children-container {
-    padding-block-start: var(--recov-page-content-top-gap);
+    padding: var(--recov-page-content-gap);
   }
 }
 
@@ -48,7 +48,7 @@ body {
 
 .recov-list-page.ant-pro-page-container {
   display: flex;
-  height: calc(100dvh - 56px);
+  height: 100dvh;
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
@@ -66,13 +66,6 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   flex-direction: column;
-}
-
-.recov-list-page.ant-pro-page-container
-  > .ant-pro-grid-content
-  > .ant-pro-grid-content-children
-  > .ant-pro-page-container-children-container {
-  padding-block-end: 16px;
 }
 
 .recov-list-stack,
@@ -138,7 +131,6 @@ body {
 }
 
 .recov-table-card.recov-toolbar-card.ant-pro-card > .ant-pro-card-body,
-.recov-task-create-form-card.ant-pro-card,
 .recov-task-create-form-card.ant-pro-card > .ant-pro-card-body {
   flex: 0 0 auto;
   overflow: visible;
@@ -179,25 +171,25 @@ body {
   flex: 0 0 auto;
 }
 
-.recov-stable-pagination-table.ant-table-wrapper {
+.recov-stable-pagination-table,
+.recov-stable-pagination-table > .ant-pro-card:last-child,
+.recov-stable-pagination-table
+  > .ant-pro-card:last-child
+  > .ant-pro-card-body,
+.recov-stable-pagination-table .ant-table-wrapper {
   display: flex;
-  height: clamp(420px, calc(100vh - 300px), 560px);
+  flex: 1 1 0;
   min-height: 0;
   flex-direction: column;
-}
-
-.recov-table-card .recov-stable-pagination-table.ant-table-wrapper {
-  flex: 1 1 0;
-  height: auto;
   overflow: hidden;
 }
 
-.recov-stable-pagination-table.ant-table-wrapper > .ant-spin,
-.recov-stable-pagination-table.ant-table-wrapper > .ant-spin-nested-loading,
-.recov-stable-pagination-table.ant-table-wrapper
+.recov-stable-pagination-table .ant-table-wrapper > .ant-spin,
+.recov-stable-pagination-table .ant-table-wrapper > .ant-spin-nested-loading,
+.recov-stable-pagination-table .ant-table-wrapper
   > .ant-spin
   > .ant-spin-container,
-.recov-stable-pagination-table.ant-table-wrapper
+.recov-stable-pagination-table .ant-table-wrapper
   > .ant-spin-nested-loading
   > .ant-spin-container {
   display: flex;
@@ -207,13 +199,13 @@ body {
   overflow: hidden;
 }
 
-.recov-stable-pagination-table.ant-table-wrapper .ant-table {
+.recov-stable-pagination-table .ant-table-wrapper .ant-table {
   flex: 1 1 0;
   min-height: 0;
   overflow: auto;
 }
 
-.recov-stable-pagination-table.ant-table-wrapper
+.recov-stable-pagination-table .ant-table-wrapper
   .ant-table-pagination.ant-pagination {
   flex: 0 0 auto;
   margin-top: 16px !important;
@@ -240,6 +232,22 @@ body {
 
 .ant-pro-layout-side .recov-sider-footer-action:hover {
   background: rgba(0, 0, 0, 0.04);
+}
+
+.ant-pro-sider-actions-list-item button[aria-label='通知中心'],
+.ant-pro-sider-actions-list-item button[aria-label='通知中心'] .anticon {
+  color: #f5f7ff !important;
+}
+
+.ant-pro-sider-actions-list-item button[aria-label='通知中心']:hover,
+.ant-pro-sider-actions-list-item button[aria-label='通知中心']:hover .anticon {
+  color: #fff !important;
+}
+
+.recov-user-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .ant-pro-layout-side .recov-sider-footer-action-icon {
@@ -292,7 +300,7 @@ body {
 
 @media (max-width: 575px) {
   .ant-pro-page-container {
-    --recov-page-content-top-gap: 16px;
+    --recov-page-content-gap: 16px;
   }
 
   .recov-page-toolbar {

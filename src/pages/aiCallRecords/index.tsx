@@ -1,6 +1,6 @@
+import { AuditOutlined, CheckOutlined, EditOutlined } from '@ant-design/icons';
 import {
   type ActionType,
-  PageContainer,
   type ProColumns,
   ProTable,
 } from '@ant-design/pro-components';
@@ -8,6 +8,7 @@ import { history, useSearchParams } from '@umijs/max';
 import {
   Alert,
   Button,
+  DatePicker,
   Descriptions,
   Drawer,
   Empty,
@@ -15,21 +16,39 @@ import {
   Form,
   Input,
   message,
-  Popconfirm,
+  Modal,
   Radio,
+  Select,
   Spin,
   Tag,
   Tooltip,
   Typography,
 } from 'antd';
+import type { Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
 import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ListPage } from '@/components/ListLayout';
 import {
   getHandoffReasonLabel,
   statusLabels as handoffStatusLabels,
 } from '@/pages/agentWorkbench/admin/_shared';
+import AfterCallResultForm, {
+  type AfterCallResultValues,
+} from '@/pages/agentWorkbench/components/AfterCallResultForm';
+import AgentName from '@/pages/agentWorkbench/components/AgentName';
+import {
+  type FollowUpClassification,
+  type LowValueReason,
+  scheduleFollowUpData,
+} from '@/pages/aiCallFollowUpData/service';
 import { listAiCallTasks } from '@/pages/aiCallTasks/service';
+import {
+  type AttemptResult,
+  submitAfterCallWork,
+  submitFollowUpDataHandlingResult,
+  submitFollowUpHandlingResult,
+} from '@/services/ruoyi/agent-console';
 import AnalysisResultDescriptions, {
   describeBusinessScene,
   describeEndReason,
@@ -52,21 +71,22 @@ import {
   getAiCallRecordSemanticAnalysis,
   listAiCallRecords,
   type QualityReviewResult,
-  reviewAiCallRecordFollowUp,
+  reviewAiCallRecordClassification,
   saveAiCallRecordQualityReview,
   scoreAiCallRecordQuality,
 } from './service';
 import {
+  getClassificationReviewPresentation,
   getCustomerIntentPresentation,
   getFollowUpPresentation,
   getQualityReviewPresentation,
   getQualityScorePresentation,
   hasUnstablePostCallData,
-  isFormalOutboundRecord,
   type StatusPresentation,
 } from './status';
+import './index.less';
 
-const { Text, Title } = Typography;
+const { Paragraph, Text, Title } = Typography;
 
 void React.createElement;
 
@@ -113,7 +133,9 @@ const mockStatusLabels: Record<string, string> = {
 const callResultLabels: Record<string, string> = {
   connected: '已接通',
   no_answer: '无人接听',
-  busy: '占线',
+  busy: '忙线',
+  rejected: '电话拒接',
+  early_hangup: '主动挂断（≤5秒）',
   call_failed: '呼叫失败',
   invalid_number: '号码无效',
 };
@@ -160,19 +182,93 @@ const dispositionLabels: Record<string, string> = {
   other: '其他',
 };
 
+const classificationLabels: Record<FollowUpClassification, string> = {
+  interested: '有意向',
+  nurturing: '持续跟进',
+  low_value: '低价值',
+  converted: '已转化',
+};
+
+const lowValueReasonLabels: Record<LowValueReason, string> = {
+  explicit_rejection: '明确拒绝',
+  no_current_need: '暂无需求',
+  customer_mismatch: '客户不匹配',
+  non_target_customer: '非目标客户',
+  invalid_contact: '联系方式无效',
+  other: '其他',
+};
+
+const reviewableClassifications = new Set<FollowUpClassification>([
+  'interested',
+  'nurturing',
+  'low_value',
+]);
+
+const lowValueReasons = new Set<LowValueReason>(
+  Object.keys(lowValueReasonLabels) as LowValueReason[],
+);
+
+const createIdempotencyKey = (prefix: string) =>
+  globalThis.crypto?.randomUUID?.() ||
+  `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+const getAiClassification = (
+  result: Record<string, unknown>,
+): FollowUpClassification | undefined => {
+  const value = result.classification as FollowUpClassification | undefined;
+  return value && reviewableClassifications.has(value) ? value : undefined;
+};
+
+const getAiLowValueReason = (
+  result: Record<string, unknown>,
+): LowValueReason | undefined => {
+  const value = result.low_value_reason as LowValueReason | undefined;
+  return value && lowValueReasons.has(value) ? value : undefined;
+};
+
+const afterCallResultStatusLabels = {
+  pending: { color: 'processing', text: '待提交' },
+  submitted: { color: 'success', text: '已提交' },
+  not_applicable: { color: 'default', text: '不适用' },
+} as const;
+
+const attemptResults = new Set<AttemptResult>([
+  'connected',
+  'no_answer',
+  'busy',
+  'rejected',
+  'invalid_contact',
+  'technical_failure',
+]);
+
+const getAfterCallContactResult = (record: AiCallRecord): AttemptResult => {
+  if (record.afterCallResultType === 'handoff') return 'connected';
+  if (attemptResults.has(record.callResult as AttemptResult)) {
+    return record.callResult as AttemptResult;
+  }
+  return record.status === 'failed' ? 'technical_failure' : 'connected';
+};
+
+const getAfterCallRemark = (record: AiCallRecord, result: AttemptResult) => {
+  if (record.failureMessage) return record.failureMessage;
+  if (result === 'no_answer') return '本次回拨未接通';
+  if (result === 'technical_failure') return '本次回拨技术失败：';
+  return result === 'connected' ? '' : `本次回拨${callResultLabels[result]}`;
+};
+
 const qualityReviewOptions: Array<{
+  description: string;
   label: string;
-  style: React.CSSProperties;
   value: QualityReviewResult;
 }> = [
   {
+    description: '明显超出质检标准',
     label: '优秀',
     value: 'excellent',
-    style: { flex: 1, textAlign: 'center' },
   },
-  { label: '良好', value: 'good', style: { flex: 1, textAlign: 'center' } },
-  { label: '合格', value: 'pass', style: { flex: 1, textAlign: 'center' } },
-  { label: '不合格', value: 'fail', style: { flex: 1, textAlign: 'center' } },
+  { description: '整体准确，略有瑕疵', label: '良好', value: 'good' },
+  { description: '达到基本质检要求', label: '合格', value: 'pass' },
+  { description: '存在明显问题', label: '不合格', value: 'fail' },
 ];
 
 const canOpenQualityReview = (row: AiCallRecord) =>
@@ -312,11 +408,29 @@ type QualityReviewFormValues = {
   qualityReason?: string | null;
 };
 
+type ClassificationReviewFormValues = {
+  classification: FollowUpClassification;
+  lowValueReason?: LowValueReason;
+  reason: string;
+};
+
+type ScheduleFollowUpFormValues = {
+  followUpReason: string;
+  nextFollowUpAt: Dayjs;
+};
+
 const AiCallRecordsPage = () => {
   const actionRef = useRef<ActionType | undefined>(undefined);
   const [qualityForm] = Form.useForm<QualityReviewFormValues>();
+  const [classificationForm] =
+    Form.useForm<ClassificationReviewFormValues>();
+  const [scheduleForm] = Form.useForm<ScheduleFollowUpFormValues>();
   const selectedQualityResult = Form.useWatch('qualityResult', qualityForm);
   const selectedQualityReason = Form.useWatch('qualityReason', qualityForm);
+  const selectedClassification = Form.useWatch(
+    'classification',
+    classificationForm,
+  );
   const [searchParams] = useSearchParams();
   const presetCallId = searchParams.get('callId')?.trim() || undefined;
   const presetListOnly = searchParams.get('view') === 'list';
@@ -339,7 +453,13 @@ const AiCallRecordsPage = () => {
   const [handoffs, setHandoffs] = useState<AiCallHandoff[]>([]);
   const [detailErrors, setDetailErrors] = useState<DetailErrors>({});
   const [detailLoading, setDetailLoading] = useState(false);
-  const [followUpReviewing, setFollowUpReviewing] = useState(false);
+  const [classificationReviewing, setClassificationReviewing] =
+    useState(false);
+  const [classificationModalOpen, setClassificationModalOpen] = useState(false);
+  const [classificationReviewKey, setClassificationReviewKey] = useState('');
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [scheduleSubmitting, setScheduleSubmitting] = useState(false);
+  const [scheduleKey, setScheduleKey] = useState('');
   const [qualityRecord, setQualityRecord] = useState<AiCallRecord>();
   const [qualityDetail, setQualityDetail] = useState<AiCallQualityDetail>();
   const [qualityRecording, setQualityRecording] =
@@ -395,7 +515,11 @@ const AiCallRecordsPage = () => {
     setAnalysis(undefined);
     setHandoffs([]);
     setDetailErrors({});
-    setFollowUpReviewing(false);
+    setClassificationReviewing(false);
+    setClassificationModalOpen(false);
+    setScheduleModalOpen(false);
+    classificationForm.resetFields();
+    scheduleForm.resetFields();
   };
 
   const closeQualityReview = () => {
@@ -417,6 +541,7 @@ const AiCallRecordsPage = () => {
     setHandoffs([]);
     setDetailErrors({});
     setDetailLoading(true);
+    setClassificationReviewKey(createIdempotencyKey('classification-review'));
     try {
       const nextDetail = await getAiCallRecordDetail(callId);
       setDetail(nextDetail);
@@ -456,6 +581,75 @@ const AiCallRecordsPage = () => {
       setDetailLoading(false);
     }
   }, []);
+
+  const submitPendingAfterCallResult = async (
+    values: AfterCallResultValues,
+  ) => {
+    const pendingRecord = detail?.record;
+    if (!pendingRecord || pendingRecord.afterCallResultStatus !== 'pending') {
+      throw new Error('该通话已无需提交话后结果');
+    }
+    const expectedVersion = detail.followUpData?.version ?? 0;
+    if (pendingRecord.afterCallResultType === 'handoff') {
+      const handoff =
+        handoffs.find(
+          (item) =>
+            item.humanAgentIdentity === pendingRecord.operatorAgentIdentity,
+        ) || handoffs[0];
+      if (!handoff) throw new Error('转人工记录尚未同步，请稍后重试');
+      if (!values.classification || values.classification === 'converted') {
+        throw new Error('请选择有意向、持续跟进或低价值');
+      }
+      if (values.lowValueReason === 'invalid_contact') {
+        throw new Error('已接通时不能选择联系方式无效');
+      }
+      await submitAfterCallWork(pendingRecord.callId, {
+        handoffId: handoff.handoffId,
+        classification: values.classification,
+        lowValueReason: values.lowValueReason,
+        conclusion: values.conclusion || '',
+        scheduleFollowUp: values.scheduleFollowUp,
+        nextFollowUpAt: values.nextFollowUpAt,
+        expectedVersion,
+        idempotencyKey: `after-call-result:${pendingRecord.callId}`,
+      });
+    } else if (pendingRecord.afterCallResultType === 'follow_up') {
+      if (!detail.followUp?.id) throw new Error('关联回访任务不存在');
+      await submitFollowUpHandlingResult(detail.followUp.id, {
+        callId: pendingRecord.callId,
+        contactResult: getAfterCallContactResult(pendingRecord),
+        remark: values.remark,
+        classification: values.classification,
+        lowValueReason: values.lowValueReason,
+        conclusion: values.conclusion,
+        scheduleFollowUp: values.scheduleFollowUp,
+        nextFollowUpAt: values.nextFollowUpAt,
+        expectedVersion,
+        idempotencyKey: `follow-up-handling:${pendingRecord.callId}`,
+      });
+    } else {
+      const followUpDataId =
+        detail.followUpData?.id || pendingRecord.followUpDataId;
+      if (!followUpDataId) throw new Error('关联跟进数据不存在');
+      await submitFollowUpDataHandlingResult(followUpDataId, {
+        callId: pendingRecord.callId,
+        contactResult: getAfterCallContactResult(pendingRecord),
+        remark: values.remark,
+        classification: values.classification,
+        lowValueReason: values.lowValueReason,
+        conclusion: values.conclusion,
+        scheduleFollowUp: values.scheduleFollowUp,
+        nextFollowUpAt: values.nextFollowUpAt,
+        expectedVersion,
+        idempotencyKey: `follow-up-data-handling:${pendingRecord.callId}`,
+      });
+    }
+    message.success('话后结果已提交');
+    await Promise.all([
+      openDetail(pendingRecord.callId),
+      Promise.resolve(actionRef.current?.reload?.()),
+    ]);
+  };
 
   const openQualityReview = useCallback(
     async (row: AiCallRecord) => {
@@ -504,11 +698,24 @@ const AiCallRecordsPage = () => {
     [qualityForm],
   );
 
-  const reviewFollowUp = async (action: 'create' | 'dismiss') => {
-    if (!selectedCallId) return;
-    setFollowUpReviewing(true);
+  const submitClassificationReview = async (
+    values: ClassificationReviewFormValues,
+  ) => {
+    if (!selectedCallId || !detail?.followUpData) return;
+    setClassificationReviewing(true);
     try {
-      await reviewAiCallRecordFollowUp(selectedCallId, action);
+      await reviewAiCallRecordClassification(selectedCallId, {
+        classification: values.classification,
+        reason: values.reason.trim(),
+        lowValueReason:
+          values.classification === 'low_value'
+            ? values.lowValueReason
+            : undefined,
+        expectedVersion: detail.followUpData.version,
+        idempotencyKey: classificationReviewKey,
+      });
+      message.success('分类复核已提交');
+      setClassificationModalOpen(false);
       await openDetail(selectedCallId);
       await Promise.resolve(actionRef.current?.reload?.());
     } catch {
@@ -516,9 +723,71 @@ const AiCallRecordsPage = () => {
         openDetail(selectedCallId),
         Promise.resolve(actionRef.current?.reload?.()),
       ]);
-      message.error('跟进确认失败，已刷新最新状态');
+      message.error('分类复核失败，已刷新最新状态');
     } finally {
-      setFollowUpReviewing(false);
+      setClassificationReviewing(false);
+    }
+  };
+
+  const adoptAiClassification = async () => {
+    const result = analysis?.analysisResult || {};
+    const classification = getAiClassification(result);
+    const reason = String(result.reason || '').trim();
+    const lowValueReason = getAiLowValueReason(result);
+    if (!classification || !reason) return;
+    if (classification === 'low_value' && !lowValueReason) {
+      classificationForm.setFieldsValue({ classification, reason });
+      setClassificationModalOpen(true);
+      message.warning('请先补充低价值原因');
+      return;
+    }
+    await submitClassificationReview({
+      classification,
+      reason,
+      lowValueReason,
+    });
+  };
+
+  const openClassificationReview = () => {
+    const result = analysis?.analysisResult || {};
+    classificationForm.setFieldsValue({
+      classification:
+        getAiClassification(result) ||
+        detail?.followUpData?.classification ||
+        undefined,
+      lowValueReason: getAiLowValueReason(result),
+      reason: String(result.reason || '').trim(),
+    });
+    setClassificationModalOpen(true);
+  };
+
+  const openSchedule = () => {
+    scheduleForm.resetFields();
+    setScheduleKey(createIdempotencyKey('schedule-follow-up'));
+    setScheduleModalOpen(true);
+  };
+
+  const submitSchedule = async () => {
+    if (!detail?.followUpData) return;
+    const values = await scheduleForm.validateFields();
+    setScheduleSubmitting(true);
+    try {
+      await scheduleFollowUpData(detail.followUpData.id, {
+        followUpReason: values.followUpReason.trim(),
+        nextFollowUpAt: values.nextFollowUpAt.toISOString(),
+        expectedVersion: detail.followUpData.version,
+        idempotencyKey: scheduleKey,
+      });
+      message.success('回访已安排');
+      setScheduleModalOpen(false);
+      await Promise.all([
+        openDetail(detail.record.callId),
+        Promise.resolve(actionRef.current?.reload?.()),
+      ]);
+    } catch {
+      message.error('回访安排失败，请保留当前内容后重试');
+    } finally {
+      setScheduleSubmitting(false);
     }
   };
 
@@ -677,16 +946,25 @@ const AiCallRecordsPage = () => {
         hideInTable: true,
       },
       {
-        title: '后续跟进',
+        title: '分类复核状态',
+        dataIndex: 'classificationReviewStatus',
+        valueType: 'select',
+        valueEnum: {
+          suggested: { text: '建议复核' },
+          reviewed: { text: '已复核' },
+        },
+        hideInTable: true,
+      },
+      {
+        title: '回访任务状态',
         dataIndex: 'followUpStatus',
         valueType: 'select',
         valueEnum: {
-          suggested: { text: '待人工确认' },
-          pending: { text: '待跟进' },
-          processing: { text: '跟进中' },
+          none: { text: '未安排' },
+          pending: { text: '待处理' },
+          processing: { text: '处理中' },
           completed: { text: '已完成' },
           closed: { text: '已关闭' },
-          none: { text: '无需跟进' },
         },
         hideInTable: true,
       },
@@ -754,18 +1032,15 @@ const AiCallRecordsPage = () => {
         search: false,
         width: 240,
         render: (_, row) => (
-          <Text
-            type={row.summary ? undefined : 'secondary'}
-            title={row.summary || undefined}
-            style={{
-              display: '-webkit-box',
-              WebkitBoxOrient: 'vertical',
-              WebkitLineClamp: 2,
-              overflow: 'hidden',
-            }}
-          >
-            {row.summary || '暂无摘要'}
-          </Text>
+          <Tooltip placement="topLeft" title={row.summary || undefined}>
+            <Paragraph
+              ellipsis={{ rows: 2 }}
+              type={row.summary ? undefined : 'secondary'}
+              style={{ marginBottom: 0 }}
+            >
+              {row.summary || '暂无摘要'}
+            </Paragraph>
+          </Tooltip>
         ),
       },
       {
@@ -776,9 +1051,7 @@ const AiCallRecordsPage = () => {
         render: (_, row) => (
           <Flex vertical gap={2}>
             <Text>{formatDateTime(row.startedAt)}</Text>
-            <Text type="secondary">
-              {formatDuration(row.durationMs)}
-            </Text>
+            <Text type="secondary">{formatDuration(row.durationMs)}</Text>
           </Flex>
         ),
       },
@@ -793,7 +1066,18 @@ const AiCallRecordsPage = () => {
           }),
       },
       {
-        title: '后续跟进',
+        title: '分类复核',
+        key: 'classificationReviewDisplay',
+        search: false,
+        width: 104,
+        render: (_, row) =>
+          renderPostCallStatus(
+            getClassificationReviewPresentation(row),
+            () => void openDetail(row.callId),
+          ),
+      },
+      {
+        title: '回访任务',
         key: 'followUpDisplay',
         search: false,
         width: 112,
@@ -813,6 +1097,28 @@ const AiCallRecordsPage = () => {
         },
       },
       {
+        title: '话后结果',
+        dataIndex: 'afterCallResultStatus',
+        valueType: 'select',
+        width: 104,
+        valueEnum: Object.fromEntries(
+          Object.entries(afterCallResultStatusLabels).map(([value, meta]) => [
+            value,
+            { text: meta.text },
+          ]),
+        ),
+        render: (_, row) => {
+          const meta = row.afterCallResultStatus
+            ? afterCallResultStatusLabels[row.afterCallResultStatus]
+            : undefined;
+          return meta && row.afterCallResultStatus !== 'not_applicable' ? (
+            <Tag color={meta.color}>{meta.text}</Tag>
+          ) : (
+            <Text type="secondary">-</Text>
+          );
+        },
+      },
+      {
         title: 'AI 评分',
         key: 'qualityScoreDisplay',
         search: false,
@@ -825,7 +1131,7 @@ const AiCallRecordsPage = () => {
         key: 'qualityReviewDisplay',
         search: false,
         fixed: 'right',
-        width: 120,
+        width: 176,
         render: (_, row) => {
           if (!canOpenQualityReview(row)) {
             return <Text type="secondary">-</Text>;
@@ -833,22 +1139,43 @@ const AiCallRecordsPage = () => {
           const presentation = getQualityReviewPresentation(
             row.qualityReviewResult,
           );
-          const content = presentation ? (
-            renderPostCallStatus(presentation)
-          ) : (
-            <Text type="secondary">未复核</Text>
-          );
+          const actionLabel = presentation ? '修改复核' : '复核';
           return (
-            <Flex vertical align="flex-start" gap={2}>
-              {content}
-              <Button
-                size="small"
-                type="link"
-                style={{ height: 'auto', padding: 0 }}
-                onClick={() => void openQualityReview(row)}
-              >
-                {presentation ? '修改' : '复核'}
-              </Button>
+            <Flex vertical align="flex-start" gap={4}>
+              <Flex align="center" gap={4}>
+                {presentation ? (
+                  renderPostCallStatus(presentation)
+                ) : (
+                  <Tag color="warning" style={{ marginInlineEnd: 0 }}>
+                    未复核
+                  </Tag>
+                )}
+                <Tooltip title={actionLabel}>
+                  <Button
+                    aria-label={actionLabel}
+                    icon={presentation ? <EditOutlined /> : <AuditOutlined />}
+                    size="small"
+                    type="text"
+                    onClick={() => void openQualityReview(row)}
+                  />
+                </Tooltip>
+              </Flex>
+              {row.qualityReviewResult === 'fail' && row.qualityReviewReason ? (
+                <Tooltip title={row.qualityReviewReason}>
+                  <Text
+                    type="danger"
+                    style={{
+                      display: '-webkit-box',
+                      fontSize: 12,
+                      WebkitBoxOrient: 'vertical',
+                      WebkitLineClamp: 2,
+                      overflow: 'hidden',
+                    }}
+                  >
+                    原因：{row.qualityReviewReason}
+                  </Text>
+                </Tooltip>
+              ) : null}
             </Flex>
           );
         },
@@ -858,7 +1185,7 @@ const AiCallRecordsPage = () => {
         key: 'option',
         valueType: 'option',
         fixed: 'right',
-        width: 92,
+        width: 120,
         render: (_, row) => {
           return (
             <Flex gap={4}>
@@ -867,7 +1194,9 @@ const AiCallRecordsPage = () => {
                 type="link"
                 onClick={() => void openDetail(row.callId)}
               >
-                查看详情
+                {row.afterCallResultStatus === 'pending'
+                  ? '提交话后结果'
+                  : '查看详情'}
               </Button>
             </Flex>
           );
@@ -904,25 +1233,40 @@ const AiCallRecordsPage = () => {
         String(selectedQualityReason || '').trim()),
   );
   const executionConfig = detail?.executionConfig;
+  const exceptionHandling = detail?.exceptionHandling;
   const afterCallWork = detail?.afterCallWork;
   const followUp = detail?.followUp;
   const analysisResult = analysis?.analysisResult || {};
-  const needsManualFollowUpReview =
-    !followUp &&
-    handoffs.length === 0 &&
-    Boolean(detail?.record && isFormalOutboundRecord(detail.record)) &&
-    analysis?.analysisStatus === '2' &&
-    Boolean(analysis?.followUpRequiresReview);
+  const aiClassification = getAiClassification(analysisResult);
+  const needsClassificationReview = Boolean(
+    detail?.followUpData &&
+      aiClassification &&
+      analysis?.classificationRequiresReview,
+  );
+  const activeFollowUpId =
+    detail?.followUpData?.activeFollowUpId ||
+    (followUp?.status === 'pending' || followUp?.status === 'processing'
+      ? followUp.id
+      : undefined);
+  const canScheduleFollowUp = Boolean(
+    detail?.followUpData &&
+      !activeFollowUpId &&
+      ['interested', 'nurturing'].includes(
+        detail.followUpData.classification || '',
+      ),
+  );
   return (
-    <PageContainer title="通话记录">
+    <ListPage title="通话记录">
       <ProTable<AiCallRecord>
+        className="recov-stable-pagination-table"
         actionRef={actionRef}
         rowKey="callId"
         columns={columns}
         search={{ labelWidth: 104 }}
-        scroll={{ x: 1450 }}
+        scroll={{ x: 1748 }}
         pagination={{
           defaultPageSize: 10,
+          showSizeChanger: true,
           showTotal: (total) => `共 ${total} 条`,
         }}
         request={async ({ current, pageSize, startedAtRange, ...filters }) => {
@@ -1049,6 +1393,37 @@ const AiCallRecordsPage = () => {
               />
             </section>
 
+            {record.afterCallResultStatus === 'pending' ? (
+              <section>
+                <Title level={5}>待提交话后结果</Title>
+                <Alert
+                  type="warning"
+                  showIcon
+                  title="本次人工通话已结束，请核对下方录音、对话和历史后提交结果。"
+                  style={{ marginBottom: 16 }}
+                />
+                <AfterCallResultForm
+                  key={record.callId}
+                  contactResult={getAfterCallContactResult(record)}
+                  currentClassification={
+                    record.afterCallResultType === 'handoff' &&
+                    detail.followUpData?.classification === 'converted'
+                      ? undefined
+                      : detail.followUpData?.classification
+                  }
+                  conclusionDraft={record.summary || undefined}
+                  includeConverted={record.afterCallResultType !== 'handoff'}
+                  includeInvalidContactReason={false}
+                  initialRemark={getAfterCallRemark(
+                    record,
+                    getAfterCallContactResult(record),
+                  )}
+                  submitText="提交话后结果"
+                  onSubmit={submitPendingAfterCallResult}
+                />
+              </section>
+            ) : null}
+
             {followUp ? (
               <section>
                 <Title level={5}>关联跟进</Title>
@@ -1125,6 +1500,40 @@ const AiCallRecordsPage = () => {
                       label: '呼叫规则',
                       children: executionConfig.ruleName || '-',
                     },
+                    ...(exceptionHandling
+                      ? [
+                          {
+                            key: 'exceptionStatus',
+                            label: '异常处理状态',
+                            children:
+                              {
+                                PENDING: '待重呼',
+                                WAITING: '等待执行',
+                                CALLING: '重呼中',
+                                CONNECTED: '已接通',
+                                MAXED: '已达上限',
+                                UNAVAILABLE: '不可重呼',
+                                STOPPED: '已停止',
+                              }[exceptionHandling.status] ||
+                              exceptionHandling.status,
+                          },
+                          {
+                            key: 'exceptionProgress',
+                            label: '异常重呼进度',
+                            children: `${exceptionHandling.retryCount}/${exceptionHandling.maxRetryCount}`,
+                          },
+                          {
+                            key: 'exceptionLastResult',
+                            label: '异常处理最后结果',
+                            children:
+                              callResultLabels[
+                                exceptionHandling.lastResult || ''
+                              ] ||
+                              exceptionHandling.lastResult ||
+                              '-',
+                          },
+                        ]
+                      : []),
                   ]}
                 />
               ) : (
@@ -1184,8 +1593,9 @@ const AiCallRecordsPage = () => {
                                 : 'success'
                             }
                           >
-                            {dispositionLabels[afterCallWork.dispositionCode] ||
-                              afterCallWork.dispositionCode}
+                            {dispositionLabels[
+                              afterCallWork.dispositionCode || ''
+                            ] || afterCallWork.dispositionCode}
                           </Tag>
                         ),
                       },
@@ -1197,7 +1607,9 @@ const AiCallRecordsPage = () => {
                       {
                         key: 'agent',
                         label: '提交坐席',
-                        children: afterCallWork.agentIdentity,
+                        children: (
+                          <AgentName identity={afterCallWork.agentIdentity} />
+                        ),
                       },
                       {
                         key: 'submittedAt',
@@ -1234,41 +1646,39 @@ const AiCallRecordsPage = () => {
                           <AnalysisResultDescriptions
                             analysisResult={analysisResult}
                           />
-                          {needsManualFollowUpReview ? (
+                          {needsClassificationReview ? (
                             <Flex gap={8}>
                               <Button
-                                loading={followUpReviewing}
+                                loading={classificationReviewing}
                                 size="small"
                                 type="primary"
-                                onClick={() => void reviewFollowUp('create')}
+                                onClick={() => void adoptAiClassification()}
                               >
-                                创建跟进
+                                采纳 AI 分类
                               </Button>
-                              <Popconfirm
-                                cancelText="取消"
-                                description="此操作不会创建跟进任务。"
-                                okText="确认无需跟进"
-                                title="确认无需跟进？"
-                                onConfirm={() => reviewFollowUp('dismiss')}
+                              <Button
+                                disabled={classificationReviewing}
+                                size="small"
+                                onClick={openClassificationReview}
                               >
-                                <Button
-                                  disabled={followUpReviewing}
-                                  size="small"
-                                >
-                                  无需跟进
-                                </Button>
-                              </Popconfirm>
+                                修改分类
+                              </Button>
                             </Flex>
                           ) : null}
-                          {analysis.followUpReviewStatus === 'dismissed' ? (
+                          {analysis.classificationReviewStatus ===
+                          'reviewed' ? (
                             <Descriptions
                               column={1}
                               styles={detailDescriptionStyles}
                               items={[
                                 {
-                                  key: 'followUpReview',
-                                  label: '人工确认',
-                                  children: `无需跟进 · ${
+                                  key: 'classificationReview',
+                                  label: '分类复核',
+                                  children: `${
+                                    analysis.followUpReviewStatus === 'adjusted'
+                                      ? '已修改分类'
+                                      : '已采纳 AI 分类'
+                                  } · ${
                                     analysis.followUpReviewedByName ||
                                     analysis.followUpReviewedBy ||
                                     '-'
@@ -1278,6 +1688,27 @@ const AiCallRecordsPage = () => {
                                 },
                               ]}
                             />
+                          ) : null}
+                          {activeFollowUpId ? (
+                            <Button
+                              size="small"
+                              style={{ alignSelf: 'flex-start' }}
+                              onClick={() =>
+                                history.push(
+                                  `/ai-call/follow-up-overview?followUpId=${encodeURIComponent(activeFollowUpId)}`,
+                                )
+                              }
+                            >
+                              查看回访任务
+                            </Button>
+                          ) : canScheduleFollowUp ? (
+                            <Button
+                              size="small"
+                              style={{ alignSelf: 'flex-start' }}
+                              onClick={openSchedule}
+                            >
+                              安排回访
+                            </Button>
                           ) : null}
                         </>
                       ) : (
@@ -1321,7 +1752,9 @@ const AiCallRecordsPage = () => {
                         {
                           key: 'agent',
                           label: '接听坐席',
-                          children: handoff.humanAgentIdentity || '-',
+                          children: (
+                            <AgentName identity={handoff.humanAgentIdentity} />
+                          ),
                         },
                         {
                           key: 'reason',
@@ -1351,6 +1784,106 @@ const AiCallRecordsPage = () => {
           />
         )}
       </Drawer>
+
+      <Modal
+        title="修改分类"
+        open={classificationModalOpen}
+        confirmLoading={classificationReviewing}
+        okText="确认修改"
+        onCancel={() => setClassificationModalOpen(false)}
+        onOk={async () => {
+          const values = await classificationForm.validateFields();
+          if (values.classification === 'converted') {
+            Modal.confirm({
+              title: '确认客户已转化？',
+              content: '确认后将完成已有回访任务，请核对业务事实。',
+              okText: '确认已转化',
+              cancelText: '取消',
+              onOk: () => submitClassificationReview(values),
+            });
+            return;
+          }
+          await submitClassificationReview(values);
+        }}
+      >
+        <Form form={classificationForm} layout="vertical">
+          <Form.Item
+            label="客户分类"
+            name="classification"
+            rules={[{ required: true, message: '请选择客户分类' }]}
+          >
+            <Select
+              options={Object.entries(classificationLabels).map(
+                ([value, label]) => ({ value, label }),
+              )}
+            />
+          </Form.Item>
+          {selectedClassification === 'low_value' ? (
+            <Form.Item
+              label="低价值原因"
+              name="lowValueReason"
+              rules={[{ required: true, message: '请选择低价值原因' }]}
+            >
+              <Select
+                options={Object.entries(lowValueReasonLabels).map(
+                  ([value, label]) => ({ value, label }),
+                )}
+              />
+            </Form.Item>
+          ) : null}
+          <Form.Item
+            label="分类原因"
+            name="reason"
+            rules={[
+              { required: true, whitespace: true, message: '请填写分类原因' },
+            ]}
+          >
+            <Input.TextArea
+              maxLength={500}
+              placeholder="说明本次分类判断依据"
+              rows={4}
+              showCount
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="安排回访"
+        open={scheduleModalOpen}
+        confirmLoading={scheduleSubmitting}
+        okText="确认安排"
+        onCancel={() => setScheduleModalOpen(false)}
+        onOk={submitSchedule}
+      >
+        <Form form={scheduleForm} layout="vertical">
+          <Form.Item
+            label="回访原因"
+            name="followUpReason"
+            rules={[
+              { required: true, whitespace: true, message: '请填写回访原因' },
+            ]}
+          >
+            <Input.TextArea
+              maxLength={500}
+              placeholder="说明本次安排回访的目标或依据"
+              rows={3}
+              showCount
+            />
+          </Form.Item>
+          <Form.Item
+            label="计划回访时间"
+            name="nextFollowUpAt"
+            rules={[{ required: true, message: '请选择计划回访时间' }]}
+          >
+            <DatePicker
+              showTime
+              style={{ width: '100%' }}
+              disabledDate={(current) => current.endOf('day').isBefore(dayjs())}
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
       <Drawer
         title="外呼质检复核"
@@ -1481,19 +2014,32 @@ const AiCallRecordsPage = () => {
                     name="qualityResult"
                     rules={[{ required: true, message: '请选择质检结果' }]}
                   >
-                    <Radio.Group
-                      block
-                      buttonStyle="solid"
-                      options={qualityReviewOptions}
-                      optionType="button"
-                      size="large"
-                      style={{ display: 'flex', width: '100%' }}
-                    />
+                    <Radio.Group className="ai-call-quality-review-options">
+                      {qualityReviewOptions.map((option) => (
+                        <Radio.Button
+                          aria-label={`${option.label}：${option.description}`}
+                          className={`ai-call-quality-review-option ai-call-quality-review-option--${option.value}`}
+                          key={option.value}
+                          value={option.value}
+                        >
+                          <span className="ai-call-quality-review-option-copy">
+                            <span className="ai-call-quality-review-option-title">
+                              {option.label}
+                            </span>
+                            <span className="ai-call-quality-review-option-description">
+                              {option.description}
+                            </span>
+                          </span>
+                          <CheckOutlined className="ai-call-quality-review-option-check" />
+                        </Radio.Button>
+                      ))}
+                    </Radio.Group>
                   </Form.Item>
                   {selectedQualityResult === 'fail' ? (
                     <Form.Item
                       label="不合格原因"
                       name="qualityReason"
+                      required
                       rules={[
                         {
                           validator: (_, value) =>
@@ -1534,7 +2080,7 @@ const AiCallRecordsPage = () => {
           </Flex>
         ) : null}
       </Drawer>
-    </PageContainer>
+    </ListPage>
   );
 };
 

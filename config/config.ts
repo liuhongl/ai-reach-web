@@ -4,6 +4,7 @@ import devProxy from './proxy';
 import routes from './routes';
 
 export default defineConfig({
+  ...(process.env.AI_REACH_E2E === '1' ? { mfsu: false } : {}),
   access: {},
   antd: {
     appConfig: {},

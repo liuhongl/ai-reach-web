@@ -41,6 +41,27 @@ export type AiCallLabPromptProfile = {
   providerKey?: 'static_profile' | 'business_query' | string;
   promptText?: string | null;
   openingMessage?: string | null;
+  productInfo?: string;
+  variables?: AiCallLabPromptVariable[];
+  versionNo?: number | null;
+  versionCount?: number;
+};
+
+export type AiCallLabPromptVariable = {
+  key: string;
+  label: string;
+};
+
+export type AiCallLabPromptVersion = {
+  id: number | string;
+  profileId: number | string;
+  versionNo: number;
+  creationMethod: 'manual' | 'ai_generated' | 'ai_optimized' | 'restored';
+  restoredFromVersionId?: number | string | null;
+  createdBy?: number | string | null;
+  createdByName?: string | null;
+  createdAt: string;
+  snapshot?: Omit<AiCallLabPromptProfile, 'id'>;
 };
 
 export type AiCallLabPromptProfilePayload = Omit<
@@ -48,6 +69,34 @@ export type AiCallLabPromptProfilePayload = Omit<
   'id'
 > & {
   id?: number | string;
+  knowledgeVersionSnapshotHash?: string;
+};
+
+export type AiCallLabProductInfoSource = {
+  claim: string;
+  chunkId: string;
+  versionId: string;
+  versionNo: number;
+  sourceFilename: string;
+  pageNo?: number | null;
+  sectionPath?: string | null;
+  startMs?: number | null;
+  endMs?: number | null;
+  excerpt: string;
+};
+
+export type AiCallLabProductInfoConflict = {
+  topic: string;
+  description: string;
+  sourceChunkIds: string[];
+};
+
+export type AiCallLabProductInfoDraft = {
+  draftText: string;
+  sources: AiCallLabProductInfoSource[];
+  conflicts: AiCallLabProductInfoConflict[];
+  sourceVersionIds: string[];
+  versionSnapshotHash: string;
 };
 
 export type AiCallLabPromptComponent = {
@@ -55,6 +104,19 @@ export type AiCallLabPromptComponent = {
   componentKey: string;
   name?: string;
   content?: string;
+};
+
+export type AiCallLabPromptCommonConfig = {
+  content: string;
+  updatedAt?: string | null;
+};
+
+export type AiCallLabPromptPreview = {
+  instructions: string;
+  openingMessage: string;
+  promptHash: string;
+  openingMessageHash: string;
+  promptSourceKey: string;
 };
 
 export type AiCallLabCreateSessionRequest = {
@@ -192,6 +254,153 @@ export const getAiCallLabPromptComponents = async () => {
   return unwrapAiCallLabPage<AiCallLabPromptComponent>(response);
 };
 
+export const getAiCallLabPromptCommonConfig = async () => {
+  const response = await aiCallLabRequest<
+    AiCallLabResponse<AiCallLabPromptCommonConfig>
+  >(buildPath('/prompt-common-config'), {
+    method: 'get',
+    timeout: AI_CALL_LAB_READ_TIMEOUT,
+  });
+  return unwrapAiCallLabResponse<AiCallLabPromptCommonConfig>(response);
+};
+
+export const saveAiCallLabPromptCommonConfig = async (content: string) => {
+  const response = await aiCallLabRequest<
+    AiCallLabResponse<AiCallLabPromptCommonConfig>
+  >(buildPath('/prompt-common-config'), {
+    method: 'put',
+    data: { content },
+    timeout: AI_CALL_LAB_ACTION_TIMEOUT,
+  });
+  return unwrapAiCallLabResponse<AiCallLabPromptCommonConfig>(response);
+};
+
+export const previewAiCallLabPromptProfile = async (
+  profile: Pick<
+    AiCallLabPromptProfile,
+    'sceneCode' | 'promptText' | 'openingMessage' | 'productInfo' | 'variables'
+  >,
+) => {
+  const response = await aiCallLabRequest<
+    AiCallLabResponse<AiCallLabPromptPreview>
+  >(buildPath('/prompt-profiles/preview'), {
+    method: 'post',
+    data: {
+      sceneCode: profile.sceneCode,
+      promptText: profile.promptText,
+      openingMessage: profile.openingMessage,
+      productInfo: profile.productInfo,
+      businessParams: Object.fromEntries(
+        (profile.variables || []).map((variable) => [
+          variable.key,
+          `[${variable.label}]`,
+        ]),
+      ),
+    },
+    timeout: AI_CALL_LAB_ACTION_TIMEOUT,
+  });
+  return unwrapAiCallLabResponse<AiCallLabPromptPreview>(response);
+};
+
+export const getAiCallLabPromptVersions = async (
+  profileId: number | string,
+) => {
+  const response = await aiCallLabRequest<
+    AiCallLabPageResponse<AiCallLabPromptVersion>
+  >(
+    buildPath(
+      `/prompt-profiles/${encodeURIComponent(String(profileId))}/versions`,
+    ),
+    { method: 'get', timeout: AI_CALL_LAB_READ_TIMEOUT },
+  );
+  return unwrapAiCallLabPage<AiCallLabPromptVersion>(response);
+};
+
+export const getAiCallLabPromptVersion = async (
+  profileId: number | string,
+  versionId: number | string,
+) => {
+  const response = await aiCallLabRequest<
+    AiCallLabResponse<AiCallLabPromptVersion>
+  >(
+    buildPath(
+      `/prompt-profiles/${encodeURIComponent(String(profileId))}/versions/${encodeURIComponent(String(versionId))}`,
+    ),
+    { method: 'get', timeout: AI_CALL_LAB_READ_TIMEOUT },
+  );
+  return unwrapAiCallLabResponse<AiCallLabPromptVersion>(response);
+};
+
+export const applyAiCallLabPromptVersion = async (
+  profileId: number | string,
+  versionId: number | string,
+) => {
+  const response = await aiCallLabRequest<
+    AiCallLabResponse<AiCallLabPromptProfile>
+  >(
+    buildPath(
+      `/prompt-profiles/${encodeURIComponent(String(profileId))}/versions/${encodeURIComponent(String(versionId))}/apply`,
+    ),
+    { method: 'post', timeout: AI_CALL_LAB_ACTION_TIMEOUT },
+  );
+  return unwrapAiCallLabResponse<AiCallLabPromptProfile>(response);
+};
+
+export const deleteAiCallLabPromptVersion = (
+  profileId: number | string,
+  versionId: number | string,
+) =>
+  aiCallLabRequest(
+    buildPath(
+      `/prompt-profiles/${encodeURIComponent(String(profileId))}/versions/${encodeURIComponent(String(versionId))}`,
+    ),
+    { method: 'delete', timeout: AI_CALL_LAB_ACTION_TIMEOUT },
+  );
+
+export type AiCallLabPromptOptimizeRequest = {
+  targetType: 'opening' | 'scenePrompt';
+  currentContent: string;
+  sceneContext: {
+    sceneName: string;
+    productInfo: string;
+    commonPrompt: string;
+    variables: AiCallLabPromptVariable[];
+  };
+  instruction?: string;
+};
+
+export const optimizeAiCallLabPrompt = async (
+  data: AiCallLabPromptOptimizeRequest,
+) => {
+  const response = await aiCallLabRequest<
+    AiCallLabResponse<{ candidateContent: string; warnings: string[] }>
+  >(buildPath('/prompt-profiles/ai-optimize'), {
+    method: 'post',
+    data,
+    timeout: 30_000,
+    skipErrorHandler: true,
+  });
+  return unwrapAiCallLabResponse(response);
+};
+
+export const extractAiCallLabProductInfo = async (
+  profileId: number | string,
+) => {
+  const response = await aiCallLabRequest<
+    AiCallLabResponse<AiCallLabProductInfoDraft>
+  >(
+    buildPath(
+      `/prompt-profiles/${encodeURIComponent(String(profileId))}/product-info:extract`,
+    ),
+    {
+      method: 'post',
+      timeout: 30_000,
+      skipErrorHandler: true,
+    },
+  );
+  return unwrapAiCallLabResponse(response);
+};
+
 export const saveAiCallLabPromptProfile = async (
   payload: AiCallLabPromptProfilePayload,
 ) => {
@@ -207,6 +416,7 @@ export const saveAiCallLabPromptProfile = async (
       method: id ? 'put' : 'post',
       data,
       timeout: AI_CALL_LAB_ACTION_TIMEOUT,
+      skipErrorHandler: Boolean(data.knowledgeVersionSnapshotHash),
     },
   );
   return unwrapAiCallLabResponse<AiCallLabPromptProfile>(response);

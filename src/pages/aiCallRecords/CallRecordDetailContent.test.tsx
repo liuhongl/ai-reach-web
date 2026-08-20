@@ -142,7 +142,9 @@ describe('CallRecordDetailContent', () => {
       analysisResult: {
         summary: '客户询问了试用方案。',
         feedback_type: '中性',
-        follow_up: { required: false, consent: 'missing', confidence: 'low' },
+        classification: 'nurturing',
+        reason: '客户有初步兴趣，但未约定下一步',
+        confidence: 'low',
       },
       analysisRetryCount: 0,
     });
@@ -161,6 +163,7 @@ describe('CallRecordDetailContent', () => {
     expect(await screen.findAllByText('GEO 产品介绍')).toHaveLength(2);
     expect(screen.getByText('浏览器连接失败')).toBeTruthy();
     expect(screen.getByText('客户询问了试用方案。')).toBeTruthy();
-    expect(screen.getByText('AI 建议：无需跟进')).toBeTruthy();
+    expect(screen.getByText('AI 建议分类')).toBeTruthy();
+    expect(screen.getByText('持续跟进')).toBeTruthy();
   });
 });

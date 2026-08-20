@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -9,7 +10,7 @@ import React, { useState } from 'react';
 import BatchTargetUpload from './BatchTargetUpload';
 
 const UploadHarness = ({ onError }: { onError: (message: string) => void }) => {
-  const [file, setFile] = useState<File>(
+  const [file, setFile] = useState<File | undefined>(
     new File(['xlsx'], 'selected-targets.xlsx'),
   );
   return (
@@ -17,9 +18,7 @@ const UploadHarness = ({ onError }: { onError: (message: string) => void }) => {
       downloading={false}
       file={file}
       onDownload={jest.fn()}
-      onFileChange={(nextFile) => {
-        if (nextFile) setFile(nextFile);
-      }}
+      onFileChange={setFile}
       onFileError={onError}
     />
   );
@@ -44,7 +43,49 @@ describe('BatchTargetUpload', () => {
     await waitFor(() =>
       expect(onError).toHaveBeenCalledWith('仅支持 .xlsx 格式的名单文件'),
     );
-    expect(screen.getByText('selected-targets.xlsx')).toBeTruthy();
+    expect(
+      screen.getByRole('button', {
+        name: '完整文件名：selected-targets.xlsx',
+      }),
+    ).toBeTruthy();
     expect(screen.queryByText('replacement.csv')).toBeNull();
+  });
+
+  it('shows an obvious selected state and keeps the extension visible', async () => {
+    const { container } = render(<UploadHarness onError={jest.fn()} />);
+    const input = container.querySelector('input[type="file"]');
+    if (!(input instanceof HTMLInputElement)) {
+      throw new Error('未找到名单文件选择框');
+    }
+    const longFileName = '2026年8月灵宸科技华东区域第一批重点客户外呼名单.xlsx';
+    await act(async () => {
+      fireEvent.change(input, {
+        target: { files: [new File(['xlsx'], longFileName)] },
+      });
+    });
+
+    expect(screen.getByText('已选择外呼名单')).toBeTruthy();
+    expect(
+      screen
+        .getByText('已选择外呼名单')
+        .closest('[aria-live="polite"]')
+        ?.classList.contains('sm:h-28'),
+    ).toBe(true);
+    expect(
+      screen.getByRole('button', {
+        name: `完整文件名：${longFileName}`,
+      }),
+    ).toBeTruthy();
+    expect(screen.getByText('.xlsx').classList.contains('shrink-0')).toBe(true);
+    expect(document.querySelector('.ant-upload-list')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /移除/ }));
+    expect(screen.queryByText('已选择外呼名单')).toBeNull();
+    expect(screen.getByText('上传完整外呼名单')).toBeTruthy();
+    expect(
+      container
+        .querySelector('.ant-upload-drag')
+        ?.classList.contains('sm:!h-28'),
+    ).toBe(true);
   });
 });

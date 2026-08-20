@@ -17,6 +17,7 @@ import type {
   FollowUpTaskDto,
 } from '@/services/ruoyi/agent-console';
 import CallRecordDetailContent from '../../aiCallRecords/CallRecordDetailContent';
+import AgentName from './AgentName';
 import FollowUpCallDetail from './FollowUpCallDetail';
 
 const { Text, Title } = Typography;
@@ -27,6 +28,7 @@ const sourceLabels: Record<FollowUpTaskDto['source_type'], string> = {
   after_call_work: '接通后跟进',
   handoff_unanswered: '人工未接回访',
   ai_post_call: 'AI 话后跟进',
+  manual_schedule: '手动安排回访',
 };
 
 const attemptResultLabels: Record<AttemptResult, string> = {
@@ -86,10 +88,18 @@ const FollowUpTaskDetailDrawer = ({
       {showHandledAt ? (
         <Text>处理时间：{formatDateTime(handling.handled_at)}</Text>
       ) : null}
-      <Text>坐席：{handling.agent_identity}</Text>
+      <Text>
+        坐席：
+        <AgentName identity={handling.agent_identity} />
+      </Text>
       <Text>联系结果：{attemptResultLabels[handling.contact_result]}</Text>
       <Text>处理备注：{handling.remark}</Text>
-      <Text>下一步：{nextActionLabels[handling.next_action]}</Text>
+      <Text>
+        下一步：
+        {handling.next_action
+          ? nextActionLabels[handling.next_action]
+          : '按本次分类处理'}
+      </Text>
       {handling.next_follow_up_at ? (
         <Text>下次跟进：{formatDateTime(handling.next_follow_up_at)}</Text>
       ) : null}

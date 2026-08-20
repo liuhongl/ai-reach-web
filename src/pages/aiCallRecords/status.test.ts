@@ -1,4 +1,5 @@
 import {
+  getClassificationReviewPresentation,
   getCustomerIntentPresentation,
   getFollowUpPresentation,
   getQualityReviewPresentation,
@@ -37,49 +38,44 @@ describe('通话记录话后状态映射', () => {
     ).toMatchObject({ text: '正向', color: 'success' });
   });
 
-  it('区分待人工确认与已创建的正式跟进任务', () => {
+  it('分类复核与回访任务独立展示', () => {
     expect(
       getFollowUpPresentation({
         ...baseRecord,
-        followUpSuggested: true,
-        followUpRequiresReview: false,
       }),
     ).toBeNull();
     expect(
-      getFollowUpPresentation({
+      getClassificationReviewPresentation({
         ...baseRecord,
-        followUpSuggested: true,
-        followUpRequiresReview: true,
+        classificationReviewStatus: 'suggested',
       }),
     ).toMatchObject({
-      text: '待人工确认',
+      text: '建议复核',
       color: 'warning',
       target: 'record',
     });
     expect(
       getFollowUpPresentation({
         ...baseRecord,
-        followUpSuggested: true,
         followUpId: 'follow-up-1',
         followUpStatus: 'pending',
       }),
     ).toMatchObject({
-      text: '待跟进',
+      text: '待处理',
       color: 'warning',
       target: 'follow_up',
     });
   });
 
-  it('展示人工确认的无需跟进结论', () => {
+  it('展示已复核分类', () => {
     expect(
-      getFollowUpPresentation({
+      getClassificationReviewPresentation({
         ...baseRecord,
-        followUpSuggested: true,
-        followUpReviewStatus: 'dismissed',
+        classificationReviewStatus: 'reviewed',
       }),
     ).toMatchObject({
-      text: '无需跟进',
-      color: 'default',
+      text: '已复核',
+      color: 'success',
       target: 'record',
     });
   });
@@ -90,15 +86,14 @@ describe('通话记录话后状态映射', () => {
       entryType: 'outbound',
       analysisStatus: '2',
       customerIntent: 'positive',
-      followUpSuggested: true,
-      followUpRequiresReview: true,
+      classificationReviewStatus: 'suggested',
     } as const;
 
     expect(getCustomerIntentPresentation(outboundRecord)).toMatchObject({
       text: '正向',
     });
-    expect(getFollowUpPresentation(outboundRecord)).toMatchObject({
-      text: '待人工确认',
+    expect(getClassificationReviewPresentation(outboundRecord)).toMatchObject({
+      text: '建议复核',
     });
   });
 
@@ -109,7 +104,6 @@ describe('通话记录话后状态映射', () => {
       taskId: 'task-1',
       analysisStatus: '2',
       customerIntent: 'neutral',
-      followUpSuggested: true,
       followUpId: 'follow-up-1',
       followUpStatus: 'pending',
     } as const;
@@ -118,7 +112,7 @@ describe('通话记录话后状态映射', () => {
       text: '中性',
     });
     expect(getFollowUpPresentation(taskWebRecord)).toMatchObject({
-      text: '待跟进',
+      text: '待处理',
       target: 'follow_up',
     });
     expect(

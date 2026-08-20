@@ -1,4 +1,8 @@
 import { ruoyiRequest } from '@/adapters/ruoyi/request';
+import type {
+  FollowUpClassification,
+  LowValueReason,
+} from '@/pages/aiCallFollowUpData/service';
 
 const AI_CALL_AGENT_BASE_API = '/ai-call-agent-api';
 const AI_CALL_RECORDS_PREFIX = '/ai-call/records';
@@ -17,6 +21,10 @@ export type AiCallRecord = {
   callId: string;
   taskId?: string | null;
   targetId?: string | null;
+  followUpDataId?: string | null;
+  operatorAgentIdentity?: string | null;
+  afterCallResultStatus?: 'not_applicable' | 'pending' | 'submitted';
+  afterCallResultType?: 'handoff' | 'follow_up' | 'follow_up_data' | null;
   taskName?: string | null;
   customerName?: string | null;
   phoneNumber?: string | null;
@@ -28,7 +36,14 @@ export type AiCallRecord = {
   customerIntent?: 'positive' | 'neutral' | 'negative' | null;
   followUpSuggested?: boolean;
   followUpRequiresReview?: boolean;
-  followUpReviewStatus?: 'created' | 'dismissed' | null;
+  followUpReviewStatus?:
+    | 'created'
+    | 'dismissed'
+    | 'confirmed'
+    | 'adjusted'
+    | null;
+  classificationRequiresReview?: boolean;
+  classificationReviewStatus?: 'suggested' | 'reviewed' | null;
   followUpId?: string | null;
   followUpStatus?: 'pending' | 'processing' | 'completed' | 'closed' | null;
   qualityScoreStatus?:
@@ -40,6 +55,7 @@ export type AiCallRecord = {
     | null;
   qualityScore?: number | null;
   qualityReviewResult?: QualityReviewResult | null;
+  qualityReviewReason?: string | null;
   recordingPlayUrl?: string | null;
   businessType?: string | null;
   businessId?: string | null;
@@ -73,10 +89,47 @@ export type AiCallRecordDetail = {
   lastEvent?: AiCallRecordEvent | null;
   afterCallWork?: {
     agentIdentity: string;
-    dispositionCode: string;
+    followUpDataId?: string | null;
+    dispositionCode?: string | null;
     summary?: string | null;
-    needsFollowUp: boolean;
+    needsFollowUp?: boolean | null;
+    classification?: 'interested' | 'nurturing' | 'low_value' | null;
+    lowValueReason?: string | null;
+    nextFollowUpAt?: string | null;
+    resultVersion?: number | null;
     submittedAt: string;
+  } | null;
+  handlingResult?: {
+    id: string;
+    followUpId?: string | null;
+    followUpDataId?: string | null;
+    contactResult: string;
+    remark: string;
+    classification?:
+      | 'interested'
+      | 'nurturing'
+      | 'low_value'
+      | 'converted'
+      | null;
+    lowValueReason?: string | null;
+    nextFollowUpAt?: string | null;
+    resultVersion?: number | null;
+    handledAt: string;
+  } | null;
+  followUpData?: {
+    id: string;
+    classification?:
+      | 'interested'
+      | 'nurturing'
+      | 'low_value'
+      | 'converted'
+      | null;
+    lowValueReason?: string | null;
+    latestConclusion?: string | null;
+    activeFollowUpId?: string | null;
+    activeFollowUpStatus?: 'pending' | 'processing' | null;
+    nextFollowUpAt?: string | null;
+    version: number;
   } | null;
   followUp?: {
     id: string;
@@ -95,6 +148,14 @@ export type AiCallRecordDetail = {
     voice?: string | null;
     voiceName?: string | null;
     ruleName?: string | null;
+  } | null;
+  exceptionHandling?: {
+    category: string;
+    status: string;
+    originalAttemptCount: number;
+    retryCount: number;
+    maxRetryCount: number;
+    lastResult?: string | null;
   } | null;
 };
 
@@ -140,7 +201,14 @@ export type AiCallSemanticAnalysis = {
   analysisError?: string | null;
   analysisRetryCount: number;
   followUpRequiresReview?: boolean;
-  followUpReviewStatus?: 'created' | 'dismissed' | null;
+  followUpReviewStatus?:
+    | 'created'
+    | 'dismissed'
+    | 'confirmed'
+    | 'adjusted'
+    | null;
+  classificationRequiresReview?: boolean;
+  classificationReviewStatus?: 'suggested' | 'reviewed' | null;
   followUpReviewedBy?: string | null;
   followUpReviewedByName?: string | null;
   followUpReviewedAt?: string | null;
@@ -212,13 +280,14 @@ export type AiCallRecordQuery = {
   customerName?: string;
   callResult?: string;
   customerIntent?: 'positive' | 'neutral' | 'negative' | 'pending' | 'failed';
+  classificationReviewStatus?: 'suggested' | 'reviewed';
   followUpStatus?:
-    | 'suggested'
     | 'pending'
     | 'processing'
     | 'completed'
     | 'closed'
     | 'none';
+  afterCallResultStatus?: 'all' | 'pending' | 'submitted' | 'not_applicable';
   businessType?: string;
   businessId?: string;
   status?: string;
@@ -313,15 +382,27 @@ export const getAiCallRecordSemanticAnalysis = async (callId: string) => {
   return unwrapData(response);
 };
 
-export const reviewAiCallRecordFollowUp = async (
+export const reviewAiCallRecordClassification = async (
   callId: string,
-  action: 'create' | 'dismiss',
+  input: {
+    classification: FollowUpClassification;
+    reason: string;
+    lowValueReason?: LowValueReason;
+    expectedVersion: number;
+    idempotencyKey: string;
+  },
 ) => {
   const response = await ruoyiRequest<AiCallSemanticAnalysis>(
-    recordPath(callId, '/follow-up-review'),
+    recordPath(callId, '/classification-review'),
     {
       ...requestOptions,
-      data: { action },
+      headers: { 'Idempotency-Key': input.idempotencyKey },
+      data: {
+        classification: input.classification,
+        reason: input.reason,
+        low_value_reason: input.lowValueReason,
+        expected_version: input.expectedVersion,
+      },
       method: 'post',
     },
   );

@@ -20,6 +20,7 @@ import {
   getAiCallRecordRecording,
 } from '@/pages/aiCallRecords/service';
 import type { FollowUpTaskDto } from '@/services/ruoyi/agent-console';
+import AgentName from './AgentName';
 
 const { Text, Title } = Typography;
 
@@ -158,7 +159,11 @@ const FollowUpCallDetail = ({
                 ? `${formatDateTime(followUp.source_record.started_at)} · ${recordStatusLabels[followUp.source_record.status] || '状态未知'}`
                 : '暂无原始通话信息',
             },
-            { key: 'agent', label: '坐席', children: agent },
+            {
+              key: 'agent',
+              label: '坐席',
+              children: <AgentName identity={agent} />,
+            },
             {
               key: 'startedAt',
               label: '开始时间',

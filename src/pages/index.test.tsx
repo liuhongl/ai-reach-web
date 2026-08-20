@@ -27,14 +27,14 @@ describe('index page', () => {
     expect(history.replace).toHaveBeenCalledWith('/ai-call-lab/customer');
   });
 
-  it('超级权限跳转到外呼任务', () => {
+  it('超级权限跳转到数据看板', () => {
     mockUseModel.mockReturnValue({
       initialState: { currentUser: { permissions: ['*:*:*'] } },
     } as never);
 
     render(<IndexPage />);
 
-    expect(history.replace).toHaveBeenCalledWith('/ai-call/tasks');
+    expect(history.replace).toHaveBeenCalledWith('/ai-call/statistics');
   });
 
   it('无 AI Call 权限时显示 403', () => {

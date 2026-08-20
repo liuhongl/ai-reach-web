@@ -9,7 +9,6 @@ import {
 import {
   type ActionType,
   DrawerForm,
-  PageContainer,
   type ProColumns,
   ProForm,
   ProFormDigit,
@@ -21,6 +20,7 @@ import { Button, Modal, message, Tag, Tooltip, Typography } from 'antd';
 import * as React from 'react';
 import { useRef, useState } from 'react';
 import TableActions from '@/components/TableActions';
+import { ListPage } from '@/components/ListLayout';
 import { useDeleteConfirm } from '@/hooks/useDeleteConfirm';
 import {
   type AiCallLine,
@@ -348,10 +348,11 @@ const AiCallLinesPage = () => {
   ];
 
   return (
-    <PageContainer title="线路配置">
+    <ListPage title="线路配置">
       {messageContextHolder}
       {modalContextHolder}
       <ProTable<AiCallLine>
+        className="recov-stable-pagination-table"
         actionRef={actionRef}
         rowKey="lineId"
         search={false}
@@ -478,7 +479,7 @@ const AiCallLinesPage = () => {
           />
         </ProForm.Group>
       </DrawerForm>
-    </PageContainer>
+    </ListPage>
   );
 };
 

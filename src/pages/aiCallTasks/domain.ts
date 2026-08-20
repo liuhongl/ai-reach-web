@@ -126,6 +126,75 @@ export type AiCallTaskTarget = {
   updatedAt: string;
 };
 
+export type ExceptionCategory =
+  | 'no_answer'
+  | 'rejected'
+  | 'early_hangup'
+  | 'invalid_number';
+
+export type ExceptionDisplayStatus =
+  | 'PENDING'
+  | 'WAITING'
+  | 'CALLING'
+  | 'CONNECTED'
+  | 'MAXED'
+  | 'UNAVAILABLE'
+  | 'STOPPED';
+
+export type ExceptionSummaryCard = {
+  category: ExceptionCategory;
+  totalCount: number;
+  pendingCount: number;
+  maxedOutCount: number;
+  policy?: {
+    category: ExceptionCategory;
+    intervalDays: number;
+    maxRetryCount: number;
+    retryable: boolean;
+  } | null;
+  activeBatch?: {
+    batchId: string;
+    targetCount: number;
+    completedCount: number;
+    startedAt: string;
+  } | null;
+  canStart: boolean;
+  disabledReason?: string | null;
+};
+
+export type ExceptionSummary = {
+  cards: ExceptionSummaryCard[];
+};
+
+export type ExceptionTarget = {
+  targetId: string;
+  customerName?: string | null;
+  phoneNumber?: string | null;
+  taskId: string;
+  taskName: string;
+  category: ExceptionCategory;
+  sourceResult: string;
+  originalAttemptCount: number;
+  retryCount: number;
+  maxRetryCount: number;
+  status: ExceptionDisplayStatus;
+  nextAttemptAt?: string | null;
+  lastAttemptAt?: string | null;
+  lastResult?: string | null;
+  callId?: string | null;
+};
+
+export type ExceptionBatch = {
+  accepted: true;
+  batchId: string;
+  category: ExceptionCategory;
+  status: 'RUNNING' | 'COMPLETED';
+  targetCount: number;
+  intervalDays: number;
+  maxRetryCount: number;
+  startedAt: string;
+};
+
 export type ValidationIssue = {
   issueId: string;
   rowNumber: number;

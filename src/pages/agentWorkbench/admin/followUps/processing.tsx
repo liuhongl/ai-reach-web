@@ -1,7 +1,7 @@
-import { PageContainer } from '@ant-design/pro-components';
 import { Modal, message } from 'antd';
 import * as React from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ListPage } from '@/components/ListLayout';
 import type {
   FollowUpCallbackCredentialDto,
   FollowUpTaskDto,
@@ -65,7 +65,7 @@ const FollowUpProcessingPage = () => {
       }
       if (index < 4) await new Promise((resolve) => setTimeout(resolve, 400));
     }
-    messageApi.warning('通话已挂断，回拨结果仍在同步，请稍后刷新我的跟进');
+    messageApi.warning('通话已挂断，回拨结果仍在同步，请稍后刷新我的任务');
   }, [callback?.call_id, callbackCall.errorMessage, callbackTask, messageApi]);
   const endCallbackCall = useCallback(async () => {
     await callbackCall.endCall();
@@ -84,7 +84,7 @@ const FollowUpProcessingPage = () => {
   }, [callbackCall.phase, settleCallback]);
 
   return (
-    <PageContainer className="agent-admin-page" title="跟进处理">
+    <ListPage className="agent-admin-page" title="回访任务">
       {messageContextHolder}
       <Modal
         title="回拨通话"
@@ -114,7 +114,7 @@ const FollowUpProcessingPage = () => {
           setCallback(nextCallback);
         }}
       />
-    </PageContainer>
+    </ListPage>
   );
 };
 

@@ -56,7 +56,7 @@ const metadata = {
   retryableResults: [
     { value: 'no_answer', label: '无人接听' },
     { value: 'busy', label: '忙线' },
-    { value: 'call_failed', label: '呼叫失败' },
+    { value: 'rejected', label: '拒接' },
   ],
 };
 

@@ -8,7 +8,7 @@ import {
   getAiCallRecordRecording,
   getAiCallRecordSemanticAnalysis,
   listAiCallRecords,
-  reviewAiCallRecordFollowUp,
+  reviewAiCallRecordClassification,
   scoreAiCallRecordQuality,
 } from './service';
 
@@ -38,6 +38,7 @@ describe('AI Call 通话记录服务', () => {
       phoneNumber: '',
       entryType: 'web',
       customerIntent: 'positive',
+      classificationReviewStatus: 'suggested',
       followUpStatus: 'pending',
       startedAtBegin: undefined,
     } as const;
@@ -53,6 +54,7 @@ describe('AI Call 通话记录服务', () => {
         targetId: 'target-1',
         entryType: 'web',
         customerIntent: 'positive',
+        classificationReviewStatus: 'suggested',
         followUpStatus: 'pending',
       },
     });
@@ -95,7 +97,12 @@ describe('AI Call 通话记录服务', () => {
     await getAiCallRecordEvents('call/1');
     await getAiCallRecordQuality('call/1');
     await scoreAiCallRecordQuality('call/1');
-    await reviewAiCallRecordFollowUp('call/1', 'create');
+    await reviewAiCallRecordClassification('call/1', {
+      classification: 'interested',
+      reason: '客户询问产品演示',
+      expectedVersion: 1,
+      idempotencyKey: 'review-1',
+    });
 
     expect(mockedRuoyiRequest.mock.calls.map(([path]) => path)).toEqual([
       '/ai-call/records/call%2F1',
@@ -106,7 +113,7 @@ describe('AI Call 通话记录服务', () => {
       '/ai-call/records/call%2F1/events',
       '/ai-call/records/call%2F1/quality',
       '/ai-call/records/call%2F1/quality/score',
-      '/ai-call/records/call%2F1/follow-up-review',
+      '/ai-call/records/call%2F1/classification-review',
     ]);
     expect(mockedRuoyiRequest).toHaveBeenNthCalledWith(
       3,
@@ -136,10 +143,16 @@ describe('AI Call 通话记录服务', () => {
     );
     expect(mockedRuoyiRequest).toHaveBeenNthCalledWith(
       9,
-      '/ai-call/records/call%2F1/follow-up-review',
+      '/ai-call/records/call%2F1/classification-review',
       {
         baseApi: '/ai-call-agent-api',
-        data: { action: 'create' },
+        headers: { 'Idempotency-Key': 'review-1' },
+        data: {
+          classification: 'interested',
+          reason: '客户询问产品演示',
+          low_value_reason: undefined,
+          expected_version: 1,
+        },
         method: 'post',
       },
     );

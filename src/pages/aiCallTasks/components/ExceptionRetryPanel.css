@@ -1,0 +1,85 @@
+.exception-retry-panel .ant-card-body {
+  padding: 18px;
+}
+
+.exception-retry-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.exception-retry-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.exception-retry-card > .ant-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.exception-retry-card__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.exception-retry-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.exception-retry-card__summary {
+  min-height: 44px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 22px;
+}
+
+.exception-retry-card__policy {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 18px;
+}
+
+.exception-retry-card__policy-row {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.exception-retry-card__number-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20px;
+  align-items: center;
+  gap: 6px;
+}
+
+.exception-retry-card__number-field .ant-input-number {
+  width: 100%;
+}
+
+.exception-retry-card__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin-top: auto;
+}
+
+@media (max-width: 1280px) {
+  .exception-retry-grid {
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .exception-retry-grid {
+    grid-template-columns: 1fr;
+  }
+}
