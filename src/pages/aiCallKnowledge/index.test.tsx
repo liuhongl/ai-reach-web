@@ -45,13 +45,24 @@ jest.mock('@ant-design/pro-components', () => {
   const ProTable = (props: Record<string, unknown>) => {
     const propsRef = React.useRef(props);
     propsRef.current = props;
+    const pagination = props.pagination as
+      | {
+          defaultPageSize?: number;
+          showTotal?: (total: number) => string;
+        }
+      | undefined;
     const [rows, setRows] = React.useState([]);
+    const [total, setTotal] = React.useState(0);
     const load = React.useCallback(async () => {
+      const currentPagination = propsRef.current.pagination as
+        | { defaultPageSize?: number }
+        | undefined;
       const result = await propsRef.current.request({
         current: 1,
-        pageSize: propsRef.current.pagination?.defaultPageSize || 20,
+        pageSize: currentPagination?.defaultPageSize || 20,
       });
       setRows(result.data || []);
+      setTotal(result.total || 0);
     }, []);
     React.useEffect(() => {
       propsRef.current.actionRef.current = {
@@ -64,7 +75,10 @@ jest.mock('@ant-design/pro-components', () => {
     const columns = props.columns as Array<Record<string, unknown>>;
     return React.createElement(
       'section',
-      null,
+      {
+        className: props.className,
+        'data-testid': 'knowledge-table',
+      },
       React.createElement('h1', null, props.headerTitle),
       ...(typeof toolBarRender === 'function'
         ? (toolBarRender() || []).filter(Boolean)
@@ -92,6 +106,11 @@ jest.mock('@ant-design/pro-components', () => {
             ),
           ),
         ),
+      ),
+      React.createElement(
+        'span',
+        { 'data-testid': 'knowledge-table-total' },
+        pagination?.showTotal?.(total),
       ),
     );
   };
@@ -189,8 +208,16 @@ describe('AiCallKnowledgePage', () => {
     expect(screen.getAllByText('内容分类')).toHaveLength(2);
     expect(screen.getByRole('button', { name: '上传新知识' })).toBeTruthy();
     expect(await screen.findByText('备注：退款政策，客服必读')).toBeTruthy();
+    expect(screen.getByText('版本 v1')).toBeTruthy();
+    expect(screen.getByText('状态')).toBeTruthy();
     expect(screen.getByText('关联产品（场景）')).toBeTruthy();
     expect(screen.getByRole('button', { name: '编辑备注' })).toBeTruthy();
+    expect(screen.getByTestId('knowledge-table').className).toContain(
+      'recov-stable-pagination-table',
+    );
+    expect(screen.getByTestId('knowledge-table-total').textContent).toBe(
+      '共 1 条',
+    );
 
     fireEvent.click(screen.getByRole('button', { name: '行业知识' }));
     await waitFor(() =>
@@ -226,9 +253,17 @@ describe('AiCallKnowledgePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: '上传新知识' }));
     const file = new File(['test content'], fileName, { type: mimeType });
-    const input = document.querySelector('input[type="file"]');
+    const input = screen
+      .getByRole('dialog')
+      .querySelector('input[type="file"]');
     expect(input).toBeTruthy();
     fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
+    expect(screen.getByText('已选择知识文件')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: `完整文件名：${fileName}` }),
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: /重新选择/ })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /移除/ })).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: '开始上传' }));
 
     await waitFor(() =>

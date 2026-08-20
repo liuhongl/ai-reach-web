@@ -1,9 +1,11 @@
 import {
+  CheckCircleFilled,
   CloudUploadOutlined,
   DeleteOutlined,
   DownloadOutlined,
   EyeOutlined,
   FileTextOutlined,
+  InboxOutlined,
   PlusOutlined,
   TagsOutlined,
   UploadOutlined,
@@ -25,6 +27,7 @@ import {
   Space,
   Spin,
   Tag,
+  theme,
   Tooltip,
   Typography,
   Upload,
@@ -58,7 +61,7 @@ import {
 } from './service';
 import './index.less';
 
-const { Paragraph, Text } = Typography;
+const { Text } = Typography;
 const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 const UPLOAD_ACCEPT =
   '.txt,.md,.markdown,.pptx,.docx,.pdf,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf';
@@ -164,6 +167,7 @@ const AiCallKnowledgePage = () => {
   const pendingUploadRef = useRef<PendingUpload | undefined>(undefined);
   const contentFilterMountedRef = useRef(false);
   const [messageApi, messageContextHolder] = message.useMessage();
+  const { token } = theme.useToken();
   const { hasPermission } = usePermission();
   const canManage = hasPermission('ai_call:knowledge:manage');
   const [uploadForm] = Form.useForm<UploadValues>();
@@ -188,6 +192,13 @@ const AiCallKnowledgePage = () => {
   const [bindingRowId, setBindingRowId] = useState<string>();
   const [bindingIds, setBindingIds] = useState<string[]>([]);
   const [savingBindings, setSavingBindings] = useState(false);
+  const uploadExtensionIndex = uploadFile?.name.lastIndexOf('.') ?? -1;
+  const uploadFileName =
+    uploadFile?.name.slice(0, uploadExtensionIndex) || uploadFile?.name;
+  const uploadFileExtension =
+    uploadExtensionIndex > 0
+      ? uploadFile?.name.slice(uploadExtensionIndex)
+      : '';
 
   useEffect(() => {
     if (!hasProcessing) return;
@@ -485,7 +496,6 @@ const AiCallKnowledgePage = () => {
       dataIndex: 'displayName',
       width: 260,
       render: (_, item) => {
-        const meta = statusMeta[item.latestVersion.status];
         return (
           <div className="ai-call-knowledge-file">
             <span className="ai-call-knowledge-file-icon">
@@ -504,10 +514,7 @@ const AiCallKnowledgePage = () => {
                   备注：{item.note}
                 </Tag>
               ) : null}
-              <span className="ai-call-knowledge-file-state">
-                <Tag color={meta.color}>{meta.label}</Tag>
-                <Text type="secondary">v{item.latestVersion.versionNo}</Text>
-              </span>
+              <Text type="secondary">版本 v{item.latestVersion.versionNo}</Text>
             </div>
           </div>
         );
@@ -525,6 +532,15 @@ const AiCallKnowledgePage = () => {
       render: (_, item) => (
         <Tag variant="filled">{categoryLabel[item.contentCategory]}</Tag>
       ),
+    },
+    {
+      title: '状态',
+      key: 'status',
+      width: 90,
+      render: (_, item) => {
+        const meta = statusMeta[item.latestVersion.status];
+        return <Tag color={meta.color}>{meta.label}</Tag>;
+      },
     },
     {
       title: '上传时间',
@@ -679,13 +695,18 @@ const AiCallKnowledgePage = () => {
 
         <TableCard>
           <ProTable<KnowledgeItem>
+            className="recov-stable-pagination-table"
             rowKey="id"
             actionRef={actionRef}
             columns={columns}
             search={false}
             options={false}
-            scroll={{ x: 950 }}
-            pagination={{ defaultPageSize: 10, showSizeChanger: true }}
+            scroll={{ x: 1050 }}
+            pagination={{
+              defaultPageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `共 ${total} 条`,
+            }}
             headerTitle={false}
             toolBarRender={false}
             request={async ({ current, pageSize }) => {
@@ -734,35 +755,84 @@ const AiCallKnowledgePage = () => {
       >
         <Form form={uploadForm} layout="vertical" preserve={false}>
           <Form.Item label="文件" required>
-            <Upload.Dragger
-              accept={UPLOAD_ACCEPT}
-              maxCount={1}
-              fileList={
-                uploadFile
-                  ? [
-                      {
-                        uid: `${uploadFile.name}-${uploadFile.lastModified}`,
-                        name: uploadFile.name,
-                        size: uploadFile.size,
-                        type: uploadFile.type,
-                        status: 'done',
-                      },
-                    ]
-                  : []
-              }
-              beforeUpload={(file) => selectUploadFile(file)}
-              onRemove={() => {
-                setUploadFile(undefined);
-                pendingUploadRef.current = undefined;
-              }}
-            >
-              <Paragraph style={{ marginBottom: 4 }}>
-                点击或拖拽文件到此处
-              </Paragraph>
-              <Text type="secondary">
-                支持 TXT、MD、PPTX、DOCX、文本型 PDF（不含扫描件），最大 100 MB
-              </Text>
-            </Upload.Dragger>
+            {uploadFile ? (
+              <div
+                aria-live="polite"
+                className="flex flex-col gap-3 rounded-lg border px-5 py-4 text-left sm:h-28 sm:flex-row sm:items-center"
+                style={{
+                  background: token.colorSuccessBg,
+                  borderColor: token.colorSuccessBorder,
+                }}
+              >
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <CheckCircleFilled
+                    className="shrink-0 text-2xl"
+                    style={{ color: token.colorSuccess }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="font-medium">已选择知识文件</div>
+                    <Tooltip
+                      title={uploadFile.name}
+                      trigger={['hover', 'focus', 'click']}
+                    >
+                      <button
+                        aria-label={`完整文件名：${uploadFile.name}`}
+                        className="mt-1 flex w-full min-w-0 items-center border-0 bg-transparent p-0 text-left text-gray-500"
+                        type="button"
+                      >
+                        <span className="min-w-0 truncate">
+                          {uploadFileName}
+                        </span>
+                        <span className="shrink-0">{uploadFileExtension}</span>
+                        <span className="ml-2 shrink-0">
+                          · {formatBytes(uploadFile.size)}
+                        </span>
+                      </button>
+                    </Tooltip>
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-2 sm:ml-auto">
+                  <Upload
+                    accept={UPLOAD_ACCEPT}
+                    maxCount={1}
+                    showUploadList={false}
+                    beforeUpload={(file) => selectUploadFile(file)}
+                  >
+                    <Button icon={<UploadOutlined />} size="small">
+                      重新选择
+                    </Button>
+                  </Upload>
+                  <Button
+                    danger
+                    icon={<DeleteOutlined />}
+                    size="small"
+                    onClick={() => {
+                      setUploadFile(undefined);
+                      pendingUploadRef.current = undefined;
+                    }}
+                  >
+                    移除
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Upload.Dragger
+                accept={UPLOAD_ACCEPT}
+                maxCount={1}
+                showUploadList={false}
+                beforeUpload={(file) => selectUploadFile(file)}
+                classNames={{ trigger: 'sm:!h-28' }}
+              >
+                <p className="ant-upload-drag-icon" style={{ marginBottom: 4 }}>
+                  <InboxOutlined style={{ fontSize: 24 }} />
+                </p>
+                <p style={{ marginBottom: 4 }}>上传知识文件</p>
+                <p className="text-gray-500" style={{ marginBottom: 0 }}>
+                  支持 TXT、MD、PPTX、DOCX、文本型 PDF（不含扫描件），最大 100
+                  MB
+                </p>
+              </Upload.Dragger>
+            )}
           </Form.Item>
           <Form.Item
             name="contentCategory"
