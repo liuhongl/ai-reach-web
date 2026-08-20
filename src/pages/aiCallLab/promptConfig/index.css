@@ -68,6 +68,70 @@
   font-weight: 600;
 }
 
+.ai-call-prompt-product-summary {
+  overflow: hidden;
+  border: 1px solid #f0f0f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.ai-call-prompt-product-summary-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.ai-call-prompt-product-summary-header > .anticon:last-child {
+  margin-left: auto;
+  color: #8c8c8c;
+}
+
+.ai-call-prompt-product-step {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #722ed1;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ai-call-prompt-product-summary-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 24px 24px;
+}
+
+.ai-call-prompt-product-intro {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.ai-call-prompt-product-intro > div,
+.ai-call-product-draft-documents {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ai-call-prompt-product-intro label {
+  font-weight: 600;
+}
+
+.ai-call-product-draft-sources {
+  max-height: 320px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
 .ai-call-variable-editor {
   overflow: hidden;
   border: 1px solid #d9d9d9;
@@ -172,5 +236,10 @@
   .ai-call-prompt-form-grid,
   .ai-call-prompt-compare {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ai-call-prompt-product-intro {
+    align-items: stretch;
+    flex-direction: column;
   }
 }

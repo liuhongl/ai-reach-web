@@ -91,8 +91,15 @@ export type AiCallLabProductInfoConflict = {
   sourceChunkIds: string[];
 };
 
+export type AiCallLabProductInfoSourceDocument = {
+  versionId: string;
+  versionNo: number;
+  sourceFilename: string;
+};
+
 export type AiCallLabProductInfoDraft = {
   draftText: string;
+  sourceDocuments?: AiCallLabProductInfoSourceDocument[];
   sources: AiCallLabProductInfoSource[];
   conflicts: AiCallLabProductInfoConflict[];
   sourceVersionIds: string[];

@@ -1,7 +1,9 @@
 import {
   CloseOutlined,
+  DatabaseOutlined,
   DeleteOutlined,
   EyeOutlined,
+  FileTextOutlined,
   PlusOutlined,
   ReloadOutlined,
   SaveOutlined,
@@ -47,23 +49,66 @@ import './index.css';
 const { Text, Title } = Typography;
 const { TextArea } = Input;
 
-const EMPTY_SCENE_PROMPT = `## 一、角色与任务
+const SCENE_SECTION_DEFAULTS = [
+  [
+    '## 二、业务信息',
+    '以“产品&服务总结”为事实来源；资料未明确的价格、效果、案例、部署和合规问题，不自行承诺，说明需要业务顾问进一步确认。',
+  ],
+  [
+    '## 三、沟通规则',
+    `1. 使用简洁、自然的口语，一次只表达一个重点或提出一个问题。
+2. 先回应客户当前问题，再推进下一步，不机械朗读整段资料。
+3. 不编造知识库和产品总结中没有的事实；无法确认时如实说明。
+4. 客户打断时立即停止当前表达，优先听完并回应客户。`,
+  ],
+  [
+    '## 四、对话流程',
+    `1. 确认客户是否方便沟通。
+2. 了解客户当前情况、关注点或主要问题。
+3. 根据客户回答介绍最相关的两到三个产品能力，不做无关展开。
+4. 客户有兴趣时邀请预约演示或转人工顾问；暂不方便时询问合适的回访时间。`,
+  ],
+  [
+    '## 五、常见异议',
+    `1. “现在没时间”：简短致歉，并询问是否需要另约时间。
+2. “暂时不需要”：确认主要原因，不反复劝说。
+3. “效果、价格、案例怎么样”：只依据已确认资料回答；资料不足时转业务顾问确认。
+4. “和 SEO 有什么区别”：简要说明 SEO 偏搜索排序，GEO 偏生成式答案中的理解、引用和推荐。`,
+  ],
+  [
+    '## 六、完成与结束条件',
+    `1. 客户明确有兴趣：确认下一步，预约演示或转人工顾问。
+2. 客户暂不方便：记录合适的回访时间后礼貌结束。
+3. 客户明确无兴趣或要求结束：停止推介并礼貌结束。
+4. 关键信息无法确认：说明需要业务顾问进一步确认，不猜测作答。`,
+  ],
+] as const;
 
-## 二、业务信息
+const DEFAULT_SCENE_PROMPT = [
+  '## 一、角色与任务',
+  '',
+  ...SCENE_SECTION_DEFAULTS.flatMap(([heading, content]) => [
+    heading,
+    content,
+    '',
+  ]),
+]
+  .join('\n')
+  .trim();
 
-## 三、沟通规则
-
-## 四、对话流程
-
-## 五、常见异议
-
-## 六、完成与结束条件`;
+const fillEmptySceneSections = (prompt: string) =>
+  SCENE_SECTION_DEFAULTS.reduce((current, [heading, content]) => {
+    const pattern = new RegExp(`(${heading})([\\s\\S]*?)(?=\\n## |$)`);
+    return current.replace(pattern, (section, title, body) =>
+      body.trim() ? section : `${title}\n${content}\n`,
+    );
+  }, prompt);
 
 const emptyProfile: AiCallLabPromptProfile = {
   name: '',
   sceneCode: '',
   providerKey: 'static_profile',
-  promptText: EMPTY_SCENE_PROMPT,
+  promptText: DEFAULT_SCENE_PROMPT,
   openingMessage: '',
   productInfo: '',
   variables: [],
@@ -98,14 +143,16 @@ const normalizeProfile = (
           label: key === 'customerName' ? '客户名称' : key,
         })),
     ],
-    promptText: prompt.includes('## 一、角色与任务')
-      ? prompt
-      : prompt
-        ? EMPTY_SCENE_PROMPT.replace(
-            '## 一、角色与任务',
-            `## 一、角色与任务\n${prompt}`,
-          )
-        : EMPTY_SCENE_PROMPT,
+    promptText: fillEmptySceneSections(
+      prompt.includes('## 一、角色与任务')
+        ? prompt
+        : prompt
+          ? DEFAULT_SCENE_PROMPT.replace(
+              '## 一、角色与任务',
+              `## 一、角色与任务\n${prompt}`,
+            )
+          : DEFAULT_SCENE_PROMPT,
+    ),
   };
 };
 
@@ -308,14 +355,10 @@ const AiCallLabPromptConfigPage = () => {
     }
     setProductDraftLoading(true);
     try {
-      setProductDraft(
-        await extractAiCallLabProductInfo(selectedProfile.id),
-      );
+      setProductDraft(await extractAiCallLabProductInfo(selectedProfile.id));
     } catch (error) {
       messageApi.error(
-        error instanceof Error
-          ? error.message
-          : '产品与服务草稿生成失败',
+        error instanceof Error ? error.message : '产品与服务草稿生成失败',
       );
     } finally {
       setProductDraftLoading(false);
@@ -328,7 +371,7 @@ const AiCallLabPromptConfigPage = () => {
       return;
     }
     const next = replaceCommunicationRules(
-      selectedProfile.promptText || EMPTY_SCENE_PROMPT,
+      selectedProfile.promptText || DEFAULT_SCENE_PROMPT,
       commonPrompt,
     );
     Modal.confirm({
@@ -664,31 +707,50 @@ const AiCallLabPromptConfigPage = () => {
                   />
                 </div>
 
-                <div className="ai-call-prompt-field">
-                  <div className="ai-call-prompt-field-title">
-                    <label htmlFor="prompt-product-info">产品 / 服务信息</label>
-                    {canManageKnowledge ? (
-                      <Button
-                        size="small"
-                        loading={productDraftLoading}
-                        disabled={!selectedProfile.id}
-                        onClick={() => void handleExtractProductInfo()}
-                      >
-                        从知识库生成
-                      </Button>
-                    ) : null}
+                <div className="ai-call-prompt-product-summary">
+                  <div className="ai-call-prompt-product-summary-header">
+                    <span className="ai-call-prompt-product-step">4</span>
+                    <Text strong>产品&amp;服务总结</Text>
+                    <DatabaseOutlined />
                   </div>
-                  <TextArea
-                    id="prompt-product-info"
-                    value={selectedProfile.productInfo || ''}
-                    rows={8}
-                    maxLength={20_000}
-                    showCount
-                    onChange={(event) =>
-                      updateSelectedProfile({ productInfo: event.target.value })
-                    }
-                    placeholder="产品事实、适用客户、核心能力、价值和不能承诺的内容"
-                  />
+                  <div className="ai-call-prompt-product-summary-body">
+                    <div className="ai-call-prompt-product-intro">
+                      <div>
+                        <label htmlFor="prompt-product-info">
+                          核心内容提取自关联知识库
+                        </label>
+                        <Text type="secondary">
+                          可从当前场景关联的知识资料中提取，也可手动编辑产品与服务要点，供
+                          AI 外呼时进行事实参考。
+                        </Text>
+                      </div>
+                      {canManageKnowledge ? (
+                        <Button
+                          type="primary"
+                          icon={<FileTextOutlined />}
+                          aria-label="从知识库一键提取"
+                          loading={productDraftLoading}
+                          disabled={!selectedProfile.id}
+                          onClick={() => void handleExtractProductInfo()}
+                        >
+                          从知识库一键提取
+                        </Button>
+                      ) : null}
+                    </div>
+                    <TextArea
+                      id="prompt-product-info"
+                      value={selectedProfile.productInfo || ''}
+                      rows={8}
+                      maxLength={20_000}
+                      showCount
+                      onChange={(event) =>
+                        updateSelectedProfile({
+                          productInfo: event.target.value,
+                        })
+                      }
+                      placeholder="产品事实、适用客户、核心能力、价值和不能承诺的内容"
+                    />
+                  </div>
                 </div>
 
                 <div className="ai-call-prompt-field">
@@ -918,6 +980,18 @@ const AiCallLabPromptConfigPage = () => {
                 )
               }
             />
+            {productDraft.sourceDocuments?.length ? (
+              <div className="ai-call-product-draft-documents">
+                <Text strong>本次参与提取资料</Text>
+                <Space wrap>
+                  {productDraft.sourceDocuments.map((document) => (
+                    <Tag key={document.versionId}>
+                      {document.sourceFilename} · v{document.versionNo}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            ) : null}
             {productDraft.conflicts.map((conflict) => (
               <Alert
                 key={`${conflict.topic}-${conflict.description}-${conflict.sourceChunkIds.join(',')}`}
@@ -928,21 +1002,31 @@ const AiCallLabPromptConfigPage = () => {
               />
             ))}
             <List
+              className="ai-call-product-draft-sources"
               size="small"
-              header={<Text strong>结论来源</Text>}
+              header={<Text strong>结论来源（模型实际引用）</Text>}
               dataSource={productDraft.sources}
               renderItem={(source) => (
                 <List.Item>
                   <List.Item.Meta
-                    title={source.claim}
+                    title={
+                      <span>
+                        <Text type="secondary">提取结论：</Text>
+                        {source.claim}
+                      </span>
+                    }
                     description={
                       <Space orientation="vertical" size={2}>
                         <Text type="secondary">
-                          {source.sourceFilename} · v{source.versionNo}
+                          来源文件：{source.sourceFilename} · v
+                          {source.versionNo}
                           {source.pageNo ? ` · 第 ${source.pageNo} 页` : ''}
                           {source.sectionPath ? ` · ${source.sectionPath}` : ''}
                         </Text>
-                        <Text>{source.excerpt}</Text>
+                        <Text>
+                          <Text type="secondary">原文片段：</Text>
+                          {source.excerpt}
+                        </Text>
                       </Space>
                     }
                   />

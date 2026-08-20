@@ -87,6 +87,18 @@ describe('AiCallLabPromptConfigPage', () => {
     });
     extractProductInfoMock.mockResolvedValue({
       draftText: '核心产品：合同审查。',
+      sourceDocuments: [
+        {
+          versionId: '11',
+          versionNo: 1,
+          sourceFilename: '合同资料.md',
+        },
+        {
+          versionId: '12',
+          versionNo: 1,
+          sourceFilename: '合同方案.pptx',
+        },
+      ],
       sources: [
         {
           claim: '提供合同审查',
@@ -130,9 +142,14 @@ describe('AiCallLabPromptConfigPage', () => {
     expect(await screen.findByDisplayValue('GEO 产品介绍')).toBeTruthy();
     expect(screen.getByText('通用提示词模板')).toBeTruthy();
     expect(screen.queryByDisplayValue('统一使用专业语气。')).toBeNull();
-    expect(screen.getByText('产品 / 服务信息')).toBeTruthy();
+    expect(screen.getByText('产品&服务总结')).toBeTruthy();
+    expect(screen.getByText('核心内容提取自关联知识库')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: '从知识库一键提取' }),
+    ).toBeTruthy();
     expect(screen.getByText('场景提示词')).toBeTruthy();
     expect(screen.getByText(/## 一、角色与任务/)).toBeTruthy();
+    expect(screen.getByText(/以“产品&服务总结”为事实来源/)).toBeTruthy();
     expect(document.querySelector('.ai-call-prompt-config-grid')).toBeNull();
     expect(styles).toMatch(
       /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/,
@@ -206,15 +223,23 @@ describe('AiCallLabPromptConfigPage', () => {
     render(React.createElement(AiCallLabPromptConfigPage));
 
     fireEvent.click(
-      await screen.findByRole('button', { name: '从知识库生成' }),
+      await screen.findByRole('button', { name: '从知识库一键提取' }),
     );
 
     await waitFor(() =>
       expect(extractProductInfoMock).toHaveBeenCalledWith('profile-geo'),
     );
     expect(savePromptProfileMock).not.toHaveBeenCalled();
-    expect(await screen.findByText(/合同资料\.md/)).toBeTruthy();
-    expect(screen.getByText('不同资料的效果描述不一致，需要人工确认。')).toBeTruthy();
+    expect(await screen.findByText('合同方案.pptx · v1')).toBeTruthy();
+    expect(screen.getByText('本次参与提取资料')).toBeTruthy();
+    expect(screen.getByText('原文片段：')).toBeTruthy();
+    expect(screen.getByText('合同审查覆盖风险识别。')).toBeTruthy();
+    expect(
+      screen.getByText('不同资料的效果描述不一致，需要人工确认。'),
+    ).toBeTruthy();
+    expect(styles).toMatch(
+      /ai-call-product-draft-sources[^}]*max-height:\s*320px[^}]*overflow-y:\s*auto/s,
+    );
 
     const draft = screen.getByLabelText('产品与服务草稿');
     fireEvent.change(draft, {
