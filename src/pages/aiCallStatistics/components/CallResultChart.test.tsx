@@ -36,7 +36,12 @@ describe('CallResultChart', () => {
     const legend = screen.getByTestId('call-result-legend');
     expect(legend.style.display).toBe('grid');
     expect(legend.style.gridTemplateColumns).toBe(
-      'repeat(2, minmax(0, 1fr))',
+      'repeat(auto-fit, minmax(220px, 1fr))',
     );
+    expect(
+      Array.from(
+        legend.querySelectorAll<HTMLElement>('.ant-typography'),
+      ).every((item) => item.style.whiteSpace === 'nowrap'),
+    ).toBe(true);
   });
 });

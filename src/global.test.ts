@@ -38,6 +38,13 @@ describe('global AI Reach styles', () => {
     });
   });
 
+  it('任务创建表单和任务列表保留完整可视高度', () => {
+    expect(styles).toContain('.recov-task-create-form-card.ant-pro-card,');
+    expect(styles).toContain('.recov-task-list-page.ant-pro-page-container');
+    expect(styles).toContain('.recov-task-list-card.ant-pro-card');
+    expect(styles).toContain('min-height: 600px');
+  });
+
   it('不包含 Recov 流程中心样式', () => {
     expect(styles).not.toContain('flow-event-center-tabs');
   });

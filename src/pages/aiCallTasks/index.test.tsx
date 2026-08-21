@@ -247,9 +247,11 @@ describe('AI Call task list page', () => {
   afterEach(cleanup);
 
   it('uses only the approved filters and maps pagination parameters', async () => {
-    render(<AiCallTasksPage />);
+    const { container } = render(<AiCallTasksPage />);
     await screen.findByText('运行任务');
 
+    expect(container.querySelector('.recov-task-list-page')).toBeTruthy();
+    expect(container.querySelector('.recov-task-list-card')).toBeTruthy();
     expect(screen.getAllByText('任务名称').length).toBeGreaterThan(0);
     expect(screen.getAllByText('任务状态').length).toBeGreaterThan(0);
     expect(screen.getByText('创建时间')).toBeTruthy();

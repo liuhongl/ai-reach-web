@@ -335,7 +335,11 @@ const AiCallTasksPage = () => {
   ];
 
   return (
-    <ListPage breadcrumbRender={false} title="外呼任务">
+    <ListPage
+      breadcrumbRender={false}
+      className="recov-task-list-page"
+      title="外呼任务"
+    >
       {messageContextHolder}
       {modalContextHolder}
       <ListStack>
@@ -358,7 +362,7 @@ const AiCallTasksPage = () => {
           </Space>
         </div>
 
-        <TableCard>
+        <TableCard className="recov-task-list-card">
           <ProTable<AiCallTask>
             actionRef={actionRef}
             className="recov-stable-pagination-table"

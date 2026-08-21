@@ -91,7 +91,7 @@ const CallResultChart = ({ data }: CallResultChartProps) => {
         style={{
           display: 'grid',
           gap: '4px 12px',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
         }}
       >
         {data.map((item) => {
@@ -115,9 +115,9 @@ const CallResultChart = ({ data }: CallResultChartProps) => {
                     background: meta.color,
                   }}
                 />
-                <Text>{meta.label}</Text>
+                <Text style={{ whiteSpace: 'nowrap' }}>{meta.label}</Text>
               </Space>
-              <Text>
+              <Text style={{ whiteSpace: 'nowrap' }}>
                 {item.count.toLocaleString()}（{(item.rate * 100).toFixed(1)}%）
               </Text>
             </Flex>
