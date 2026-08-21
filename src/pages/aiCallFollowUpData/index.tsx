@@ -347,6 +347,7 @@ type ClassificationForm = {
   classification: FollowUpClassification;
   lowValueReason?: LowValueReason;
   reason: string;
+  conclusion: string;
 };
 
 type ScheduleForm = {
@@ -647,6 +648,7 @@ const FollowUpDataPage = () => {
       classification: row.classification,
       lowValueReason: row.low_value_reason || undefined,
       reason: row.classification_reason || '',
+      conclusion: row.latest_conclusion || '',
     });
   };
 
@@ -907,6 +909,7 @@ const FollowUpDataPage = () => {
               {
                 classification: values.classification,
                 reason: values.reason.trim(),
+                conclusion: values.conclusion.trim(),
                 lowValueReason:
                   values.classification === 'low_value'
                     ? values.lowValueReason
@@ -962,6 +965,20 @@ const FollowUpDataPage = () => {
               maxLength={500}
               showCount
               placeholder="说明本次分类判断依据"
+            />
+          </Form.Item>
+          <Form.Item
+            label="沟通结论"
+            name="conclusion"
+            rules={[
+              { required: true, whitespace: true, message: '请填写沟通结论' },
+            ]}
+          >
+            <Input.TextArea
+              rows={4}
+              maxLength={4000}
+              showCount
+              placeholder="确认或修正上次通话的沟通结论"
             />
           </Form.Item>
         </Form>

@@ -60,6 +60,7 @@ describe('跟进数据接口', () => {
     await adjustFollowUpDataClassification('1', {
       classification: 'low_value',
       reason: '客户当前暂无需求',
+      conclusion: '客户明确表示当前不考虑采购。',
       lowValueReason: 'no_current_need',
       expectedVersion: 1,
       idempotencyKey: 'classification-1',
@@ -80,6 +81,7 @@ describe('跟进数据接口', () => {
         data: {
           classification: 'low_value',
           reason: '客户当前暂无需求',
+          conclusion: '客户明确表示当前不考虑采购。',
           low_value_reason: 'no_current_need',
           expected_version: 1,
         },

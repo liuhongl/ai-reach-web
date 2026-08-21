@@ -9,7 +9,11 @@ import * as React from 'react';
 import { listAiCallTasks } from '@/pages/aiCallTasks/service';
 import { startFollowUpDataCall } from '@/services/ruoyi/agent-console';
 import FollowUpDataPage from './index';
-import { getFollowUpData, listFollowUpData } from './service';
+import {
+  adjustFollowUpDataClassification,
+  getFollowUpData,
+  listFollowUpData,
+} from './service';
 
 jest.mock('@/pages/aiCallTasks/service', () => ({
   listAiCallTasks: jest.fn(),
@@ -128,6 +132,9 @@ describe('跟进数据页面', () => {
         },
       ],
     });
+    (adjustFollowUpDataClassification as jest.Mock).mockResolvedValue({
+      version: 2,
+    });
   });
 
   it('默认查询有意向并支持四类切换和详情时间线', async () => {
@@ -173,6 +180,11 @@ describe('跟进数据页面', () => {
     expect(
       within(classificationDialog).getByDisplayValue('客户要求安排产品演示'),
     ).toBeTruthy();
+    expect(
+      within(classificationDialog).getByDisplayValue(
+        '客户希望下周查看产品演示',
+      ),
+    ).toBeTruthy();
     fireEvent.click(
       within(classificationDialog).getByRole('button', { name: 'Close' }),
     );
@@ -181,6 +193,26 @@ describe('跟进数据页面', () => {
     const scheduleDialog = await findDialogByTitle('安排回访');
     expect(within(scheduleDialog).getByText('本次回访原因')).toBeTruthy();
     expect(within(scheduleDialog).getByText('计划回访时间')).toBeTruthy();
+  });
+
+  it('调整分类时同时提交人工修正后的沟通结论', async () => {
+    render(<FollowUpDataPage />);
+
+    fireEvent.click(await screen.findByRole('button', { name: '调整分类' }));
+    const dialog = await findDialogByTitle('调整分类');
+    fireEvent.change(within(dialog).getByLabelText('沟通结论'), {
+      target: { value: '客户关注指标，但尚未接受产品演示。' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: '确认调整' }));
+
+    await waitFor(() =>
+      expect(adjustFollowUpDataClassification).toHaveBeenCalledWith(
+        '100',
+        expect.objectContaining({
+          conclusion: '客户关注指标，但尚未接受产品演示。',
+        }),
+      ),
+    );
   });
 
   it('从跟进数据确认客户上下文后发起人工外呼', async () => {

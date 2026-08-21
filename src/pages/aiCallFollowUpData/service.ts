@@ -116,6 +116,7 @@ export const adjustFollowUpDataClassification = async (
   input: {
     classification: FollowUpClassification;
     reason: string;
+    conclusion: string;
     lowValueReason?: LowValueReason;
     expectedVersion: number;
     idempotencyKey: string;
@@ -131,6 +132,7 @@ export const adjustFollowUpDataClassification = async (
         data: {
           classification: input.classification,
           reason: input.reason,
+          conclusion: input.conclusion,
           low_value_reason: input.lowValueReason,
           expected_version: input.expectedVersion,
         },
