@@ -1482,7 +1482,7 @@ describe('AI Call 通话记录页面', () => {
 
     fireEvent.click(within(detailDrawer).getByText('查看跟进任务'));
     expect(history.push).toHaveBeenCalledWith(
-      '/ai-call/follow-ups?followUpId=342941293734035456',
+      '/ai-call/follow-up-overview?followUpId=342941293734035456',
     );
   });
 

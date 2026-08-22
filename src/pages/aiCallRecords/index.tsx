@@ -1455,7 +1455,7 @@ const AiCallRecordsPage = () => {
                             type="link"
                             onClick={() =>
                               history.push(
-                                `/ai-call/follow-ups?followUpId=${encodeURIComponent(
+                                `/ai-call/follow-up-overview?followUpId=${encodeURIComponent(
                                   followUp.id,
                                 )}`,
                               )
