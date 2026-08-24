@@ -872,6 +872,47 @@ describe('AI Call 通话记录页面', () => {
     ).toBeNull();
   });
 
+  it('复核后再次修改分类时仍展示当时采纳的 AI 分类', async () => {
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: mockRecord,
+      executionConfig: null,
+      followUpData: {
+        id: 'data-1',
+        classification: 'nurturing',
+        version: 3,
+      },
+    });
+    (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue({
+      callId: 'call-1',
+      analysisSceneCode: 'intro_geo',
+      analysisStatus: '2',
+      analysisResult: {
+        classification: 'interested',
+        confidence: 'medium',
+        valid_dialogue: true,
+        reason: '客户同意安排产品演示',
+        evidence: ['客户：行'],
+      },
+      classificationRequiresReview: false,
+      classificationReviewStatus: 'reviewed',
+      followUpReviewStatus: 'confirmed',
+      followUpReviewedByName: '管理员',
+      followUpReviewedAt: '2026-08-21T10:36:27+08:00',
+      analysisRetryCount: 0,
+    });
+
+    render(<AiCallRecordsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: '查看详情' }));
+    const detailDrawer = await screen.findByRole('dialog', {
+      name: '通话记录详情',
+    });
+
+    expect(
+      within(detailDrawer).getByText(/已采纳 AI 分类：有意向/),
+    ).toBeTruthy();
+    expect(within(detailDrawer).getByText('持续跟进')).toBeTruthy();
+  });
+
   it('分类冲突时可保留当前分类，复核后才允许安排回访', async () => {
     (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
       record: mockRecord,

@@ -1743,8 +1743,12 @@ const AiCallRecordsPage = () => {
                         children: `${
                           analysis.followUpReviewStatus === 'confirmed'
                             ? `已采纳 AI 分类：${
-                                currentClassification
-                                  ? classificationLabels[currentClassification]
+                                aiClassification
+                                  ? classificationLabels[aiClassification]
+                                  : currentClassification
+                                    ? classificationLabels[
+                                        currentClassification
+                                      ]
                                   : '-'
                               }`
                             : `已确认最终分类：${
