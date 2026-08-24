@@ -7,6 +7,7 @@ import {
   getAiCallLabHandoff,
   getAiCallLabPromptCommonConfig,
   getAiCallLabPromptProfiles,
+  getAiCallLabPromptVersionApplications,
   getAiCallLabPromptComponents,
   getAiCallLabRecording,
   getAiCallLabSession,
@@ -88,6 +89,21 @@ describe('AI Call Lab configuration service', () => {
         method: 'patch',
         data: { versionName: 'GEO 产品介绍' },
       }),
+    );
+  });
+
+  it('loads prompt version applications through the authenticated proxy', async () => {
+    mockRuoyiRequest.mockResolvedValueOnce({ rows: [], total: 0 });
+
+    await getAiCallLabPromptVersionApplications('prompt/1');
+
+    expect(mockRuoyiRequest).toHaveBeenCalledWith(
+      '/ai-call/prompt-profiles/prompt%2F1/version-applications',
+      {
+        baseApi: '/ai-call-agent-api',
+        method: 'get',
+        timeout: 10_000,
+      },
     );
   });
 

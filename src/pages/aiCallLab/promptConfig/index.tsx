@@ -1,7 +1,6 @@
 import {
   CloseOutlined,
   DatabaseOutlined,
-  DeleteOutlined,
   EyeOutlined,
   FileTextOutlined,
   PlusOutlined,
@@ -24,7 +23,8 @@ import {
   Tag,
   Typography,
 } from 'antd';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import dayjs from 'dayjs';
+import React, { useCallback, useEffect, useState } from 'react';
 import { ListPage, TableCard } from '@/components/ListLayout';
 import { usePermission } from '@/components/Permission';
 import {
@@ -32,12 +32,14 @@ import {
   type AiCallLabPromptProfile,
   type AiCallLabPromptVariable,
   type AiCallLabPromptVersion,
+  type AiCallLabPromptVersionApplication,
   applyAiCallLabPromptVersion,
   deleteAiCallLabPromptVersion,
   extractAiCallLabProductInfo,
   getAiCallLabPromptCommonConfig,
   getAiCallLabPromptProfiles,
   getAiCallLabPromptVersion,
+  getAiCallLabPromptVersionApplications,
   getAiCallLabPromptVersions,
   optimizeAiCallLabPrompt,
   previewAiCallLabPromptProfile,
@@ -50,6 +52,16 @@ import './index.css';
 
 const { Text, Title } = Typography;
 const { TextArea } = Input;
+
+const creationMethodLabels: Record<
+  AiCallLabPromptVersion['creationMethod'],
+  string
+> = {
+  manual: '人工编辑',
+  ai_generated: 'AI 生成',
+  ai_optimized: 'AI 优化',
+  restored: '历史恢复',
+};
 
 const SCENE_SECTION_DEFAULTS = [
   [
@@ -171,13 +183,6 @@ const replaceCommunicationRules = (prompt: string, common: string) => {
     : `${prompt.trim()}\n\n${replacement}`;
 };
 
-const creationMethodText: Record<string, string> = {
-  manual: '人工编辑',
-  ai_generated: 'AI 生成',
-  ai_optimized: 'AI 优化',
-  restored: '应用历史版本',
-};
-
 const providerText: Record<string, string> = {
   static_profile: '固定场景配置',
   business_query: '业务查询',
@@ -192,6 +197,9 @@ const AiCallLabPromptConfigPage = () => {
     useState<AiCallLabPromptProfile>(emptyProfile);
   const [commonPrompt, setCommonPrompt] = useState('');
   const [versions, setVersions] = useState<AiCallLabPromptVersion[]>([]);
+  const [versionApplications, setVersionApplications] = useState<
+    AiCallLabPromptVersionApplication[]
+  >([]);
   const [sceneDirty, setSceneDirty] = useState(false);
   const [commonDirty, setCommonDirty] = useState(false);
   const [createOrigin, setCreateOrigin] =
@@ -200,11 +208,6 @@ const AiCallLabPromptConfigPage = () => {
   const [saving, setSaving] = useState(false);
   const [savingCommon, setSavingCommon] = useState(false);
   const [previewLoading, setPreviewLoading] = useState(false);
-  const [variableModalOpen, setVariableModalOpen] = useState(false);
-  const [variableDraft, setVariableDraft] = useState<AiCallLabPromptVariable>({
-    key: '',
-    label: '',
-  });
   const [aiTarget, setAiTarget] = useState<'opening' | 'scenePrompt' | null>(
     null,
   );
@@ -224,10 +227,15 @@ const AiCallLabPromptConfigPage = () => {
   const loadVersions = useCallback(async (profileId?: string | number) => {
     if (!profileId) {
       setVersions([]);
+      setVersionApplications([]);
       return;
     }
-    const result = await getAiCallLabPromptVersions(profileId);
-    setVersions(result.rows);
+    const [versionResult, applicationResult] = await Promise.all([
+      getAiCallLabPromptVersions(profileId),
+      getAiCallLabPromptVersionApplications(profileId),
+    ]);
+    setVersions(versionResult.rows);
+    setVersionApplications(applicationResult.rows);
   }, []);
 
   const applyProfile = useCallback(
@@ -402,36 +410,20 @@ const AiCallLabPromptConfigPage = () => {
   };
 
   const variables = selectedProfile.variables || [];
-  const referencedTokens = useMemo(
-    () =>
-      `${selectedProfile.openingMessage || ''}\n${selectedProfile.promptText || ''}`,
-    [selectedProfile.openingMessage, selectedProfile.promptText],
-  );
-
-  const addVariable = () => {
-    const key = variableDraft.key.trim();
-    const label = variableDraft.label.trim();
+  const saveVariable = (draft: AiCallLabPromptVariable) => {
+    const key = draft.key.trim();
+    const label = draft.label.trim();
     if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(key) || !label) {
       messageApi.warning('变量需填写中文名称和合法 camelCase 标识');
-      return;
+      return undefined;
     }
     if (variables.some((item) => item.key === key || item.label === label)) {
       messageApi.warning('变量标识或名称已存在');
-      return;
+      return undefined;
     }
-    updateSelectedProfile({ variables: [...variables, { key, label }] });
-    setVariableDraft({ key: '', label: '' });
-    setVariableModalOpen(false);
-  };
-
-  const deleteVariable = (variable: AiCallLabPromptVariable) => {
-    if (referencedTokens.includes(`{{${variable.key}}}`)) {
-      messageApi.warning(`请先从开场白和场景提示词中删除“${variable.label}”`);
-      return;
-    }
-    updateSelectedProfile({
-      variables: variables.filter((item) => item.key !== variable.key),
-    });
+    const saved = { key, label };
+    updateSelectedProfile({ variables: [...variables, saved] });
+    return saved;
   };
 
   const closeAiModal = () => {
@@ -588,11 +580,11 @@ const AiCallLabPromptConfigPage = () => {
     if (!profileId) return;
     Modal.confirm({
       title: `应用版本 v${version.versionNo}？`,
-      content: '应用后会生成一个新的最新版本，不会覆盖原历史记录。',
+      content: `应用后，v${version.versionNo} 将成为当前使用版本。历史版本不会删除，已创建任务不受影响。`,
       onOk: async () => {
         const saved = await applyAiCallLabPromptVersion(profileId, version.id);
         applyProfile(saved);
-        messageApi.success('历史版本已应用');
+        messageApi.success(`版本 v${version.versionNo} 已设为当前使用版本`);
       },
     });
   };
@@ -767,6 +759,7 @@ const AiCallLabPromptConfigPage = () => {
                   <div className="ai-call-prompt-field-title">
                     <Text strong>开场白</Text>
                     <Button
+                      className="ai-call-prompt-ai-button"
                       size="small"
                       loading={aiLoading && aiTarget === 'opening'}
                       onClick={() => void runAiOptimize('opening')}
@@ -777,10 +770,10 @@ const AiCallLabPromptConfigPage = () => {
                   <VariableEditor
                     value={selectedProfile.openingMessage || ''}
                     variables={variables}
-                    onAddVariable={() => setVariableModalOpen(true)}
                     onChange={(value) =>
                       updateSelectedProfile({ openingMessage: value })
                     }
+                    onSaveVariable={saveVariable}
                   />
                 </div>
 
@@ -841,6 +834,7 @@ const AiCallLabPromptConfigPage = () => {
                       </div>
                     </div>
                     <Button
+                      className="ai-call-prompt-ai-button"
                       size="small"
                       loading={aiLoading && aiTarget === 'scenePrompt'}
                       onClick={() => void runAiOptimize('scenePrompt')}
@@ -852,44 +846,11 @@ const AiCallLabPromptConfigPage = () => {
                     value={selectedProfile.promptText || ''}
                     variables={variables}
                     minHeight={360}
-                    onAddVariable={() => setVariableModalOpen(true)}
                     onChange={(value) =>
                       updateSelectedProfile({ promptText: value })
                     }
+                    onSaveVariable={saveVariable}
                   />
-                </div>
-
-                <div className="ai-call-prompt-field">
-                  <div className="ai-call-prompt-field-title">
-                    <Text strong>业务变量</Text>
-                    <Button
-                      size="small"
-                      icon={<PlusOutlined />}
-                      onClick={() => setVariableModalOpen(true)}
-                    >
-                      添加变量
-                    </Button>
-                  </div>
-                  <div className="ai-call-prompt-variable-list">
-                    {variables.length ? (
-                      variables.map((variable) => (
-                        <Tag
-                          key={variable.key}
-                          closable
-                          onClose={(event) => {
-                            event.preventDefault();
-                            deleteVariable(variable);
-                          }}
-                        >
-                          {variable.label} · {variable.key}
-                        </Tag>
-                      ))
-                    ) : (
-                      <Text type="secondary">
-                        暂无变量。变量会映射为创建任务时上传名单的中文表头。
-                      </Text>
-                    )}
-                  </div>
                 </div>
               </div>
             </TableCard>
@@ -903,6 +864,7 @@ const AiCallLabPromptConfigPage = () => {
                   dataSource={versions}
                   renderItem={(version) => (
                     <List.Item
+                      className="ai-call-prompt-version-item"
                       actions={[
                         <Button
                           key="detail"
@@ -936,7 +898,6 @@ const AiCallLabPromptConfigPage = () => {
                           disabled={
                             version.versionNo === selectedProfile.versionNo
                           }
-                          icon={<DeleteOutlined />}
                           onClick={() => {
                             const profileId = selectedProfile.id;
                             if (!profileId) return;
@@ -979,13 +940,9 @@ const AiCallLabPromptConfigPage = () => {
                             >
                               {version.versionName || selectedProfile.name}
                             </Text>
-                            <Tag>
-                              {creationMethodText[version.creationMethod] ||
-                                version.creationMethod}
-                            </Tag>
                           </Space>
                         }
-                        description={`${version.createdByName || '系统'} · ${new Date(version.createdAt).toLocaleString()}`}
+                        description={`${creationMethodLabels[version.creationMethod]} · ${version.createdByName || '系统'} · ${dayjs(version.createdAt).format('YYYY-MM-DD HH:mm:ss')}`}
                       />
                     </List.Item>
                   )}
@@ -997,43 +954,27 @@ const AiCallLabPromptConfigPage = () => {
                   }
                 />
               )}
+              {versionApplications.length ? (
+                <div className="ai-call-prompt-version-applications">
+                  <Text strong>版本切换记录</Text>
+                  <List
+                    size="small"
+                    dataSource={versionApplications}
+                    renderItem={(application) => (
+                      <List.Item>
+                        <List.Item.Meta
+                          title={`v${application.fromVersionNo ?? '-'} → v${application.toVersionNo}`}
+                          description={`${application.appliedByName || '系统'} · ${dayjs(application.appliedAt).format('YYYY-MM-DD HH:mm:ss')}`}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              ) : null}
             </TableCard>
           </Space>
         </Spin>
       </div>
-
-      <Modal
-        title="添加业务变量"
-        open={variableModalOpen}
-        onOk={addVariable}
-        onCancel={() => setVariableModalOpen(false)}
-        okText="添加"
-      >
-        <Space orientation="vertical" style={{ width: '100%' }}>
-          <Input
-            addonBefore="中文名称"
-            placeholder="例如：公司名"
-            value={variableDraft.label}
-            onChange={(event) =>
-              setVariableDraft((current) => ({
-                ...current,
-                label: event.target.value,
-              }))
-            }
-          />
-          <Input
-            addonBefore="变量标识"
-            placeholder="例如：companyName"
-            value={variableDraft.key}
-            onChange={(event) =>
-              setVariableDraft((current) => ({
-                ...current,
-                key: event.target.value,
-              }))
-            }
-          />
-        </Space>
-      </Modal>
 
       <Modal
         width={900}

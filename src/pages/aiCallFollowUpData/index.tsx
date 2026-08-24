@@ -35,6 +35,7 @@ import { useFollowUpCallback } from '@/pages/agentWorkbench/hooks/useFollowUpCal
 import CallRecordDetailContent from '@/pages/aiCallRecords/CallRecordDetailContent';
 import { listAiCallTasks } from '@/pages/aiCallTasks/service';
 import {
+  confirmFollowUpDataCallConnected,
   endFollowUpDataCall,
   type FollowUpCallbackCredentialDto,
   startFollowUpDataCall,
@@ -104,7 +105,10 @@ const createIdempotencyKey = () =>
   globalThis.crypto?.randomUUID?.() ||
   `follow-up-data-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-const followUpDataCallbackServices = { end: endFollowUpDataCall };
+const followUpDataCallbackServices = {
+  end: endFollowUpDataCall,
+  confirmConnected: confirmFollowUpDataCallConnected,
+};
 
 const suggestedFocus: Record<FollowUpClassification, string> = {
   interested: '确认需求细节、决策条件和下一步合作安排。',
@@ -442,7 +446,7 @@ const FollowUpDataCallModal = ({
 
   return (
     <Modal
-      title={credential ? '人工外呼' : '确认人工外呼'}
+      title={credential ? '立即人工外呼' : '确认立即人工外呼'}
       open
       width={720}
       closable={!credential}
@@ -732,7 +736,7 @@ const FollowUpDataPage = () => {
         renderText: formatDateTime,
       },
       {
-        title: '计划跟进时间',
+        title: '计划回访时间',
         dataIndex: 'next_follow_up_at',
         search: false,
         width: 180,
@@ -769,12 +773,12 @@ const FollowUpDataPage = () => {
                 permissions={['ai_call:agent:manage', 'ai_call:agent:console']}
                 mode="all"
                 noAccess="disable"
-                title="人工外呼需要同时具备管理和坐席权限"
+                title="立即人工外呼需要同时具备管理和坐席权限"
                 type="link"
                 size="small"
                 onClick={() => setCallTarget(row)}
               >
-                人工外呼
+                立即人工外呼
               </PermissionButton>
             )}
             <Button
@@ -794,7 +798,7 @@ const FollowUpDataPage = () => {
                   )
                 }
               >
-                查看任务
+                查看回访任务
               </Button>
             ) : ['interested', 'nurturing'].includes(row.classification) ? (
               <Button
@@ -802,7 +806,7 @@ const FollowUpDataPage = () => {
                 size="small"
                 onClick={() => openSchedule(row)}
               >
-                安排回访
+                安排后续回访
               </Button>
             ) : null}
           </Flex>
@@ -985,7 +989,7 @@ const FollowUpDataPage = () => {
       </Modal>
 
       <Modal
-        title="安排回访"
+        title="安排后续回访"
         open={Boolean(scheduleTarget)}
         confirmLoading={scheduleSubmitting}
         okText="确认安排"

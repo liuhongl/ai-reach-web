@@ -151,6 +151,9 @@ describe('跟进数据页面', () => {
     expect(searchLabels).toContain('客户姓名');
     expect(searchLabels).not.toContain('分类可信度');
     expect(searchLabels).not.toContain('计划跟进时间');
+    expect(
+      await screen.findByRole('columnheader', { name: '计划回访时间' }),
+    ).toBeTruthy();
     for (const label of ['有意向', '持续跟进', '低价值', '已转化']) {
       expect(screen.getByRole('tab', { name: label })).toBeTruthy();
     }
@@ -171,7 +174,20 @@ describe('跟进数据页面', () => {
     expect(await screen.findByText('通话详情 call-1')).toBeTruthy();
   });
 
-  it('提供调整分类和安排回访表单', async () => {
+  it('存在回访任务时展示明确的任务入口', async () => {
+    (listFollowUpData as jest.Mock).mockResolvedValue({
+      rows: [{ ...row, active_follow_up_id: 'follow-up-1' }],
+      total: 1,
+    });
+
+    render(<FollowUpDataPage />);
+
+    expect(
+      await screen.findByRole('button', { name: '查看回访任务' }),
+    ).toBeTruthy();
+  });
+
+  it('提供调整分类和安排后续回访表单', async () => {
     render(<FollowUpDataPage />);
 
     fireEvent.click(await screen.findByRole('button', { name: '调整分类' }));
@@ -189,8 +205,8 @@ describe('跟进数据页面', () => {
       within(classificationDialog).getByRole('button', { name: 'Close' }),
     );
 
-    fireEvent.click(screen.getByRole('button', { name: '安排回访' }));
-    const scheduleDialog = await findDialogByTitle('安排回访');
+    fireEvent.click(screen.getByRole('button', { name: '安排后续回访' }));
+    const scheduleDialog = await findDialogByTitle('安排后续回访');
     expect(within(scheduleDialog).getByText('本次回访原因')).toBeTruthy();
     expect(within(scheduleDialog).getByText('计划回访时间')).toBeTruthy();
   });
@@ -229,8 +245,10 @@ describe('跟进数据页面', () => {
     });
     render(<FollowUpDataPage />);
 
-    fireEvent.click(await screen.findByRole('button', { name: '人工外呼' }));
-    const dialog = await findDialogByTitle('确认人工外呼');
+    fireEvent.click(
+      await screen.findByRole('button', { name: '立即人工外呼' }),
+    );
+    const dialog = await findDialogByTitle('确认立即人工外呼');
     expect(within(dialog).getByText('有意向')).toBeTruthy();
     expect(within(dialog).getByText(row.latest_conclusion)).toBeTruthy();
     expect(within(dialog).getByText('建议沟通重点')).toBeTruthy();

@@ -787,6 +787,20 @@ export const endFollowUpCall = (
     },
   );
 
+export const confirmFollowUpCallConnected = (
+  followUpId: BigintString,
+  callId: string,
+  input: IdempotentSessionInput,
+) =>
+  agentConsoleRequest<{ call_id: string; attempt_result: 'connected' }>(
+    `${AGENT_CONSOLE_API_PREFIX}/follow-ups/${encodeId(followUpId)}/call/${encodeId(callId)}/connected`,
+    {
+      method: 'post',
+      headers: idempotencyHeaders(input.idempotencyKey),
+      data: presenceData(input),
+    },
+  );
+
 export const endFollowUpDataCall = (
   followUpDataId: BigintString,
   callId: string,
@@ -794,6 +808,20 @@ export const endFollowUpDataCall = (
 ) =>
   agentConsoleRequest<{ call_id: string; status: 'completed'; end_reason: string }>(
     `${AGENT_CONSOLE_API_PREFIX}/follow-up-data/${encodeId(followUpDataId)}/call/${encodeId(callId)}/end`,
+    {
+      method: 'post',
+      headers: idempotencyHeaders(input.idempotencyKey),
+      data: presenceData(input),
+    },
+  );
+
+export const confirmFollowUpDataCallConnected = (
+  followUpDataId: BigintString,
+  callId: string,
+  input: IdempotentSessionInput,
+) =>
+  agentConsoleRequest<{ call_id: string; status: 'running' }>(
+    `${AGENT_CONSOLE_API_PREFIX}/follow-up-data/${encodeId(followUpDataId)}/call/${encodeId(callId)}/connected`,
     {
       method: 'post',
       headers: idempotencyHeaders(input.idempotencyKey),

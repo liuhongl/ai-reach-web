@@ -18,6 +18,7 @@ import {
   Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
+import dayjs from 'dayjs';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import type {
   ExceptionCategory,
@@ -90,6 +91,9 @@ const createIdempotencyKey = () =>
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : '操作失败，请稍后重试';
+
+const formatDateTime = (value?: string | null) =>
+  value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '—';
 
 type PolicyDraft = { intervalDays: number; maxRetryCount: number };
 
@@ -251,8 +255,8 @@ const ExceptionRetryPanel = () => {
           <Tag color={STATUS_META[value].color}>{STATUS_META[value].text}</Tag>
         ),
       },
-      { title: '下次执行时间', dataIndex: 'nextAttemptAt', width: 180, render: (value) => value || '—' },
-      { title: '最后外呼时间', dataIndex: 'lastAttemptAt', width: 180, render: (value) => value || '—' },
+      { title: '下次执行时间', dataIndex: 'nextAttemptAt', width: 180, render: formatDateTime },
+      { title: '最后外呼时间', dataIndex: 'lastAttemptAt', width: 180, render: formatDateTime },
       {
         title: '最后结果',
         dataIndex: 'lastResult',

@@ -41,6 +41,19 @@
   justify-content: space-between;
 }
 
+.ai-call-prompt-ai-button.ant-btn {
+  border-color: #c4b5fd;
+  background: #f5f3ff;
+  color: #6d28d9;
+}
+
+.ai-call-prompt-ai-button.ant-btn:hover,
+.ai-call-prompt-ai-button.ant-btn:focus-visible {
+  border-color: #7c3aed;
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
 .ai-call-prompt-scene-select {
   width: min(680px, 100%);
 }
@@ -182,8 +195,61 @@
   background: #ede9fe;
 }
 
-.ai-call-prompt-variable-list {
-  min-height: 32px;
+.ai-call-variable-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.ai-call-variable-picker-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ai-call-variable-picker-toolbar .ant-input-affix-wrapper {
+  flex: 1;
+}
+
+.ai-call-variable-picker-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #ede9fe;
+  border-radius: 6px;
+  background: #faf8ff;
+}
+
+.ai-call-variable-picker-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ai-call-variable-picker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ai-call-prompt-version-item .ant-list-item-action {
+  margin-inline-start: 12px;
+}
+
+.ai-call-prompt-config-page
+  .ai-call-prompt-version-item
+  .ant-list-item-action
+  > li {
+  padding-inline: 4px;
+}
+
+.ai-call-prompt-version-applications {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid #f0f0f0;
 }
 
 .ai-call-prompt-readonly,
@@ -248,6 +314,11 @@
   }
 
   .ai-call-prompt-product-intro {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .ai-call-variable-picker-toolbar {
     align-items: stretch;
     flex-direction: column;
   }

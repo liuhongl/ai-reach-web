@@ -19,7 +19,7 @@ export const AI_CALL_NAV_ITEMS: AiCallNavItem[] = [
     permission: 'ai_call:agent:manage',
   },
   {
-    name: '知识资产',
+    name: '知识库',
     path: '/ai-call/knowledge',
     permission: 'ai_call:knowledge:view',
   },
@@ -94,7 +94,7 @@ const AI_CALL_MENU: AiCallMenuItem[] = [
   findNavItem('数据看板'),
   {
     name: '知识库',
-    children: [findNavItem('知识资产'), findNavItem('提示词')],
+    children: [findNavItem('知识库'), findNavItem('提示词')],
   },
   {
     name: '外呼',
@@ -123,7 +123,7 @@ const AI_CALL_MENU: AiCallMenuItem[] = [
 const permissionSubject = (permissions: string[]) => ({ permissions });
 
 const AI_CALL_SYSTEM_NAV_ITEMS = [
-  '知识资产',
+  '知识库',
   '提示词',
   '线路',
   '呼叫规则',

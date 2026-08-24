@@ -31,6 +31,7 @@ const endReasonLabels: Record<string, string> = {
 
 const analysisFieldLabels: Record<string, string> = {
   summary: '通话摘要',
+  follow_up: '后续跟进建议',
   feedback_type: '客户反馈',
   key_points: '关键要点',
   time_hint: '客户期望联系时间',
@@ -41,10 +42,13 @@ const analysisFieldLabels: Record<string, string> = {
   evidence: '判断依据',
   confidence: '分类置信度',
   evidence_conflict: '证据冲突',
+  valid_dialogue: '有效业务对话',
+  low_value_reason: '低价值原因',
 };
 
 const analysisFieldOrder = [
   'summary',
+  'follow_up',
   'feedback_type',
   'key_points',
   'time_hint',
@@ -55,6 +59,8 @@ const analysisFieldOrder = [
   'evidence',
   'confidence',
   'evidence_conflict',
+  'valid_dialogue',
+  'low_value_reason',
 ];
 
 const feedbackTagColors: Record<string, string> = {
@@ -99,6 +105,21 @@ const followUpConfidenceLabels: Record<string, string> = {
   low: '低',
 };
 
+const followUpConsentLabels: Record<string, string> = {
+  explicit: '明确同意',
+  missing: '未提及',
+  refused: '明确拒绝',
+};
+
+const lowValueReasonLabels: Record<string, string> = {
+  explicit_rejection: '明确拒绝',
+  no_current_need: '暂无需求',
+  customer_mismatch: '客户不匹配',
+  non_target_customer: '非目标客户',
+  invalid_contact: '联系方式无效',
+  other: '其他',
+};
+
 export const describeBusinessScene = (value?: string | null) =>
   value ? businessSceneLabels[value] || value : '-';
 
@@ -126,6 +147,16 @@ const renderAnalysisValue = (key: string, value: unknown) => {
     ) : (
       '-'
     );
+  }
+  if (key === 'follow_up' && value && typeof value === 'object') {
+    const followUp = value as Record<string, unknown>;
+    return [
+      `需要跟进：${followUp.required === true ? '是' : followUp.required === false ? '否' : '-'}`,
+      `客户同意：${followUpConsentLabels[String(followUp.consent || '')] || followUp.consent || '-'}`,
+      `原因：${followUp.reason || '-'}`,
+      `期望时间：${followUp.preferred_time || '-'}`,
+      `置信度：${followUpConfidenceLabels[String(followUp.confidence || '')] || followUp.confidence || '-'}`,
+    ].join('；');
   }
   if (key === 'feedback_type') {
     const text = String(value || '-');
@@ -198,6 +229,13 @@ const renderAnalysisValue = (key: string, value: unknown) => {
   }
   if (key === 'evidence_conflict') {
     return value === true ? '有冲突，建议人工复核' : '无';
+  }
+  if (key === 'valid_dialogue') {
+    return value === true ? '是' : '否';
+  }
+  if (key === 'low_value_reason') {
+    const reason = String(value || '');
+    return lowValueReasonLabels[reason] || reason || '-';
   }
   return value && typeof value === 'object'
     ? JSON.stringify(value)

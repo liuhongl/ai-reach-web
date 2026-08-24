@@ -15,8 +15,8 @@ import {
   Flex,
   Form,
   Input,
-  message,
   Modal,
+  message,
   Radio,
   Select,
   Spin,
@@ -38,6 +38,7 @@ import AfterCallResultForm, {
 } from '@/pages/agentWorkbench/components/AfterCallResultForm';
 import AgentName from '@/pages/agentWorkbench/components/AgentName';
 import {
+  adjustFollowUpDataClassification,
   type FollowUpClassification,
   type LowValueReason,
   scheduleFollowUpData,
@@ -422,8 +423,7 @@ type ScheduleFollowUpFormValues = {
 const AiCallRecordsPage = () => {
   const actionRef = useRef<ActionType | undefined>(undefined);
   const [qualityForm] = Form.useForm<QualityReviewFormValues>();
-  const [classificationForm] =
-    Form.useForm<ClassificationReviewFormValues>();
+  const [classificationForm] = Form.useForm<ClassificationReviewFormValues>();
   const [scheduleForm] = Form.useForm<ScheduleFollowUpFormValues>();
   const selectedQualityResult = Form.useWatch('qualityResult', qualityForm);
   const selectedQualityReason = Form.useWatch('qualityReason', qualityForm);
@@ -453,8 +453,7 @@ const AiCallRecordsPage = () => {
   const [handoffs, setHandoffs] = useState<AiCallHandoff[]>([]);
   const [detailErrors, setDetailErrors] = useState<DetailErrors>({});
   const [detailLoading, setDetailLoading] = useState(false);
-  const [classificationReviewing, setClassificationReviewing] =
-    useState(false);
+  const [classificationReviewing, setClassificationReviewing] = useState(false);
   const [classificationModalOpen, setClassificationModalOpen] = useState(false);
   const [classificationReviewKey, setClassificationReviewKey] = useState('');
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
@@ -704,7 +703,14 @@ const AiCallRecordsPage = () => {
     if (!selectedCallId || !detail?.followUpData) return;
     setClassificationReviewing(true);
     try {
-      await reviewAiCallRecordClassification(selectedCallId, {
+      const result = analysis?.analysisResult || {};
+      const canReviewAiClassification = Boolean(
+        analysis?.analysisStatus === '2' &&
+          analysis.classificationReviewStatus !== 'reviewed' &&
+          getAiClassification(result) &&
+          String(result.reason || '').trim(),
+      );
+      const input = {
         classification: values.classification,
         reason: values.reason.trim(),
         lowValueReason:
@@ -713,8 +719,18 @@ const AiCallRecordsPage = () => {
             : undefined,
         expectedVersion: detail.followUpData.version,
         idempotencyKey: classificationReviewKey,
-      });
-      message.success('分类复核已提交');
+      };
+      if (canReviewAiClassification) {
+        await reviewAiCallRecordClassification(selectedCallId, input);
+      } else {
+        await adjustFollowUpDataClassification(detail.followUpData.id, {
+          ...input,
+          conclusion: detail.followUpData.latestConclusion || input.reason,
+        });
+      }
+      message.success(
+        canReviewAiClassification ? '分类复核已提交' : '客户分类已修改',
+      );
       setClassificationModalOpen(false);
       await openDetail(selectedCallId);
       await Promise.resolve(actionRef.current?.reload?.());
@@ -748,15 +764,44 @@ const AiCallRecordsPage = () => {
     });
   };
 
+  const retainCurrentClassification = async () => {
+    const followUpData = detail?.followUpData;
+    const classification = followUpData?.classification;
+    if (!followUpData || !classification) return;
+    const lowValueReason = lowValueReasons.has(
+      followUpData.lowValueReason as LowValueReason,
+    )
+      ? (followUpData.lowValueReason as LowValueReason)
+      : undefined;
+    if (classification === 'low_value' && !lowValueReason) {
+      openClassificationReview();
+      message.warning('请先补充低价值原因');
+      return;
+    }
+    await submitClassificationReview({
+      classification,
+      lowValueReason,
+      reason: '人工复核后保留当前业务分类。',
+    });
+  };
+
   const openClassificationReview = () => {
     const result = analysis?.analysisResult || {};
+    const current = detail?.followUpData?.classification || undefined;
+    const currentLowValueReason = lowValueReasons.has(
+      detail?.followUpData?.lowValueReason as LowValueReason,
+    )
+      ? (detail?.followUpData?.lowValueReason as LowValueReason)
+      : undefined;
     classificationForm.setFieldsValue({
-      classification:
-        getAiClassification(result) ||
-        detail?.followUpData?.classification ||
-        undefined,
-      lowValueReason: getAiLowValueReason(result),
-      reason: String(result.reason || '').trim(),
+      classification: current || getAiClassification(result),
+      lowValueReason:
+        current === 'low_value'
+          ? currentLowValueReason
+          : getAiLowValueReason(result),
+      reason:
+        detail?.followUpData?.latestConclusion ||
+        String(result.reason || '').trim(),
     });
     setClassificationModalOpen(true);
   };
@@ -1021,7 +1066,9 @@ const AiCallRecordsPage = () => {
             </Text>
             <Text type="secondary">
               {getEntryTypeLabel(row)}
-              {row.attemptNo ? ` · 第 ${row.attemptNo} 次` : ''}
+              {row.entryType !== 'sip_callback' && row.attemptNo
+                ? ` · 第 ${row.attemptNo} 次`
+                : ''}
             </Text>
           </Flex>
         ),
@@ -1236,6 +1283,7 @@ const AiCallRecordsPage = () => {
   const exceptionHandling = detail?.exceptionHandling;
   const afterCallWork = detail?.afterCallWork;
   const followUp = detail?.followUp;
+  const currentClassification = detail?.followUpData?.classification;
   const analysisResult = analysis?.analysisResult || {};
   const aiClassification = getAiClassification(analysisResult);
   const needsClassificationReview = Boolean(
@@ -1243,13 +1291,24 @@ const AiCallRecordsPage = () => {
       aiClassification &&
       analysis?.classificationRequiresReview,
   );
+  const classificationConflict = Boolean(
+    currentClassification &&
+      aiClassification &&
+      currentClassification !== aiClassification &&
+      analysis?.classificationReviewStatus !== 'reviewed',
+  );
   const activeFollowUpId =
     detail?.followUpData?.activeFollowUpId ||
     (followUp?.status === 'pending' || followUp?.status === 'processing'
       ? followUp.id
       : undefined);
+  const activeFollowUpShownAbove = Boolean(
+    activeFollowUpId && followUp?.id === activeFollowUpId,
+  );
   const canScheduleFollowUp = Boolean(
     detail?.followUpData &&
+      !detailErrors.analysis &&
+      !needsClassificationReview &&
       !activeFollowUpId &&
       ['interested', 'nurturing'].includes(
         detail.followUpData.classification || '',
@@ -1574,168 +1633,251 @@ const AiCallRecordsPage = () => {
               )}
             </section>
 
-            <section>
-              {afterCallWork ? (
-                <>
-                  <Title level={5}>坐席最终处置</Title>
+            {afterCallWork ? (
+              <section>
+                <Title level={5}>坐席最终处置</Title>
+                <Descriptions
+                  column={1}
+                  styles={detailDescriptionStyles}
+                  items={[
+                    {
+                      key: 'disposition',
+                      label: '处置结果',
+                      children: (
+                        <Tag
+                          color={
+                            afterCallWork.needsFollowUp ? 'warning' : 'success'
+                          }
+                        >
+                          {(afterCallWork.classification &&
+                            classificationLabels[
+                              afterCallWork.classification
+                            ]) ||
+                            dispositionLabels[
+                              afterCallWork.dispositionCode || ''
+                            ] ||
+                            afterCallWork.classification ||
+                            afterCallWork.dispositionCode ||
+                            '-'}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      key: 'summary',
+                      label: '处理备注',
+                      children: afterCallWork.summary || '-',
+                    },
+                    {
+                      key: 'agent',
+                      label: '提交坐席',
+                      children: (
+                        <AgentName identity={afterCallWork.agentIdentity} />
+                      ),
+                    },
+                    {
+                      key: 'submittedAt',
+                      label: '提交时间',
+                      children: formatDateTime(afterCallWork.submittedAt),
+                    },
+                  ]}
+                />
+              </section>
+            ) : null}
+
+            <section data-testid="customer-follow-up-section">
+              <Title level={5}>客户分类与回访</Title>
+              <Flex vertical gap={12}>
+                <Descriptions
+                  column={2}
+                  styles={detailDescriptionStyles}
+                  items={[
+                    {
+                      key: 'currentClassification',
+                      label: '当前业务分类',
+                      children: currentClassification ? (
+                        <Tag>{classificationLabels[currentClassification]}</Tag>
+                      ) : (
+                        <Text type="secondary">未分类</Text>
+                      ),
+                    },
+                    {
+                      key: 'aiClassification',
+                      label: 'AI 建议分类',
+                      children: aiClassification ? (
+                        <Tag color="purple">
+                          {classificationLabels[aiClassification]}
+                        </Tag>
+                      ) : (
+                        <Text type="secondary">暂无建议</Text>
+                      ),
+                    },
+                    ...(!activeFollowUpShownAbove
+                      ? [
+                          {
+                            key: 'activeFollowUp',
+                            label: '当前回访任务',
+                            children: activeFollowUpId ? (
+                              <Tag color="processing">
+                                {statusLabels[
+                                  detail?.followUpData?.activeFollowUpStatus ||
+                                    followUp?.status ||
+                                    ''
+                                ] || '已安排'}
+                              </Tag>
+                            ) : (
+                              <Text type="secondary">未安排</Text>
+                            ),
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+                {analysis?.classificationReviewStatus === 'reviewed' ? (
                   <Descriptions
                     column={1}
                     styles={detailDescriptionStyles}
                     items={[
                       {
-                        key: 'disposition',
-                        label: '处置结果',
-                        children: (
-                          <Tag
-                            color={
-                              afterCallWork.needsFollowUp
-                                ? 'warning'
-                                : 'success'
-                            }
-                          >
-                            {dispositionLabels[
-                              afterCallWork.dispositionCode || ''
-                            ] || afterCallWork.dispositionCode}
-                          </Tag>
-                        ),
-                      },
-                      {
-                        key: 'summary',
-                        label: '处理备注',
-                        children: afterCallWork.summary || '-',
-                      },
-                      {
-                        key: 'agent',
-                        label: '提交坐席',
-                        children: (
-                          <AgentName identity={afterCallWork.agentIdentity} />
-                        ),
-                      },
-                      {
-                        key: 'submittedAt',
-                        label: '提交时间',
-                        children: formatDateTime(afterCallWork.submittedAt),
+                        key: 'classificationReview',
+                        label: '分类复核',
+                        children: `${
+                          analysis.followUpReviewStatus === 'confirmed'
+                            ? `已采纳 AI 分类：${
+                                currentClassification
+                                  ? classificationLabels[currentClassification]
+                                  : '-'
+                              }`
+                            : `已确认最终分类：${
+                                currentClassification
+                                  ? classificationLabels[currentClassification]
+                                  : '-'
+                              }`
+                        } · ${
+                          analysis.followUpReviewedByName ||
+                          analysis.followUpReviewedBy ||
+                          '-'
+                        } · ${formatDateTime(analysis.followUpReviewedAt)}`,
                       },
                     ]}
                   />
-                </>
-              ) : (
-                <>
-                  <Title level={5}>AI 分析与转人工</Title>
-                  {detailErrors.analysis ? (
+                ) : null}
+                {needsClassificationReview && classificationConflict ? (
+                  <Alert
+                    showIcon
+                    title="AI 建议分类与当前业务分类不一致，请先完成分类复核。"
+                    type="warning"
+                  />
+                ) : null}
+                {detail?.followUpData ? (
+                  <Flex wrap gap={8}>
+                    {needsClassificationReview ? (
+                      <>
+                        {classificationConflict ? (
+                          <Button
+                            loading={classificationReviewing}
+                            size="small"
+                            type="primary"
+                            onClick={() => void retainCurrentClassification()}
+                          >
+                            保留当前分类
+                          </Button>
+                        ) : null}
+                        <Button
+                          disabled={classificationReviewing}
+                          size="small"
+                          type={classificationConflict ? 'default' : 'primary'}
+                          onClick={() => void adoptAiClassification()}
+                        >
+                          采纳 AI 分类
+                        </Button>
+                      </>
+                    ) : null}
+                    <Button
+                      aria-label="修改分类"
+                      disabled={classificationReviewing}
+                      icon={<EditOutlined />}
+                      size="small"
+                      type="link"
+                      onClick={openClassificationReview}
+                    >
+                      修改分类
+                    </Button>
+                    {activeFollowUpId ? (
+                      activeFollowUpShownAbove ? null : (
+                        <Button
+                          size="small"
+                          onClick={() =>
+                            history.push(
+                              `/ai-call/follow-up-overview?followUpId=${encodeURIComponent(activeFollowUpId)}`,
+                            )
+                          }
+                        >
+                          查看回访任务
+                        </Button>
+                      )
+                    ) : canScheduleFollowUp ? (
+                      <Button size="small" onClick={openSchedule}>
+                        安排回访
+                      </Button>
+                    ) : null}
+                  </Flex>
+                ) : null}
+              </Flex>
+            </section>
+
+            <section data-testid="analysis-result-section">
+              <Title level={5}>AI 分析结果</Title>
+              {detailErrors.analysis ? (
+                <Alert showIcon title={detailErrors.analysis} type="error" />
+              ) : analysis ? (
+                <Flex vertical gap={12}>
+                  <Descriptions
+                    column={1}
+                    styles={detailDescriptionStyles}
+                    items={[
+                      {
+                        key: 'analysisStatus',
+                        label: '分析状态',
+                        children: (
+                          <Tag>
+                            {analysisStatusLabels[analysis.analysisStatus] ||
+                              analysis.analysisStatus}
+                          </Tag>
+                        ),
+                      },
+                    ]}
+                  />
+                  {analysis.analysisError ? (
                     <Alert
                       showIcon
-                      title={detailErrors.analysis}
+                      title={analysis.analysisError}
                       type="error"
                     />
-                  ) : analysis ? (
-                    <Flex vertical gap={12}>
-                      <Text>
-                        分析状态：
-                        {analysisStatusLabels[analysis.analysisStatus] ||
-                          analysis.analysisStatus}
-                      </Text>
-                      {analysis.analysisError ? (
-                        <Alert
-                          showIcon
-                          title={analysis.analysisError}
-                          type="error"
-                        />
-                      ) : hasAnalysisResult(analysisResult) ? (
-                        <>
-                          <AnalysisResultDescriptions
-                            analysisResult={analysisResult}
-                          />
-                          {needsClassificationReview ? (
-                            <Flex gap={8}>
-                              <Button
-                                loading={classificationReviewing}
-                                size="small"
-                                type="primary"
-                                onClick={() => void adoptAiClassification()}
-                              >
-                                采纳 AI 分类
-                              </Button>
-                              <Button
-                                disabled={classificationReviewing}
-                                size="small"
-                                onClick={openClassificationReview}
-                              >
-                                修改分类
-                              </Button>
-                            </Flex>
-                          ) : null}
-                          {analysis.classificationReviewStatus ===
-                          'reviewed' ? (
-                            <Descriptions
-                              column={1}
-                              styles={detailDescriptionStyles}
-                              items={[
-                                {
-                                  key: 'classificationReview',
-                                  label: '分类复核',
-                                  children: `${
-                                    analysis.followUpReviewStatus === 'adjusted'
-                                      ? '已修改分类'
-                                      : '已采纳 AI 分类'
-                                  } · ${
-                                    analysis.followUpReviewedByName ||
-                                    analysis.followUpReviewedBy ||
-                                    '-'
-                                  } · ${formatDateTime(
-                                    analysis.followUpReviewedAt,
-                                  )}`,
-                                },
-                              ]}
-                            />
-                          ) : null}
-                          {activeFollowUpId ? (
-                            <Button
-                              size="small"
-                              style={{ alignSelf: 'flex-start' }}
-                              onClick={() =>
-                                history.push(
-                                  `/ai-call/follow-up-overview?followUpId=${encodeURIComponent(activeFollowUpId)}`,
-                                )
-                              }
-                            >
-                              查看回访任务
-                            </Button>
-                          ) : canScheduleFollowUp ? (
-                            <Button
-                              size="small"
-                              style={{ alignSelf: 'flex-start' }}
-                              onClick={openSchedule}
-                            >
-                              安排回访
-                            </Button>
-                          ) : null}
-                        </>
-                      ) : (
-                        <Empty
-                          image={Empty.PRESENTED_IMAGE_SIMPLE}
-                          description="暂无结构化分析结果"
-                        />
-                      )}
-                    </Flex>
+                  ) : hasAnalysisResult(analysisResult) ? (
+                    <AnalysisResultDescriptions
+                      analysisResult={analysisResult}
+                    />
                   ) : (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description="暂无 AI 分析"
+                      description="暂无结构化分析结果"
                     />
                   )}
-                </>
+                </Flex>
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="暂无 AI 分析"
+                />
               )}
+            </section>
 
+            <section data-testid="handoff-result-section">
+              <Title level={5}>转人工结果</Title>
               {detailErrors.handoffs ? (
                 <Alert showIcon title={detailErrors.handoffs} type="error" />
               ) : handoffs.length ? (
-                <Flex
-                  data-testid="handoff-details"
-                  vertical
-                  gap={8}
-                  style={{ marginTop: 16 }}
-                >
+                <Flex data-testid="handoff-details" vertical gap={8}>
                   {handoffs.map((handoff) => (
                     <Descriptions
                       key={handoff.handoffId}

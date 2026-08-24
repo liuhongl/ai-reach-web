@@ -22,7 +22,7 @@ describe('AI Call navigation', () => {
       menu
         .find((item) => item.name === '知识库')
         ?.children?.map((item) => item.name),
-    ).toEqual(['知识资产', '提示词']);
+    ).toEqual(['知识库', '提示词']);
     expect(
       menu
         .find((item) => item.name === '外呼')
@@ -52,7 +52,7 @@ describe('AI Call navigation', () => {
         name: '知识库',
         children: [
           expect.objectContaining({
-            name: '知识资产',
+            name: '知识库',
             path: '/ai-call/knowledge',
           }),
         ],

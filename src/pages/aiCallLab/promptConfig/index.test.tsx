@@ -4,10 +4,12 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Modal } from 'antd';
 import React from 'react';
 import {
+  applyAiCallLabPromptVersion,
   extractAiCallLabProductInfo,
   getAiCallLabPromptCommonConfig,
   getAiCallLabPromptProfiles,
   getAiCallLabPromptVersion,
+  getAiCallLabPromptVersionApplications,
   getAiCallLabPromptVersions,
   optimizeAiCallLabPrompt,
   previewAiCallLabPromptProfile,
@@ -25,6 +27,7 @@ jest.mock('@/services/ruoyi/ai-call-lab', () => ({
   getAiCallLabPromptProfile: jest.fn(),
   getAiCallLabPromptProfiles: jest.fn(),
   getAiCallLabPromptVersion: jest.fn(),
+  getAiCallLabPromptVersionApplications: jest.fn(),
   getAiCallLabPromptVersions: jest.fn(),
   optimizeAiCallLabPrompt: jest.fn(),
   previewAiCallLabPromptProfile: jest.fn(),
@@ -38,8 +41,11 @@ jest.mock('@/components/Permission', () => ({
 }));
 
 const extractProductInfoMock = extractAiCallLabProductInfo as jest.Mock;
+const applyPromptVersionMock = applyAiCallLabPromptVersion as jest.Mock;
 const getPromptProfilesMock = getAiCallLabPromptProfiles as jest.Mock;
 const getPromptVersionMock = getAiCallLabPromptVersion as jest.Mock;
+const getPromptVersionApplicationsMock =
+  getAiCallLabPromptVersionApplications as jest.Mock;
 const getCommonConfigMock = getAiCallLabPromptCommonConfig as jest.Mock;
 const getPromptVersionsMock = getAiCallLabPromptVersions as jest.Mock;
 const optimizePromptMock = optimizeAiCallLabPrompt as jest.Mock;
@@ -87,6 +93,19 @@ describe('AiCallLabPromptConfigPage', () => {
     });
     getCommonConfigMock.mockResolvedValue({ content: '统一使用专业语气。' });
     getPromptVersionsMock.mockResolvedValue({ rows: [], total: 0 });
+    getPromptVersionApplicationsMock.mockResolvedValue({ rows: [], total: 0 });
+    applyPromptVersionMock.mockResolvedValue({
+      id: 'profile-geo',
+      name: 'GEO 产品介绍',
+      sceneCode: 'intro_geo',
+      providerKey: 'static_profile',
+      promptText: 'GEO 初稿',
+      openingMessage: '您好',
+      productInfo: 'GEO 产品事实',
+      variables: [{ key: 'customerName', label: '客户名称' }],
+      versionNo: 1,
+      versionCount: 2,
+    });
     updatePromptVersionNameMock.mockImplementation(
       async (_profileId, _versionId, versionName) => ({
         id: 'version-1',
@@ -167,6 +186,19 @@ describe('AiCallLabPromptConfigPage', () => {
     expect(screen.getByText('场景提示词')).toBeTruthy();
     expect(screen.getByText(/## 一、角色与任务/)).toBeTruthy();
     expect(screen.getByText(/以“产品&服务总结”为事实来源/)).toBeTruthy();
+    expect(screen.queryByText('场景业务变量')).toBeNull();
+    expect(screen.queryByRole('button', { name: /添加变量/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: '定义变量' })).toBeNull();
+    expect(screen.getAllByRole('button', { name: '插入变量' })).toHaveLength(2);
+    const aiButtons = screen.getAllByRole('button', {
+      name: 'AI 生成 / 优化',
+    });
+    expect(aiButtons).toHaveLength(2);
+    expect(
+      aiButtons.every((button) =>
+        button.classList.contains('ai-call-prompt-ai-button'),
+      ),
+    ).toBe(true);
     expect(document.querySelector('.ai-call-prompt-config-grid')).toBeNull();
     expect(styles).toMatch(
       /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/,
@@ -236,6 +268,24 @@ describe('AiCallLabPromptConfigPage', () => {
       ],
       total: 2,
     });
+    getPromptVersionApplicationsMock.mockResolvedValue({
+      rows: [
+        {
+          id: 'application-1',
+          profileId: 'profile-geo',
+          fromVersionId: 'version-1',
+          fromVersionNo: 2,
+          fromVersionName: 'GEO 产品介绍',
+          toVersionId: 'version-old',
+          toVersionNo: 1,
+          toVersionName: 'GEO 初稿',
+          appliedBy: '7',
+          appliedByName: '测试用户',
+          appliedAt: '2026-08-20T13:00:00Z',
+        },
+      ],
+      total: 1,
+    });
     getPromptVersionMock.mockResolvedValue({
       id: 'version-1',
       profileId: 'profile-geo',
@@ -256,7 +306,31 @@ describe('AiCallLabPromptConfigPage', () => {
 
     render(React.createElement(AiCallLabPromptConfigPage));
 
-    expect((await screen.findAllByText('应用此版本')).length).toBe(1);
+    const applyButton = (await screen.findAllByText('应用此版本'))[0];
+    expect(screen.getAllByText('应用此版本')).toHaveLength(1);
+    expect(screen.getByText(/人工编辑.*2026-08-20/)).toBeTruthy();
+    expect(screen.getByText(/历史恢复.*2026-08-20/)).toBeTruthy();
+    expect(await screen.findByText('版本切换记录')).toBeTruthy();
+    expect(screen.getByText('v2 → v1')).toBeTruthy();
+    expect(screen.getByText(/测试用户.*2026-08-20 21:00:00/)).toBeTruthy();
+    expect((await screen.findAllByText(/2026-08-20/)).length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      screen
+        .getAllByRole('button', { name: '删除' })[0]
+        .querySelector('.anticon'),
+    ).toBeNull();
+    fireEvent.click(applyButton);
+    expect(await screen.findByText(/v1 将成为当前使用版本/)).toBeTruthy();
+    expect(screen.queryByText(/生成一个新的最新版本/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /确\s*定/ }));
+    await waitFor(() =>
+      expect(applyPromptVersionMock).toHaveBeenCalledWith(
+        'profile-geo',
+        'version-old',
+      ),
+    );
     fireEvent.click(screen.getAllByRole('button', { name: '查看详情' })[0]);
     expect(await screen.findByText('固定场景配置')).toBeTruthy();
     expect(screen.getAllByText('场景编码').length).toBeGreaterThan(0);
@@ -286,9 +360,71 @@ describe('AiCallLabPromptConfigPage', () => {
     );
   });
 
+  it('separates variable creation from selection and shares the created variable', async () => {
+    getPromptProfilesMock.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'profile-geo',
+          name: 'GEO 产品介绍',
+          sceneCode: 'intro_geo',
+          providerKey: 'static_profile',
+          promptText: '## 一、角色与任务\n介绍{{companyName}}',
+          openingMessage: '您好{{companyName}}',
+          productInfo: 'GEO 产品事实',
+          variables: [{ key: 'companyName', label: '公司名' }],
+          versionNo: 2,
+          versionCount: 2,
+        },
+      ],
+      total: 1,
+    });
+    render(React.createElement(AiCallLabPromptConfigPage));
+
+    const insertButtons = await screen.findAllByRole('button', {
+      name: '插入变量',
+    });
+    fireEvent.click(insertButtons[0]);
+    expect(await screen.findByPlaceholderText('搜索变量')).toBeTruthy();
+    expect(screen.queryByPlaceholderText('例如：公司名')).toBeNull();
+    expect(screen.queryByRole('button', { name: '编辑' })).toBeNull();
+    expect(screen.queryByRole('button', { name: '删除' })).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: '新建变量' }));
+    expect(screen.queryByPlaceholderText('搜索变量')).toBeNull();
+    fireEvent.change(screen.getByPlaceholderText('例如：公司名'), {
+      target: { value: '企业名称' },
+    });
+    fireEvent.change(screen.getByPlaceholderText('例如：companyName'), {
+      target: { value: 'enterpriseName' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /^创\s*建$/ }));
+
+    expect(await screen.findByPlaceholderText('搜索变量')).toBeTruthy();
+    expect(
+      screen
+        .getByRole('button', { name: '企业名称' })
+        .classList.contains('ant-btn-primary'),
+    ).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: /^插\s*入$/ }));
+    fireEvent.click(screen.getByRole('button', { name: /保存场景配置/ }));
+
+    await waitFor(() =>
+      expect(savePromptProfileMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          openingMessage: expect.stringContaining('{{enterpriseName}}'),
+          variables: [
+            { key: 'companyName', label: '公司名' },
+            { key: 'enterpriseName', label: '企业名称' },
+          ],
+        }),
+      ),
+    );
+  });
+
   it('reviews and manually applies a sourced product draft before saving', async () => {
     render(React.createElement(AiCallLabPromptConfigPage));
 
+    await screen.findByDisplayValue('GEO 产品介绍');
     fireEvent.click(
       await screen.findByRole('button', { name: '从知识库一键提取' }),
     );

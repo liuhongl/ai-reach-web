@@ -166,4 +166,36 @@ describe('CallRecordDetailContent', () => {
     expect(screen.getByText('AI 建议分类')).toBeTruthy();
     expect(screen.getByText('持续跟进')).toBeTruthy();
   });
+
+  it('展示新版话后分类作为坐席处置结果', async () => {
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: {
+        id: 'record-acw',
+        callId: 'call-acw',
+        entryType: 'web',
+        status: 'completed',
+        startedAt: '2026-08-23T10:35:07+08:00',
+      },
+      afterCallWork: {
+        agentIdentity: 'agent-admin',
+        classification: 'nurturing',
+        summary: '询问试用',
+        submittedAt: '2026-08-23T10:39:08+08:00',
+      },
+    });
+    (getAiCallRecordRecording as jest.Mock).mockResolvedValue(null);
+    (getAiCallRecordDialogue as jest.Mock).mockResolvedValue({
+      rows: [],
+      total: 0,
+    });
+    (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue(null);
+    (getAiCallRecordHandoffs as jest.Mock).mockResolvedValue({
+      rows: [],
+      total: 0,
+    });
+
+    render(<CallRecordDetailContent callId="call-acw" />);
+
+    expect(await screen.findByText('持续跟进')).toBeTruthy();
+  });
 });

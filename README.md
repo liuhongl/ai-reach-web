@@ -31,6 +31,62 @@ npm run dev
 
 修改代理配置后必须重启开发服务。验证页面前应先确认 `8078` 实际由本项目启动，并确认两个后端监听正常。
 
+### 8079 提示词候选环境
+
+`8079` 用于提示词、知识库等候选功能的人工验证，不使用上面的默认代理。启动时必须显式指定两条后端链路：
+
+| 前端路径 | 目标服务 | 用途 |
+| --- | --- | --- |
+| `/dev-api/` | `https://reach.lingchen-ai.com/dev-api` | 复用已授权 RuoYi 的登录、租户、用户和权限数据 |
+| `/ai-call-agent-api/` | `http://127.0.0.1:19014` | 先移除远端 RuoYi 的 `Authorization`，再转发到本地 `19013` 候选后端 |
+
+```bash
+AUTH_ENV_FILE=/absolute/path/to/authorized/.env.local
+
+env \
+  PORT=8079 \
+  UMI_ENV=dev \
+  MOCK=none \
+  AI_REACH_E2E=1 \
+  UMI_APP_API_TARGET=https://reach.lingchen-ai.com/dev-api \
+  UMI_APP_AI_CALL_API_TARGET=http://127.0.0.1:19014 \
+  node --env-file="$AUTH_ENV_FILE" ./node_modules/.bin/max dev
+```
+
+- 授权配置文件必须包含 `UMI_APP_ENCRYPT`、`UMI_APP_RSA_PUBLIC_KEY`、`UMI_APP_RSA_PRIVATE_KEY`、`UMI_APP_CLIENT_ID`；只配置两个代理目标会导致租户和验证码可加载，但提交登录稳定返回 `403 没有访问权限`。
+- 本机 `8080` 的 RuoYi 初始化服务不属于这条候选链路；如果登录页只出现 `XXX有限公司`，说明 `UMI_APP_API_TARGET` 缺失并回退到了本机 `8080`。
+- `19014` 是候选环境的鉴权隔离代理：必须删除请求中的 `Authorization` 后再转发到 `19013`。8079 直接连接 `19013` 时，远端 RuoYi Token 会因本地 JWT 签名不一致而使提示词接口返回 `500 invalid_signature`。
+- `19013` 必须以 SQLite、stub provider、禁止 SIP 外呼的隔离配置启动；不得用 `19011` 代替。
+- `8078/19011` 是另一套本地基线，启动或修复 `8079/19014/19013` 时不要停止或改配它们。
+- 租户数量可能变化，验收以接口成功且包含预期租户为准，不把固定数量写成启动条件。
+
+启动后至少验证：
+
+```bash
+for port in 8079 19014 19013; do
+  lsof -nP -iTCP:"$port" -sTCP:LISTEN
+done
+
+curl --fail http://127.0.0.1:8079/dev-api/auth/tenant/list
+curl --fail http://127.0.0.1:8079/dev-api/auth/code
+curl --fail 'http://127.0.0.1:8079/ai-call-agent-api/ai-call/prompt-profiles?pageSize=1'
+```
+
+三个端口都监听且三条请求都返回 `200`，只表示这套隔离候选环境的页面与接口连通。由于 `19014` 会移除鉴权头，这不能证明 AI Call 的权限或租户隔离；权限与租户必须在启用 JWT、保留真实鉴权头的集成环境另行验收。
+
+#### 重复启动故障对照
+
+| 现象 | 根因 | 处理 |
+| --- | --- | --- |
+| 登录页接口 `504` | `/dev-api/` 的目标服务不可用或代理目标错误 | 先核对 `UMI_APP_API_TARGET`，不要直接启动本机 `8080` 顶替 |
+| 登录页只有 `XXX有限公司` | 8079 回退到本机 `8080` 初始化库 | 使用上面的远端 RuoYi 目标重启 8079，不在初始化库补租户 |
+| 租户、验证码正常，提交登录提示“没有访问权限” | 启动时未加载 `clientId` 或 RSA 加密配置 | 使用授权配置文件重新启动，不能只传两个代理目标 |
+| 提示词页面接口 `504` | `19014` 隔离代理或 `19013` 候选后端未监听 | 先恢复 `19013`，再恢复转发到它的 `19014` |
+| 登录后提示词页面接口 `500`，19013 日志出现 `invalid_signature` | 8079 直接连接了 `19013`，或 `19014` 未移除远端 RuoYi Token | 将 `UMI_APP_AI_CALL_API_TARGET` 恢复为 `http://127.0.0.1:19014`，并确认 19014 删除 `Authorization` 后再转发 |
+| 参数已经修改但页面仍旧报错 | 8079 仍在运行旧的编译结果 | 停止原 8079 进程后重新启动，再执行三条接口检查 |
+
+固定排查顺序是：确认监听进程及其工作目录 → 核对 `8079 → 19014 → 19013` 链路 → 核对授权配置是否加载 → 验证三条接口 → 最后打开页面。不要把“页面能打开”当成登录和提示词链路已恢复。
+
 ## 生产构建
 
 生产构建前至少执行：

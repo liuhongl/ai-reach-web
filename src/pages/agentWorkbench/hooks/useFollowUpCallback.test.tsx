@@ -30,6 +30,8 @@ const credential = {
 const createRoom = () => {
   let disconnected: ((reason?: number) => void) | undefined;
   let remoteAudio: (() => void) | undefined;
+  let sipCallStatus: ((status: string) => void) | undefined;
+  let remoteParticipantDisconnected: (() => void) | undefined;
   return {
     connect: jest.fn().mockResolvedValue(undefined),
     publishMicrophone: jest.fn().mockResolvedValue(undefined),
@@ -42,9 +44,17 @@ const createRoom = () => {
     onRemoteAudio: jest.fn((handler) => {
       remoteAudio = handler;
     }),
+    onSipCallStatus: jest.fn((handler) => {
+      sipCallStatus = handler;
+    }),
+    onRemoteParticipantDisconnected: jest.fn((handler) => {
+      remoteParticipantDisconnected = handler;
+    }),
     onNetworkQuality: jest.fn(),
     emitDisconnected: (reason?: number) => disconnected?.(reason),
     emitRemoteAudio: () => remoteAudio?.(),
+    emitSipCallStatus: (status: string) => sipCallStatus?.(status),
+    emitRemoteParticipantDisconnected: () => remoteParticipantDisconnected?.(),
   };
 };
 
@@ -129,6 +139,46 @@ describe('useFollowUpCallback', () => {
     );
     act(() => room.emitDisconnected(1));
 
+    await waitFor(() =>
+      expect(screen.getByTestId('phase').textContent).toBe('ended'),
+    );
+  });
+
+  it('marks callback audio ready only after the SIP call becomes active', async () => {
+    const room = createRoom();
+    const confirmConnected = jest.fn().mockResolvedValue({ code: 200 });
+    render(
+      <Harness
+        options={{
+          credential,
+          followUpId: 'follow-up-1',
+          consoleSessionId: 'session-1',
+          roomFactory: () => room,
+          services: { end: jest.fn(), confirmConnected },
+        }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('phase').textContent).toBe('connected'),
+    );
+    act(() => room.emitRemoteAudio());
+    expect(screen.getByTestId('remote-audio').textContent).toBe('no');
+
+    act(() => room.emitSipCallStatus('ringing'));
+    expect(confirmConnected).not.toHaveBeenCalled();
+    act(() => room.emitSipCallStatus('active'));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('remote-audio').textContent).toBe('yes'),
+    );
+    expect(confirmConnected).toHaveBeenCalledWith(
+      'follow-up-1',
+      credential.call_id,
+      expect.objectContaining({ consoleSessionId: 'session-1' }),
+    );
+
+    act(() => room.emitRemoteParticipantDisconnected());
     await waitFor(() =>
       expect(screen.getByTestId('phase').textContent).toBe('ended'),
     );

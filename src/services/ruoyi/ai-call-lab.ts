@@ -65,6 +65,20 @@ export type AiCallLabPromptVersion = {
   snapshot?: Omit<AiCallLabPromptProfile, 'id'>;
 };
 
+export type AiCallLabPromptVersionApplication = {
+  id: number | string;
+  profileId: number | string;
+  fromVersionId?: number | string | null;
+  fromVersionNo?: number | null;
+  fromVersionName?: string | null;
+  toVersionId: number | string;
+  toVersionNo: number;
+  toVersionName: string;
+  appliedBy?: number | string | null;
+  appliedByName?: string | null;
+  appliedAt: string;
+};
+
 export type AiCallLabPromptProfilePayload = Omit<
   AiCallLabPromptProfile,
   'id'
@@ -337,6 +351,20 @@ export const getAiCallLabPromptVersion = async (
     { method: 'get', timeout: AI_CALL_LAB_READ_TIMEOUT },
   );
   return unwrapAiCallLabResponse<AiCallLabPromptVersion>(response);
+};
+
+export const getAiCallLabPromptVersionApplications = async (
+  profileId: number | string,
+) => {
+  const response = await aiCallLabRequest<
+    AiCallLabPageResponse<AiCallLabPromptVersionApplication>
+  >(
+    buildPath(
+      `/prompt-profiles/${encodeURIComponent(String(profileId))}/version-applications`,
+    ),
+    { method: 'get', timeout: AI_CALL_LAB_READ_TIMEOUT },
+  );
+  return unwrapAiCallLabPage<AiCallLabPromptVersionApplication>(response);
 };
 
 export const applyAiCallLabPromptVersion = async (

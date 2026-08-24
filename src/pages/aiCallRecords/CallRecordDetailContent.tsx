@@ -86,6 +86,12 @@ const dispositionLabels: Record<string, string> = {
   other: '其他',
 };
 
+const classificationLabels: Record<string, string> = {
+  interested: '有意向',
+  nurturing: '持续跟进',
+  low_value: '低价值',
+};
+
 const formatDateTime = (value?: string | null) =>
   value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
 
@@ -333,8 +339,15 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
                         afterCallWork.needsFollowUp ? 'warning' : 'success'
                       }
                     >
-                      {dispositionLabels[afterCallWork.dispositionCode || ''] ||
-                        afterCallWork.dispositionCode}
+                      {classificationLabels[
+                        afterCallWork.classification || ''
+                      ] ||
+                        dispositionLabels[
+                          afterCallWork.dispositionCode || ''
+                        ] ||
+                        afterCallWork.classification ||
+                        afterCallWork.dispositionCode ||
+                        '-'}
                     </Tag>
                   ),
                 },

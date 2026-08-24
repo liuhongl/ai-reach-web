@@ -379,6 +379,8 @@ describe('AI Call task list page', () => {
     expect(await screen.findByText('王先生')).toBeTruthy();
     expect(screen.getByText('138****8001')).toBeTruthy();
     expect(screen.getByText('历史回访任务')).toBeTruthy();
+    expect(screen.getByText('2026-08-13 10:00:00')).toBeTruthy();
+    expect(screen.queryByText('2026-08-13T02:00:00Z')).toBeNull();
     expect(mockedListExceptionTargets).toHaveBeenCalledWith({
       category: 'no_answer',
       pageNum: 1,

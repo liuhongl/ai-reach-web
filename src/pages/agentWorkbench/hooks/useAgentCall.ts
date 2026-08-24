@@ -53,6 +53,8 @@ export type AgentRoomConnection = {
   disconnect: () => Promise<void> | void;
   onDisconnected: (handler: (reason?: DisconnectReason) => void) => void;
   onRemoteAudio: (handler: () => void) => void;
+  onSipCallStatus?: (handler: (status: string) => void) => void;
+  onRemoteParticipantDisconnected?: (handler: () => void) => void;
   onNetworkQuality: (handler: (quality: AgentNetworkQuality) => void) => void;
 };
 
@@ -165,10 +167,32 @@ export const createLiveKitAgentRoom = (): AgentRoomConnection => {
   let localAudioTrack: LocalAudioTrack | undefined;
   let disconnectHandler: ((reason?: DisconnectReason) => void) | undefined;
   let remoteAudioHandler: (() => void) | undefined;
+  let sipCallStatusHandler: ((status: string) => void) | undefined;
+  let remoteParticipantDisconnectedHandler: (() => void) | undefined;
   let qualityHandler: ((quality: AgentNetworkQuality) => void) | undefined;
   const attachedAudio = new Set<HTMLMediaElement>();
+  const notifySipCallStatus = (participant: Participant) => {
+    if (!participant.identity.startsWith('sip-')) return;
+    const status = participant.attributes?.['sip.callStatus'];
+    if (status) sipCallStatusHandler?.(status);
+  };
 
   room.on(RoomEvent.Disconnected, (reason) => disconnectHandler?.(reason));
+  room.on(RoomEvent.ParticipantConnected, notifySipCallStatus);
+  room.on(
+    RoomEvent.ParticipantAttributesChanged,
+    (changed: Record<string, string>, participant: Participant) => {
+      const status = changed['sip.callStatus'];
+      if (status && participant.identity.startsWith('sip-')) {
+        sipCallStatusHandler?.(status);
+      }
+    },
+  );
+  room.on(RoomEvent.ParticipantDisconnected, (participant: Participant) => {
+    if (participant.identity.startsWith('sip-')) {
+      remoteParticipantDisconnectedHandler?.();
+    }
+  });
   room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack) => {
     if (track.kind !== Track.Kind.Audio) return;
     const element = track.attach();
@@ -221,6 +245,13 @@ export const createLiveKitAgentRoom = (): AgentRoomConnection => {
     },
     onRemoteAudio: (handler) => {
       remoteAudioHandler = handler;
+    },
+    onSipCallStatus: (handler) => {
+      sipCallStatusHandler = handler;
+      room.remoteParticipants.forEach(notifySipCallStatus);
+    },
+    onRemoteParticipantDisconnected: (handler) => {
+      remoteParticipantDisconnectedHandler = handler;
     },
     onNetworkQuality: (handler) => {
       qualityHandler = handler;

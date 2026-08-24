@@ -1,6 +1,7 @@
 import { DisconnectReason } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  confirmFollowUpCallConnected,
   endFollowUpCall,
   type FollowUpCallbackCredentialDto,
   type IdempotentSessionInput,
@@ -15,6 +16,11 @@ import {
 
 type FollowUpCallbackServices = {
   end: typeof endFollowUpCall;
+  confirmConnected: (
+    followUpId: string,
+    callId: string,
+    input: IdempotentSessionInput,
+  ) => Promise<unknown>;
 };
 
 export type UseFollowUpCallbackOptions = {
@@ -26,7 +32,10 @@ export type UseFollowUpCallbackOptions = {
   refresh?: () => void | Promise<void>;
 };
 
-const defaultServices: FollowUpCallbackServices = { end: endFollowUpCall };
+const defaultServices: FollowUpCallbackServices = {
+  end: endFollowUpCall,
+  confirmConnected: confirmFollowUpCallConnected,
+};
 
 const idempotencyInput = (
   consoleSessionId: string,
@@ -55,6 +64,9 @@ export const useFollowUpCallback = ({
   const generationRef = useRef(0);
   const intentionalDisconnectRef = useRef(false);
   const endingRef = useRef(false);
+  const remoteAudioTrackReadyRef = useRef(false);
+  const sipConnectedRef = useRef(false);
+  const connectedReportedRef = useRef(false);
 
   const disconnectRoom = useCallback(async () => {
     const room = roomRef.current;
@@ -80,9 +92,51 @@ export const useFollowUpCallback = ({
     setPhase('connecting');
     setConnectionStage('livekit_connecting');
     setRemoteAudioReady(false);
+    remoteAudioTrackReadyRef.current = false;
+    sipConnectedRef.current = false;
+    connectedReportedRef.current = false;
     setErrorMessage('');
     room.onRemoteAudio(() => {
-      if (generation === generationRef.current) setRemoteAudioReady(true);
+      remoteAudioTrackReadyRef.current = true;
+      if (sipConnectedRef.current) setRemoteAudioReady(true);
+    });
+    room.onSipCallStatus?.((status) => {
+      if (
+        generation !== generationRef.current ||
+        connectedReportedRef.current ||
+        !['active', 'answered', 'connected'].includes(status.toLowerCase())
+      ) {
+        return;
+      }
+      connectedReportedRef.current = true;
+      void services
+        .confirmConnected(
+          followUpId || '',
+          credential.call_id,
+          idempotencyInput(consoleSessionId),
+        )
+        .then(() => {
+          if (generation === generationRef.current) {
+            sipConnectedRef.current = true;
+            setRemoteAudioReady(remoteAudioTrackReadyRef.current);
+          }
+        })
+        .catch(() => {
+          connectedReportedRef.current = false;
+          setErrorMessage('客户接通状态确认失败，请重试回拨');
+        });
+    });
+    room.onRemoteParticipantDisconnected?.(() => {
+      if (
+        generation !== generationRef.current ||
+        intentionalDisconnectRef.current ||
+        endingRef.current
+      ) {
+        return;
+      }
+      setPhase('ended');
+      setErrorMessage('通话已挂断，正在同步处理结果');
+      void refresh?.();
     });
     room.onNetworkQuality((quality) => {
       if (generation === generationRef.current) setNetworkQuality(quality);
@@ -135,7 +189,15 @@ export const useFollowUpCallback = ({
       generationRef.current += 1;
       void disconnectRoom();
     };
-  }, [consoleSessionId, credential, disconnectRoom, refresh, roomFactory]);
+  }, [
+    consoleSessionId,
+    credential,
+    disconnectRoom,
+    followUpId,
+    refresh,
+    roomFactory,
+    services,
+  ]);
 
   const toggleMicrophone = useCallback(async () => {
     const enabled = !microphoneEnabled;

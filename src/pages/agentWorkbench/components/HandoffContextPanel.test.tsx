@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { cleanup, render, screen } from '@testing-library/react';
 import * as React from 'react';
 import type {
@@ -43,6 +45,11 @@ const context: HandoffContextDto = {
 };
 
 describe('HandoffContextPanel', () => {
+  const styles = fs.readFileSync(
+    path.join(__dirname, 'HandoffContextPanel.css'),
+    'utf8',
+  );
+
   afterEach(cleanup);
 
   it('keeps the summary and renders every AI/customer turn without timestamps', () => {
@@ -87,5 +94,17 @@ describe('HandoffContextPanel', () => {
     expect(screen.queryByText('转人工原因：')).toBeNull();
     expect(screen.queryByText('业务来源：')).toBeNull();
     expect(screen.queryByText('通话编号：')).toBeNull();
+  });
+
+  it('keeps Ant Design spin wrappers shrinkable so the conversation can scroll', () => {
+    expect(styles).toContain(
+      '.agent-handoff-dialogue > .ant-spin-nested-loading,',
+    );
+    expect(styles).toContain(
+      '> .ant-spin-nested-loading > .ant-spin-container',
+    );
+    expect(styles).toMatch(
+      /\.agent-handoff-dialogue > \.ant-spin-nested-loading,[\s\S]*?\{[\s\S]*?display: flex;[\s\S]*?min-height: 0;[\s\S]*?flex: 1 1 auto;[\s\S]*?flex-direction: column;[\s\S]*?\}/,
+    );
   });
 });

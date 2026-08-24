@@ -57,6 +57,14 @@
   margin-bottom: 10px;
 }
 
+.agent-handoff-dialogue > .ant-spin-nested-loading,
+.agent-handoff-dialogue > .ant-spin-nested-loading > .ant-spin-container {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
 .agent-handoff-dialogue-scroll {
   display: grid;
   min-height: 0;

@@ -155,6 +155,10 @@ describe('agent console service contract', () => {
       consoleSessionId: 'session-1',
       idempotencyKey: 'follow-up-call-1',
     });
+    await call('confirmFollowUpCallConnected', 'follow-up-1', 'call-1', {
+      consoleSessionId: 'session-1',
+      idempotencyKey: 'follow-up-connected-1',
+    });
     await call('endFollowUpCall', 'follow-up-1', 'call-1', {
       consoleSessionId: 'session-1',
       idempotencyKey: 'follow-up-end-1',
@@ -166,6 +170,7 @@ describe('agent console service contract', () => {
       '/ai-call/agent-console/follow-ups/follow-up-1/handling-results',
       '/ai-call/agent-console/follow-ups/follow-up-1/claim',
       '/ai-call/agent-console/follow-ups/follow-up-1/call',
+      '/ai-call/agent-console/follow-ups/follow-up-1/call/call-1/connected',
       '/ai-call/agent-console/follow-ups/follow-up-1/call/call-1/end',
     ]);
     expect(mockedRequest.mock.calls[0][1]).toMatchObject({
@@ -197,6 +202,10 @@ describe('agent console service contract', () => {
       data: { console_session_id: 'session-1' },
     });
     expect(mockedRequest.mock.calls[5][1]).toMatchObject({
+      headers: { 'Idempotency-Key': 'follow-up-connected-1' },
+      data: { console_session_id: 'session-1' },
+    });
+    expect(mockedRequest.mock.calls[6][1]).toMatchObject({
       headers: { 'Idempotency-Key': 'follow-up-end-1' },
       data: { console_session_id: 'session-1' },
     });
@@ -257,6 +266,10 @@ describe('agent console service contract', () => {
       takeover: true,
       takeoverReason: '负责人已调整，由当前坐席继续处理',
     });
+    await call('confirmFollowUpDataCallConnected', 'data-1', 'call-1', {
+      consoleSessionId: 'session-1',
+      idempotencyKey: 'data-connected-1',
+    });
     await call('endFollowUpDataCall', 'data-1', 'call-1', {
       consoleSessionId: 'session-1',
       idempotencyKey: 'data-end-1',
@@ -273,6 +286,7 @@ describe('agent console service contract', () => {
 
     expect(mockedRequest.mock.calls.map(([url]) => url)).toEqual([
       '/ai-call/agent-console/follow-up-data/data-1/call',
+      '/ai-call/agent-console/follow-up-data/data-1/call/call-1/connected',
       '/ai-call/agent-console/follow-up-data/data-1/call/call-1/end',
       '/ai-call/agent-console/follow-up-data/data-1/handling-results',
     ]);
@@ -286,10 +300,14 @@ describe('agent console service contract', () => {
       },
     });
     expect(mockedRequest.mock.calls[1][1]).toMatchObject({
-      headers: { 'Idempotency-Key': 'data-end-1' },
+      headers: { 'Idempotency-Key': 'data-connected-1' },
       data: { console_session_id: 'session-1' },
     });
     expect(mockedRequest.mock.calls[2][1]).toMatchObject({
+      headers: { 'Idempotency-Key': 'data-end-1' },
+      data: { console_session_id: 'session-1' },
+    });
+    expect(mockedRequest.mock.calls[3][1]).toMatchObject({
       headers: { 'Idempotency-Key': 'data-result-1' },
       data: {
         call_id: 'call-1',

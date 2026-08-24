@@ -5,6 +5,7 @@ import {
   DownloadOutlined,
   EyeOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   InboxOutlined,
   PlusOutlined,
   TagsOutlined,
@@ -15,8 +16,6 @@ import { ProTable } from '@ant-design/pro-components';
 import {
   Alert,
   Button,
-  Descriptions,
-  Drawer,
   Form,
   Input,
   List,
@@ -27,9 +26,9 @@ import {
   Space,
   Spin,
   Tag,
-  theme,
   Tooltip,
   Typography,
+  theme,
   Upload,
 } from 'antd';
 import dayjs from 'dayjs';
@@ -44,7 +43,6 @@ import OfficePreview from './OfficePreview';
 import {
   deleteKnowledgeItem,
   downloadKnowledgeVersion,
-  getKnowledgeItem,
   hashKnowledgeFile,
   type KnowledgeContentCategory,
   type KnowledgeItem,
@@ -184,14 +182,11 @@ const AiCallKnowledgePage = () => {
   const [uploading, setUploading] = useState(false);
   const [editingItem, setEditingItem] = useState<KnowledgeItem>();
   const [savingEdit, setSavingEdit] = useState(false);
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerLoading, setDrawerLoading] = useState(false);
-  const [detail, setDetail] = useState<KnowledgeItem>();
+  const [versionItem, setVersionItem] = useState<KnowledgeItem>();
+  const [versionsLoading, setVersionsLoading] = useState(false);
   const [versions, setVersions] = useState<KnowledgeVersion[]>([]);
   const [profiles, setProfiles] = useState<AiCallLabPromptProfile[]>([]);
   const [bindingRowId, setBindingRowId] = useState<string>();
-  const [bindingIds, setBindingIds] = useState<string[]>([]);
-  const [savingBindings, setSavingBindings] = useState(false);
   const uploadExtensionIndex = uploadFile?.name.lastIndexOf('.') ?? -1;
   const uploadFileName =
     uploadFile?.name.slice(0, uploadExtensionIndex) || uploadFile?.name;
@@ -235,27 +230,17 @@ const AiCallKnowledgePage = () => {
     };
   }, [canManage, messageApi]);
 
-  const loadDetail = async (item: KnowledgeItem) => {
-    setDrawerOpen(true);
-    setDrawerLoading(true);
-    setDetail(undefined);
+  const openVersionHistory = async (item: KnowledgeItem) => {
+    setVersionItem(item);
+    setVersionsLoading(true);
     setVersions([]);
     try {
-      const [nextDetail, nextVersions] = await Promise.all([
-        getKnowledgeItem(item.id),
-        listKnowledgeVersions(item.id),
-      ]);
-      setDetail(nextDetail);
-      setVersions(nextVersions);
-      setBindingIds(
-        (nextDetail.sceneBindings || []).map(
-          (binding) => binding.promptProfileId,
-        ),
-      );
+      setVersions(await listKnowledgeVersions(item.id));
     } catch {
-      messageApi.error('知识详情加载失败');
+      setVersionItem(undefined);
+      messageApi.error('版本记录加载失败');
     } finally {
-      setDrawerLoading(false);
+      setVersionsLoading(false);
     }
   };
 
@@ -330,9 +315,6 @@ const AiCallKnowledgePage = () => {
         uploadTarget ? '新版本已进入处理队列' : '知识文件已进入处理队列',
       );
       await actionRef.current?.reload();
-      if (uploadTarget && detail?.id === uploadTarget.id) {
-        await loadDetail(uploadTarget);
-      }
     } catch {
       messageApi.error('上传失败，请检查文件后重试');
     } finally {
@@ -357,9 +339,8 @@ const AiCallKnowledgePage = () => {
     }
     setSavingEdit(true);
     try {
-      const updated = await updateKnowledgeItem(editingItem.id, values);
+      await updateKnowledgeItem(editingItem.id, values);
       setEditingItem(undefined);
-      if (detail?.id === updated.id) setDetail(updated);
       messageApi.success('知识信息已更新');
       await actionRef.current?.reload();
     } catch {
@@ -428,23 +409,39 @@ const AiCallKnowledgePage = () => {
     }
   };
 
-  const saveBindings = async () => {
-    if (!detail) return;
-    setSavingBindings(true);
-    try {
-      const result = await replaceKnowledgeSceneBindings(detail.id, bindingIds);
-      setDetail({
-        ...detail,
-        sceneBindings: result.sceneBindings,
-        bindingCount: result.sceneBindings.length,
-      });
-      messageApi.success('关联场景已更新');
-      await actionRef.current?.reload();
-    } catch {
-      messageApi.error('关联场景更新失败');
-    } finally {
-      setSavingBindings(false);
+  const previewCurrentFile = async (item: KnowledgeItem) => {
+    let version = item.latestVersion;
+    if (
+      version.status !== 'READY' &&
+      item.currentReadyVersionId &&
+      item.currentReadyVersionId !== version.id
+    ) {
+      try {
+        const history = await listKnowledgeVersions(item.id);
+        version =
+          history.find(({ id }) => id === item.currentReadyVersionId) ||
+          version;
+      } catch {
+        messageApi.error('文件预览信息加载失败');
+        return;
+      }
     }
+
+    if (version.status === 'FAILED') {
+      messageApi.error(
+        version.failureMessage || '文件处理失败，请在版本记录中重试',
+      );
+      return;
+    }
+    if (version.status !== 'READY') {
+      messageApi.info('文件正在处理，暂不可预览');
+      return;
+    }
+    if (!PREVIEWABLE_EXTENSIONS.has(version.extension.toLowerCase())) {
+      messageApi.info('当前文件格式暂不支持在线预览，请在版本记录中下载');
+      return;
+    }
+    await previewVersion(version);
   };
 
   const saveRowBindings = async (
@@ -467,7 +464,7 @@ const AiCallKnowledgePage = () => {
     try {
       await retryKnowledgeVersion(version.id);
       messageApi.success('已重新进入处理队列');
-      if (detail) await loadDetail(detail);
+      if (versionItem) await openVersionHistory(versionItem);
       await actionRef.current?.reload();
     } catch {
       messageApi.error('该版本暂时无法重试');
@@ -477,18 +474,13 @@ const AiCallKnowledgePage = () => {
   const removeItem = async (item: KnowledgeItem) => {
     try {
       await deleteKnowledgeItem(item.id);
-      if (detail?.id === item.id) setDrawerOpen(false);
+      if (versionItem?.id === item.id) setVersionItem(undefined);
       messageApi.success('知识条目已删除');
       await actionRef.current?.reloadAndRest?.();
     } catch {
       messageApi.error('知识条目删除失败');
     }
   };
-
-  const bindingOptions = buildBindingOptions(
-    detail?.sceneBindings || [],
-    profiles,
-  );
 
   const columns: ProColumns<KnowledgeItem>[] = [
     {
@@ -505,16 +497,17 @@ const AiCallKnowledgePage = () => {
               <Button
                 type="link"
                 className="ai-call-knowledge-file-name"
-                onClick={() => loadDetail(item)}
+                onClick={() => void previewCurrentFile(item)}
               >
                 {item.displayName}
               </Button>
               {item.note ? (
-                <Tag className="ai-call-knowledge-note" color="orange">
-                  备注：{item.note}
-                </Tag>
+                <Tooltip title={`备注：${item.note}`}>
+                  <Tag className="ai-call-knowledge-note" color="orange">
+                    备注：{item.note}
+                  </Tag>
+                </Tooltip>
               ) : null}
-              <Text type="secondary">版本 v{item.latestVersion.versionNo}</Text>
             </div>
           </div>
         );
@@ -543,10 +536,10 @@ const AiCallKnowledgePage = () => {
       },
     },
     {
-      title: '上传时间',
-      dataIndex: 'createdAt',
+      title: '更新时间',
+      dataIndex: 'updatedAt',
       width: 160,
-      render: (_, item) => formatDateTime(item.createdAt),
+      render: (_, item) => formatDateTime(item.updatedAt),
     },
     {
       title: '关联产品（场景）',
@@ -577,10 +570,28 @@ const AiCallKnowledgePage = () => {
     {
       title: '操作',
       key: 'actions',
-      width: canManage ? 88 : 0,
+      width: canManage ? 176 : 56,
       fixed: 'right',
       render: (_, item) => (
         <Space size={4}>
+          {canManage ? (
+            <Tooltip title="上传新版本">
+              <Button
+                type="text"
+                aria-label="上传新版本"
+                icon={<UploadOutlined />}
+                onClick={() => openUpload(item)}
+              />
+            </Tooltip>
+          ) : null}
+          <Tooltip title="版本记录">
+            <Button
+              type="text"
+              aria-label="版本记录"
+              icon={<HistoryOutlined />}
+              onClick={() => void openVersionHistory(item)}
+            />
+          </Tooltip>
           {canManage ? (
             <>
               <Tooltip title="添加或修改备注">
@@ -821,7 +832,6 @@ const AiCallKnowledgePage = () => {
                 maxCount={1}
                 showUploadList={false}
                 beforeUpload={(file) => selectUploadFile(file)}
-                classNames={{ trigger: 'sm:!h-28' }}
               >
                 <p className="ant-upload-drag-icon" style={{ marginBottom: 4 }}>
                   <InboxOutlined style={{ fontSize: 24 }} />
@@ -863,177 +873,99 @@ const AiCallKnowledgePage = () => {
         </Form>
       </Modal>
 
-      <Drawer
-        title={detail?.displayName || '知识详情'}
-        size="large"
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        extra={
-          canManage && detail ? (
-            <Button
-              icon={<UploadOutlined />}
-              onClick={() => openUpload(detail)}
-            >
-              上传新版本
-            </Button>
-          ) : null
-        }
+      <Modal
+        title={`${versionItem?.displayName || ''} · 版本记录`}
+        width={760}
+        open={Boolean(versionItem)}
+        footer={null}
+        destroyOnHidden
+        onCancel={() => setVersionItem(undefined)}
       >
-        <Spin spinning={drawerLoading}>
-          {detail ? (
-            <Space direction="vertical" size="large" style={{ width: '100%' }}>
-              <Descriptions
-                bordered
-                size="small"
-                column={2}
-                items={[
-                  {
-                    key: 'category',
-                    label: '内容分类',
-                    children: categoryLabel[detail.contentCategory],
-                  },
-                  {
-                    key: 'versions',
-                    label: '版本数',
-                    children: detail.versionCount,
-                  },
-                  {
-                    key: 'bindings',
-                    label: '关联场景',
-                    children: detail.bindingCount,
-                  },
-                  {
-                    key: 'updated',
-                    label: '更新时间',
-                    children: formatDateTime(detail.updatedAt),
-                  },
-                  {
-                    key: 'note',
-                    label: '备注',
-                    span: 2,
-                    children: detail.note || '-',
-                  },
-                ]}
-              />
-
-              <section style={{ width: '100%' }}>
-                <Text strong>关联场景</Text>
-                <Space.Compact style={{ display: 'flex', marginTop: 8 }}>
-                  <Select
-                    mode="multiple"
-                    style={{ flex: 1 }}
-                    disabled={!canManage}
-                    value={bindingIds}
-                    placeholder="暂未关联场景"
-                    options={bindingOptions}
-                    onChange={setBindingIds}
+        <Spin spinning={versionsLoading}>
+          <List
+            bordered
+            dataSource={versions}
+            renderItem={(version) => {
+              const meta = statusMeta[version.status];
+              const canPreview = PREVIEWABLE_EXTENSIONS.has(
+                version.extension.toLowerCase(),
+              );
+              return (
+                <List.Item
+                  actions={[
+                    ...(version.status === 'READY' && canPreview
+                      ? [
+                          <Button
+                            key="preview"
+                            type="link"
+                            icon={<EyeOutlined />}
+                            onClick={() => void previewVersion(version)}
+                          >
+                            预览
+                          </Button>,
+                        ]
+                      : []),
+                    ...(version.status === 'READY'
+                      ? [
+                          <Button
+                            key="download"
+                            type="link"
+                            icon={<DownloadOutlined />}
+                            onClick={() =>
+                              downloadKnowledgeVersion(
+                                version.id,
+                                version.sourceFilename,
+                              ).catch(() => messageApi.error('文件下载失败'))
+                            }
+                          >
+                            下载
+                          </Button>,
+                        ]
+                      : []),
+                    ...(canManage && version.failureRetryable
+                      ? [
+                          <Button
+                            key="retry"
+                            type="link"
+                            onClick={() => void retryVersion(version)}
+                          >
+                            重试
+                          </Button>,
+                        ]
+                      : []),
+                  ]}
+                >
+                  <List.Item.Meta
+                    title={
+                      <Space>
+                        <Text>v{version.versionNo}</Text>
+                        <Tag color={meta.color}>{meta.label}</Tag>
+                        <Text>{version.sourceFilename}</Text>
+                      </Space>
+                    }
+                    description={
+                      <Space wrap>
+                        <Text type="secondary">
+                          {formatBytes(version.byteSize)}
+                        </Text>
+                        <Text type="secondary">
+                          {version.chunkCount} 个切片
+                        </Text>
+                        <Text type="secondary">
+                          {formatDateTime(version.createdAt)}
+                        </Text>
+                        {version.failureMessage ? (
+                          <Text type="danger">{version.failureMessage}</Text>
+                        ) : null}
+                      </Space>
+                    }
                   />
-                  {canManage ? (
-                    <Button
-                      type="primary"
-                      loading={savingBindings}
-                      onClick={saveBindings}
-                    >
-                      保存关联
-                    </Button>
-                  ) : null}
-                </Space.Compact>
-              </section>
-
-              <section style={{ width: '100%' }}>
-                <Text strong>历史版本</Text>
-                <List
-                  style={{ marginTop: 8 }}
-                  bordered
-                  dataSource={versions}
-                  renderItem={(version) => {
-                    const meta = statusMeta[version.status];
-                    const canPreview = PREVIEWABLE_EXTENSIONS.has(
-                      version.extension.toLowerCase(),
-                    );
-                    return (
-                      <List.Item
-                        actions={[
-                          ...(version.status === 'READY' && canPreview
-                            ? [
-                                <Button
-                                  key="preview"
-                                  type="link"
-                                  icon={<EyeOutlined />}
-                                  onClick={() => previewVersion(version)}
-                                >
-                                  预览
-                                </Button>,
-                              ]
-                            : []),
-                          ...(version.status === 'READY'
-                            ? [
-                                <Button
-                                  key="download"
-                                  type="link"
-                                  icon={<DownloadOutlined />}
-                                  onClick={() =>
-                                    downloadKnowledgeVersion(
-                                      version.id,
-                                      version.sourceFilename,
-                                    ).catch(() =>
-                                      messageApi.error('文件下载失败'),
-                                    )
-                                  }
-                                >
-                                  下载
-                                </Button>,
-                              ]
-                            : []),
-                          ...(canManage && version.failureRetryable
-                            ? [
-                                <Button
-                                  key="retry"
-                                  type="link"
-                                  onClick={() => retryVersion(version)}
-                                >
-                                  重试
-                                </Button>,
-                              ]
-                            : []),
-                        ]}
-                      >
-                        <List.Item.Meta
-                          title={
-                            <Space>
-                              <Text>v{version.versionNo}</Text>
-                              <Tag color={meta.color}>{meta.label}</Tag>
-                              <Text>{version.sourceFilename}</Text>
-                            </Space>
-                          }
-                          description={
-                            <Space wrap>
-                              <Text type="secondary">
-                                {formatBytes(version.byteSize)}
-                              </Text>
-                              <Text type="secondary">
-                                {version.chunkCount} 个切片
-                              </Text>
-                              <Text type="secondary">
-                                {formatDateTime(version.createdAt)}
-                              </Text>
-                              {version.failureMessage ? (
-                                <Text type="danger">
-                                  {version.failureMessage}
-                                </Text>
-                              ) : null}
-                            </Space>
-                          }
-                        />
-                      </List.Item>
-                    );
-                  }}
-                />
-              </section>
-            </Space>
-          ) : null}
+                </List.Item>
+              );
+            }}
+          />
         </Spin>
-      </Drawer>
+      </Modal>
     </ListPage>
   );
 };

@@ -6,7 +6,6 @@ import AiCallKnowledgePage from './index';
 import {
   deleteKnowledgeItem,
   downloadKnowledgeVersion,
-  getKnowledgeItem,
   hashKnowledgeFile,
   listKnowledgeItems,
   listKnowledgeVersions,
@@ -28,7 +27,6 @@ jest.mock('@/services/ruoyi/ai-call-lab', () => ({
 jest.mock('./service', () => ({
   deleteKnowledgeItem: jest.fn(),
   downloadKnowledgeVersion: jest.fn(),
-  getKnowledgeItem: jest.fn(),
   hashKnowledgeFile: jest.fn(),
   listKnowledgeItems: jest.fn(),
   listKnowledgeVersions: jest.fn(),
@@ -154,7 +152,7 @@ const item = {
   ],
   bindingCount: 1,
   createdAt: '2026-08-19T08:00:00Z',
-  updatedAt: '2026-08-19T08:00:00Z',
+  updatedAt: '2026-08-20T09:30:00',
 };
 
 describe('AiCallKnowledgePage', () => {
@@ -175,7 +173,6 @@ describe('AiCallKnowledgePage', () => {
       versionId: 'new-version',
       status: 'PROCESSING',
     });
-    (getKnowledgeItem as jest.Mock).mockResolvedValue(item);
     (listKnowledgeVersions as jest.Mock).mockResolvedValue([
       item.latestVersion,
     ]);
@@ -207,10 +204,19 @@ describe('AiCallKnowledgePage', () => {
     expect(await screen.findByText('媒体分类')).toBeTruthy();
     expect(screen.getAllByText('内容分类')).toHaveLength(2);
     expect(screen.getByRole('button', { name: '上传新知识' })).toBeTruthy();
-    expect(await screen.findByText('备注：退款政策，客服必读')).toBeTruthy();
-    expect(screen.getByText('版本 v1')).toBeTruthy();
+    const note = await screen.findByText('备注：退款政策，客服必读');
+    fireEvent.mouseEnter(note);
+    expect((await screen.findByRole('tooltip')).textContent).toContain(
+      '备注：退款政策，客服必读',
+    );
+    expect(screen.queryByText('当前版本 v1')).toBeNull();
     expect(screen.getByText('状态')).toBeTruthy();
+    expect(screen.getByText('更新时间')).toBeTruthy();
+    expect(screen.queryByText('上传时间')).toBeNull();
+    expect(screen.getByText('2026-08-20 09:30:00')).toBeTruthy();
     expect(screen.getByText('关联产品（场景）')).toBeTruthy();
+    expect(screen.getByRole('button', { name: '上传新版本' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '版本记录' })).toBeTruthy();
     expect(screen.getByRole('button', { name: '编辑备注' })).toBeTruthy();
     expect(screen.getByTestId('knowledge-table').className).toContain(
       'recov-stable-pagination-table',
@@ -227,6 +233,37 @@ describe('AiCallKnowledgePage', () => {
         contentCategory: 'INDUSTRY',
       }),
     );
+  });
+
+  it('previews the current file from its name and uploads a new version from the row', async () => {
+    (previewKnowledgeVersion as jest.Mock).mockResolvedValue({
+      text: jest.fn().mockResolvedValue('preview'),
+    });
+    render(React.createElement(AiCallKnowledgePage));
+
+    fireEvent.click(await screen.findByRole('button', { name: '售后知识.md' }));
+    await waitFor(() =>
+      expect(previewKnowledgeVersion).toHaveBeenCalledWith(
+        '90071992547409932',
+        'md',
+      ),
+    );
+
+    Modal.destroyAll();
+    fireEvent.click(screen.getByRole('button', { name: '上传新版本' }));
+    expect(await screen.findByText('上传“售后知识.md”的新版本')).toBeTruthy();
+  });
+
+  it('lets the upload hint use its natural height', async () => {
+    render(React.createElement(AiCallKnowledgePage));
+
+    fireEvent.click(await screen.findByRole('button', { name: '上传新知识' }));
+    expect(
+      screen
+        .getByRole('dialog')
+        .querySelector('.ant-upload-drag')
+        ?.className.includes('sm:!h-28'),
+    ).toBe(false);
   });
 
   it.each([
@@ -315,7 +352,10 @@ describe('AiCallKnowledgePage', () => {
     ]);
 
     render(React.createElement(AiCallKnowledgePage));
-    fireEvent.click(await screen.findByRole('button', { name: '售后知识.md' }));
+    fireEvent.click(await screen.findByRole('button', { name: '版本记录' }));
+
+    expect(listKnowledgeVersions).toHaveBeenCalledWith(item.id);
+    expect(screen.queryByRole('dialog', { name: '知识详情' })).toBeNull();
 
     expect(await screen.findAllByRole('button', { name: /下载/ })).toHaveLength(
       3,
