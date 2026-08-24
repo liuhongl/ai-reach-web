@@ -61,9 +61,11 @@ jest.mock('@/services/ruoyi/auth', () => ({
 describe('resolveLoginRedirect', () => {
   it.each([
     ['/ai-call/tasks', '/ai-call/tasks'],
-    ['https://evil.example/path', '/'],
-    ['//evil.example/path', '/'],
-    ['/user/login', '/'],
+    ['/', '/ai-call/statistics'],
+    [null, '/ai-call/statistics'],
+    ['https://evil.example/path', '/ai-call/statistics'],
+    ['//evil.example/path', '/ai-call/statistics'],
+    ['/user/login', '/ai-call/statistics'],
   ])('将 %s 解析为 %s', (redirect, expected) => {
     expect(resolveLoginRedirect(redirect)).toBe(expected);
   });
@@ -107,5 +109,35 @@ describe('LoginPage', () => {
     expect(mockFetchUserInfo).toHaveBeenCalled();
     expect(mockSetInitialState).toHaveBeenCalled();
     expect(history.replace).toHaveBeenCalledWith('/ai-call/tasks');
+  });
+
+  it('根地址登录后等待用户状态更新并进入数据看板', async () => {
+    jest.mocked(login).mockResolvedValue({
+      data: { access_token: 'reach-token' },
+    } as never);
+    Object.assign(history.location, { search: '?redirect=%2F' });
+    let finishStateUpdate!: () => void;
+    mockSetInitialState.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          finishStateUpdate = resolve;
+        }),
+    );
+    render(<LoginPage />);
+    await waitFor(() => expect(getCodeImg).toHaveBeenCalled());
+
+    let submitPromise!: Promise<void>;
+    act(() => {
+      submitPromise = loginFormProps.onFinish({
+        username: 'admin',
+        password: 'secret',
+      });
+    });
+    await waitFor(() => expect(mockSetInitialState).toHaveBeenCalled());
+
+    expect(history.replace).not.toHaveBeenCalled();
+    finishStateUpdate();
+    await act(async () => submitPromise);
+    expect(history.replace).toHaveBeenCalledWith('/ai-call/statistics');
   });
 });

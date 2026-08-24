@@ -13,13 +13,7 @@ import {
 import { history, useModel } from '@umijs/max';
 import { Alert, App, Button, Form } from 'antd';
 import { createStyles } from 'antd-style';
-import React, {
-  startTransition,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { RuoyiError } from '@/adapters/ruoyi/response';
 import { setToken } from '@/adapters/ruoyi/token';
 import Footer from '@/components/Footer';
@@ -48,20 +42,23 @@ type InitErrors = {
 
 const defaultTenantId = '000000';
 const loginPath = '/user/login';
+const defaultLoginRedirect = '/ai-call/statistics';
 const rememberedTenantIdKey = 'loginTenantId';
 
 const canUseStorage = () => typeof localStorage !== 'undefined';
 
 export const resolveLoginRedirect = (redirect: string | null): string => {
-  if (!redirect?.startsWith('/') || redirect.startsWith('//')) return '/';
+  if (!redirect?.startsWith('/') || redirect.startsWith('//'))
+    return defaultLoginRedirect;
 
   try {
     const parsed = new URL(redirect, window.location.origin);
-    if (parsed.origin !== window.location.origin) return '/';
-    if (parsed.pathname === loginPath) return '/';
+    if (parsed.origin !== window.location.origin) return defaultLoginRedirect;
+    if (parsed.pathname === loginPath || parsed.pathname === '/')
+      return defaultLoginRedirect;
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
-    return '/';
+    return defaultLoginRedirect;
   }
 };
 
@@ -288,11 +285,9 @@ const Login: React.FC = () => {
   const fetchUserInfo = async () => {
     const userInfo = await initialState?.fetchUserInfo?.();
     if (userInfo) {
-      startTransition(() => {
-        setInitialState((state) =>
-          state ? { ...state, currentUser: userInfo } : state,
-        );
-      });
+      await setInitialState((state) =>
+        state ? { ...state, currentUser: userInfo } : state,
+      );
     }
   };
 
