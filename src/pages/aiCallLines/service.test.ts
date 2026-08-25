@@ -19,6 +19,10 @@ const mockRequest = ruoyiRequest as jest.Mock;
 const payload = {
   lineCode: 'primary-line',
   lineName: '正式外呼线路',
+  description: '用于正式营销外呼',
+  unitPrice: '0.1250',
+  purpose: '新客户邀约',
+  expiresAt: '2027-12-31',
   enabled: true,
   adapterType: 'livekit_sip' as const,
   routeMode: 'managed_trunk_id' as const,

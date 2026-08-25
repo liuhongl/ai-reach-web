@@ -86,10 +86,10 @@ jest.mock('@ant-design/pro-components', () => {
   const React = require('react');
   return {
     PageContainer: (props: Record<string, unknown>) => {
-      const { children, title } = props;
+      const { children, className, title } = props;
       return React.createElement(
         'main',
-        null,
+        { className },
         React.createElement('h1', null, title),
         children,
       );
@@ -308,7 +308,9 @@ describe('AI Call 通话记录页面', () => {
   });
 
   it('提供业务筛选、复合列，并继承任务与外呼对象上下文', async () => {
-    render(<AiCallRecordsPage />);
+    const { container } = render(<AiCallRecordsPage />);
+
+    expect(container.querySelector('.recov-list-page')).toBeTruthy();
 
     for (const text of [
       '通话记录',
@@ -1257,7 +1259,9 @@ describe('AI Call 通话记录页面', () => {
     render(<AiCallRecordsPage />);
 
     const summaryNode = await screen.findByText(summary);
-    expect(summaryNode.style.webkitLineClamp).toBe('2');
+    await waitFor(() =>
+      expect(summaryNode.style.webkitLineClamp).toBe('2'),
+    );
     fireEvent.mouseEnter(summaryNode);
     expect((await screen.findByRole('tooltip')).textContent).toBe(summary);
     expect(screen.getByText('正向')).toBeTruthy();

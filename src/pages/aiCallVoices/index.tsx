@@ -575,8 +575,6 @@ const AiCallVoicesPage = () => {
     <ListPage breadcrumbRender={false} title="音色管理">
       {messageContextHolder}
       <ListStack>
-        <h2 className="m-0 text-xl font-semibold">音色管理</h2>
-
         <TableCard className="recov-toolbar-card">
           <div className="flex w-full flex-wrap items-start gap-3">
             <Form<VoiceFilters>

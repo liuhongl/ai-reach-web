@@ -8,10 +8,6 @@
   padding-right: 4px;
 }
 
-.ai-call-prompt-config-layout > h3 {
-  margin: 0 0 16px;
-}
-
 .ai-call-prompt-config-card.ant-pro-card,
 .ai-call-prompt-common-collapse {
   min-width: 0;
@@ -24,6 +20,10 @@
 
 .ai-call-prompt-config-card.ant-pro-card > .ant-pro-card-body {
   overflow: visible;
+}
+
+.ai-call-prompt-common-card.ant-collapse {
+  background: #fff;
 }
 
 .ai-call-prompt-common-collapse .ant-collapse-header {

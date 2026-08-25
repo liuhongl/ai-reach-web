@@ -281,9 +281,10 @@ describe('AI Call voice management page', () => {
         total: 1,
       });
 
-    render(<AiCallVoicesPage />);
+    const { container } = render(<AiCallVoicesPage />);
     await flushPromises();
 
+    expect(container.querySelector('.recov-list-stack > h2')).toBeNull();
     expect(screen.getByText('创建中')).toBeTruthy();
     expect(screen.queryByRole('tab')).toBeNull();
     expect(mockList).toHaveBeenCalledTimes(1);

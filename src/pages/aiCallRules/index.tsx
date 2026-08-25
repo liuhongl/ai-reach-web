@@ -300,7 +300,6 @@ const AiCallRulesPage = () => {
       {messageContextHolder}
       {modalContextHolder}
       <ListStack>
-        <h2 className="m-0 text-xl font-semibold">呼叫规则</h2>
         <TableCard className="recov-toolbar-card">
           <div className="flex w-full justify-end">
             <Space size={8} wrap>

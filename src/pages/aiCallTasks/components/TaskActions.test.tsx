@@ -8,10 +8,12 @@ jest.mock('@/components/TableActions', () => ({
   __esModule: true,
   default: ({
     actions,
+    maxVisible,
   }: {
     actions: Array<{ icon?: unknown; key: string }>;
+    maxVisible?: number;
   }) => (
-    <div>
+    <div data-max-visible={maxVisible}>
       {actions.map((action) => (
         <span data-testid={action.key} key={action.key}>
           {action.icon ? '有图标' : '无图标'}
@@ -49,5 +51,8 @@ describe('TaskActions', () => {
     );
 
     expect(screen.getByTestId('view').textContent).toBe('无图标');
+    expect(screen.getByTestId('view').parentElement?.dataset.maxVisible).toBe(
+      '1',
+    );
   });
 });

@@ -102,6 +102,7 @@ describe('AI Call rules page', () => {
     render(<AiCallRulesPage />);
 
     expect(await screen.findByText('工作日规则')).toBeTruthy();
+    expect(document.querySelector('.recov-list-stack > h2')).toBeNull();
     expect(screen.getByText('09:00–18:00')).toBeTruthy();
     expect(screen.getByText('最多重试 1 次')).toBeTruthy();
     expect(screen.getByText('启用')).toBeTruthy();

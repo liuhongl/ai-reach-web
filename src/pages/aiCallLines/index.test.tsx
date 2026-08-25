@@ -7,7 +7,11 @@ import {
 } from '@testing-library/react';
 import { message } from 'antd';
 import * as React from 'react';
-import AiCallLinesPage, { createLineCode, toLinePayload } from '.';
+import AiCallLinesPage, {
+  createLineCode,
+  toCopyInitialValues,
+  toLinePayload,
+} from '.';
 import {
   disableAiCallLine,
   listAiCallLines,
@@ -51,8 +55,20 @@ jest.mock('@/components/TableActions', () => {
 
 jest.mock('@ant-design/pro-components', () => {
   const React = require('react');
-  const Field = ({ label }: { label: string }) =>
-    React.createElement('label', null, label);
+  const Field = ({
+    label,
+    name,
+    width,
+  }: {
+    label: string;
+    name?: string;
+    width?: string;
+  }) =>
+    React.createElement(
+      'label',
+      { 'data-field-name': name, 'data-field-width': width },
+      label,
+    );
   const ProForm = {
     Group: ({ children, title }: { children: unknown; title: string }) =>
       React.createElement(
@@ -67,21 +83,23 @@ jest.mock('@ant-design/pro-components', () => {
       props.open
         ? React.createElement(
             'aside',
-            null,
+            { 'data-drawer-width': props.width },
             React.createElement('h2', null, props.title),
             props.children,
           )
         : null,
     PageContainer: ({
       children,
+      className,
       title,
     }: {
       children: unknown;
+      className?: string;
       title: string;
     }) =>
       React.createElement(
         'main',
-        null,
+        { className },
         React.createElement('h1', null, title),
         children,
       ),
@@ -92,11 +110,31 @@ jest.mock('@ant-design/pro-components', () => {
       children: (values: { routeMode: string }) => unknown;
     }) => children({ routeMode: 'managed_trunk_id' }),
     ProFormDigit: Field,
+    ProFormDatePicker: Field,
     ProFormSelect: Field,
     ProFormSwitch: Field,
     ProFormText: Field,
+    ProFormTextArea: ({
+      label,
+      name,
+      width,
+    }: {
+      label: string;
+      name?: string;
+      width?: string;
+    }) =>
+      React.createElement(
+        'label',
+        {
+          'data-field-kind': 'textarea',
+          'data-field-name': name,
+          'data-field-width': width,
+        },
+        label,
+      ),
     ProTable: (props: Record<string, unknown>) => {
       const columns = props.columns as Array<{
+        dataIndex?: string;
         title?: unknown;
         valueType?: string;
         render?: (value: unknown, row: unknown) => unknown;
@@ -109,10 +147,17 @@ jest.mock('@ant-design/pro-components', () => {
       const optionColumn = columns.find(
         (column) => column.valueType === 'option',
       );
+      const lineNameColumn = columns.find(
+        (column) => column.dataIndex === 'lineName',
+      );
       const mockRow = {
         lineId: '340700000000000001',
         lineCode: 'primary-line',
         lineName: '正式外呼线路',
+        description: '用于正式营销外呼',
+        unitPrice: '0.1250',
+        purpose: '新客户邀约',
+        expiresAt: '2027-12-31',
         enabled: true,
         adapterType: 'livekit_sip',
         routeMode: 'managed_trunk_id',
@@ -133,10 +178,23 @@ jest.mock('@ant-design/pro-components', () => {
       };
       return React.createElement(
         'section',
-        null,
+        {
+          'data-testid': 'line-table',
+          'data-column-order': columns
+            .map((column) => String(column.title || ''))
+            .join('|'),
+          'data-line-name-custom-render': String(
+            Boolean(lineNameColumn?.render),
+          ),
+        },
         toolBarRender?.(),
         ...columns.map((column, index) =>
           React.createElement('span', { key: `column-${index}` }, column.title),
+        ),
+        React.createElement(
+          'div',
+          { key: 'line-name' },
+          lineNameColumn?.render?.(undefined, mockRow) ?? mockRow.lineName,
         ),
         React.createElement(
           'div',
@@ -190,6 +248,10 @@ const line = {
   lineId: '340700000000000001',
   lineCode: 'primary-line',
   lineName: '正式外呼线路',
+  description: '用于正式营销外呼',
+  unitPrice: '0.1250',
+  purpose: '新客户邀约',
+  expiresAt: '2027-12-31',
   enabled: true,
   adapterType: 'livekit_sip' as const,
   routeMode: 'managed_trunk_id' as const,
@@ -230,12 +292,18 @@ describe('AI Call 线路配置页面', () => {
   });
 
   it('展示线路业务字段、完整操作且没有真实拨打入口', async () => {
-    render(<AiCallLinesPage />);
+    const { container } = render(<AiCallLinesPage />);
+
+    expect(container.querySelector('.recov-list-page')).toBeTruthy();
 
     for (const text of [
       '线路配置',
       '新增线路',
       '线路名称',
+      '描述',
+      '单价',
+      '用途',
+      '到期时间',
       '接入方式',
       'SIP 接入地址',
       '报备主叫号码',
@@ -251,6 +319,7 @@ describe('AI Call 线路配置页面', () => {
     for (const action of [
       '编辑线路',
       '配置检查',
+      '复制配置',
       '设为默认',
       '停用线路',
       '删除线路',
@@ -259,6 +328,17 @@ describe('AI Call 线路配置页面', () => {
     }
     expect(screen.queryByText('测试拨打')).toBeNull();
     expect(screen.queryByText('外呼测试')).toBeNull();
+    expect(screen.queryByText('primary-line')).toBeNull();
+    expect(
+      screen.getByTestId('line-table').getAttribute('data-column-order'),
+    ).toBe(
+      '线路名称|默认线路|描述|接入方式|SIP 接入地址|报备主叫号码|最大并发|单价|用途|健康状态|启用状态|到期时间|更新时间|操作',
+    );
+    expect(
+      screen
+        .getByTestId('line-table')
+        .getAttribute('data-line-name-custom-render'),
+    ).toBe('false');
   });
 
   it('新增线路只展示当前厂商需要的业务字段', () => {
@@ -267,14 +347,51 @@ describe('AI Call 线路配置页面', () => {
     fireEvent.click(screen.getByRole('button', { name: '新增线路' }));
 
     const drawer = screen.getByRole('complementary');
+    expect(drawer.getAttribute('data-drawer-width')).toBe('760');
     expect(
       within(drawer).getByRole('heading', { name: '新增线路配置' }),
     ).toBeTruthy();
+    expect(
+      Array.from(drawer.querySelectorAll('h3'), (heading) =>
+        heading.textContent?.trim(),
+      ),
+    ).toEqual(['基本信息', 'SIP 接入', '容量设置', '业务信息']);
+    const businessSection = within(drawer)
+      .getByRole('heading', { name: '业务信息' })
+      .closest('section');
+    expect(
+      Array.from(businessSection?.querySelectorAll('label') || [], (label) =>
+        label.textContent?.trim(),
+      ),
+    ).toEqual(['单价', '到期时间', '描述', '用途']);
+    expect(
+      within(drawer).getByText('线路名称').getAttribute('data-field-width'),
+    ).toBe('xl');
+    expect(
+      within(drawer).getByText('用途').getAttribute('data-field-kind'),
+    ).toBe('textarea');
+    for (const label of [
+      'SIP 地址',
+      'SIP 端口',
+      '最大并发',
+      '呼叫超时',
+      '单价',
+      '到期时间',
+    ]) {
+      expect(
+        within(drawer).getByText(label).getAttribute('data-field-width'),
+      ).toBe('md');
+    }
     for (const text of [
       '基本信息',
+      '业务信息',
       'SIP 接入',
       '容量设置',
       '线路名称',
+      '描述',
+      '单价',
+      '用途',
+      '到期时间',
       'SIP 地址',
       'SIP 端口',
       '报备主叫号码',
@@ -326,6 +443,22 @@ describe('AI Call 线路配置页面', () => {
       authMode: 'ip_allowlist',
       destinationCountry: 'CN',
       enabled: false,
+      description: '用于正式营销外呼',
+      unitPrice: '0.1250',
+      purpose: '新客户邀约',
+      expiresAt: '2027-12-31',
+    });
+  });
+
+  it('复制配置生成新名称和编码并默认停用', () => {
+    expect(toCopyInitialValues(line, 1_722_225_600_000)).toMatchObject({
+      lineCode: 'sip-line-lz6gnls0',
+      lineName: '正式外呼线路（副本）',
+      enabled: false,
+      description: '用于正式营销外呼',
+      unitPrice: '0.1250',
+      purpose: '新客户邀约',
+      expiresAt: '2027-12-31',
     });
   });
 

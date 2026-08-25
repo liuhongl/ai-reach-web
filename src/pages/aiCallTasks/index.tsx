@@ -15,13 +15,9 @@ import {
 } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
 import React, { useRef, useState } from 'react';
-import {
-  ListPage,
-  ListStack,
-  TableCard,
-} from '@/components/ListLayout';
-import TaskActions from './components/TaskActions';
+import { ListPage, ListStack, TableCard } from '@/components/ListLayout';
 import ExceptionRetryPanel from './components/ExceptionRetryPanel';
+import TaskActions from './components/TaskActions';
 import TaskStatusTag from './components/TaskStatusTag';
 import {
   type AiCallTask,
@@ -319,7 +315,7 @@ const AiCallTasksPage = () => {
     {
       title: '操作',
       key: 'actions',
-      width: 180,
+      width: 120,
       fixed: 'right',
       search: false,
       render: (_value, task) => (
@@ -343,24 +339,26 @@ const AiCallTasksPage = () => {
       {messageContextHolder}
       {modalContextHolder}
       <ListStack>
-        <div className="flex items-center justify-between gap-4">
-          <h2 className="m-0 text-xl font-semibold">外呼任务</h2>
-          <Space>
-            <Button
-              icon={<BarChartOutlined />}
-              onClick={() => history.push('/ai-call/statistics')}
-            >
-              外呼统计
-            </Button>
-            <Button
-              icon={<PlusOutlined />}
-              type="primary"
-              onClick={() => history.push('/ai-call/tasks/create')}
-            >
-              新建任务
-            </Button>
-          </Space>
-        </div>
+        <TableCard className="recov-toolbar-card">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="m-0 text-xl font-semibold">外呼任务</h2>
+            <Space>
+              <Button
+                icon={<BarChartOutlined />}
+                onClick={() => history.push('/ai-call/statistics')}
+              >
+                外呼统计
+              </Button>
+              <Button
+                icon={<PlusOutlined />}
+                type="primary"
+                onClick={() => history.push('/ai-call/tasks/create')}
+              >
+                新建任务
+              </Button>
+            </Space>
+          </div>
+        </TableCard>
 
         <TableCard className="recov-task-list-card">
           <ProTable<AiCallTask>

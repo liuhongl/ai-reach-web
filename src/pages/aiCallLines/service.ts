@@ -18,6 +18,10 @@ export type AiCallLineHealthStatus =
 export type AiCallLinePayload = {
   lineCode: string;
   lineName: string;
+  description?: string | null;
+  unitPrice?: string | null;
+  purpose?: string | null;
+  expiresAt?: string | null;
   enabled: boolean;
   adapterType: 'livekit_sip';
   routeMode: AiCallLineRouteMode;

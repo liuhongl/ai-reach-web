@@ -1,5 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import * as React from 'react';
+import { listAiCallTasks } from '@/pages/aiCallTasks/service';
 import {
   getAdminFollowUp,
   listAdminFollowUps,
@@ -46,6 +47,10 @@ jest.mock('@ant-design/pro-components', () => {
 jest.mock('@/services/ruoyi/agent-console', () => ({
   getAdminFollowUp: jest.fn(),
   listAdminFollowUps: jest.fn(),
+}));
+
+jest.mock('@/pages/aiCallTasks/service', () => ({
+  listAiCallTasks: jest.fn(),
 }));
 
 jest.mock('../_shared', () => ({
@@ -112,6 +117,10 @@ describe('跟进总览深链', () => {
       rows: [],
       total: 0,
     });
+    (listAiCallTasks as jest.Mock).mockResolvedValue({
+      rows: [{ taskId: 'task-1', taskName: '新品回访' }],
+      total: 1,
+    });
     (getAdminFollowUp as jest.Mock).mockResolvedValue(task);
   });
 
@@ -159,7 +168,7 @@ describe('跟进总览深链', () => {
     ).toMatchObject({ initialValue: 'pending' });
   });
 
-  it('仅保留来源类型、任务状态和业务场景筛选，并映射管理端参数', async () => {
+  it('支持按所属任务筛选并映射管理端参数', async () => {
     mockDeepLinkFollowUpId = '';
     mockTableQuery = {
       current: 1,
@@ -167,6 +176,7 @@ describe('跟进总览深链', () => {
       source_type: 'after_call_work',
       status: 'completed',
       scene_code: 'intro_geo',
+      task_id: 'task-1',
     };
 
     render(<FollowUpOverviewPage />);
@@ -178,6 +188,7 @@ describe('跟进总览深链', () => {
         sourceType: 'after_call_work',
         status: 'completed',
         sceneCode: 'intro_geo',
+        taskId: 'task-1',
       }),
     );
     const searchableTitles = (
@@ -185,7 +196,21 @@ describe('跟进总览深链', () => {
     )
       .filter((column) => !column.hideInSearch)
       .map((column) => column.title);
-    expect(searchableTitles).toEqual(['来源类型', '业务场景', '任务状态']);
+    expect(searchableTitles).toEqual([
+      '来源类型',
+      '业务场景',
+      '所属任务',
+      '任务状态',
+    ]);
+    const taskColumn = (
+      latestProTableProps.columns as {
+        dataIndex?: string;
+        request?: () => Promise<unknown>;
+      }[]
+    ).find((column) => column.dataIndex === 'task_id');
+    await expect(taskColumn?.request?.()).resolves.toEqual([
+      { label: '新品回访', value: 'task-1' },
+    ]);
     expect(
       (
         latestProTableProps.columns as {

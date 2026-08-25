@@ -40,7 +40,7 @@ const TaskActions = ({ task, loadingAction, onAction }: TaskActionsProps) => {
     onClick: () => onAction(action, task),
   }));
 
-  return <TableActions actions={actions} maxVisible={3} showLabels />;
+  return <TableActions actions={actions} maxVisible={1} showLabels />;
 };
 
 export default TaskActions;

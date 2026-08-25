@@ -6,6 +6,7 @@ import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ListPage } from '@/components/ListLayout';
 import AgentName from '@/pages/agentWorkbench/components/AgentName';
+import { listAiCallTasks } from '@/pages/aiCallTasks/service';
 import {
   type FollowUpTaskDto,
   getAdminFollowUp,
@@ -41,6 +42,14 @@ const attemptResultLabels: Record<string, string> = {
   rejected: '客户拒接',
   invalid_contact: '无效联系方式',
   technical_failure: '技术失败',
+};
+
+const loadTaskOptions = async () => {
+  const page = await listAiCallTasks({ pageNum: 1, pageSize: 200 });
+  return page.rows.map((task) => ({
+    label: task.taskName,
+    value: task.taskId,
+  }));
 };
 
 const normalizeDetail = (response: unknown): FollowUpTaskDto => {
@@ -138,6 +147,14 @@ export const FollowUpOverviewPage = () => {
         valueType: 'select',
         valueEnum: sceneValueEnum,
         hideInTable: true,
+      },
+      {
+        title: '所属任务',
+        dataIndex: 'task_id',
+        valueType: 'select',
+        hideInTable: true,
+        request: loadTaskOptions,
+        fieldProps: { showSearch: true, optionFilterProp: 'label' },
       },
       {
         title: '任务状态',
@@ -278,6 +295,7 @@ export const FollowUpOverviewPage = () => {
           source_started_at_range,
           source_type,
           scene_code,
+          task_id,
           status: selectedStatus,
           ...filters
         }) => {
@@ -298,6 +316,7 @@ export const FollowUpOverviewPage = () => {
               ...filters,
               ...(source_type ? { sourceType: source_type } : {}),
               ...(scene_code ? { sceneCode: scene_code } : {}),
+              ...(task_id ? { taskId: task_id } : {}),
               ...(status ? { status } : {}),
               ...(presetFormalOutboundOnly ? { formalOutboundOnly: true } : {}),
               ...(sourceStartedAtBegin ? { sourceStartedAtBegin } : {}),

@@ -30,6 +30,7 @@ import { ListPage } from '@/components/ListLayout';
 import { PermissionButton } from '@/components/Permission';
 import AgentName from '@/pages/agentWorkbench/components/AgentName';
 import CurrentCallPanel from '@/pages/agentWorkbench/components/CurrentCallPanel';
+import '@/pages/agentWorkbench/components/FollowUpPanel.css';
 import { useAgentPresence } from '@/pages/agentWorkbench/hooks/useAgentPresence';
 import { useFollowUpCallback } from '@/pages/agentWorkbench/hooks/useFollowUpCallback';
 import CallRecordDetailContent from '@/pages/aiCallRecords/CallRecordDetailContent';
@@ -820,6 +821,7 @@ const FollowUpDataPage = () => {
     <ListPage title="跟进数据">
       {messageContextHolder}
       <Tabs
+        className="agent-follow-up-scope-tabs"
         activeKey={classification}
         items={Object.entries(classificationLabels).map(([key, label]) => ({
           key,

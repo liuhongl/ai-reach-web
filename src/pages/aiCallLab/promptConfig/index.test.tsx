@@ -175,8 +175,12 @@ describe('AiCallLabPromptConfigPage', () => {
     render(React.createElement(AiCallLabPromptConfigPage));
 
     expect(await screen.findByDisplayValue('GEO 产品介绍')).toBeTruthy();
-    expect(screen.getByText('通用沟通规则模板')).toBeTruthy();
+    const commonTemplate = screen.getByText('通用沟通规则模板');
+    expect(commonTemplate.closest('.ai-call-prompt-common-card')).toBeTruthy();
     expect(screen.getByText('仅替换当前场景的「三、沟通规则」')).toBeTruthy();
+    expect(
+      screen.queryByRole('heading', { name: 'AI Call 提示词配置' }),
+    ).toBeNull();
     expect(screen.queryByDisplayValue('统一使用专业语气。')).toBeNull();
     expect(screen.getByText('产品&服务总结')).toBeTruthy();
     expect(screen.getByText('核心内容提取自关联知识库')).toBeTruthy();

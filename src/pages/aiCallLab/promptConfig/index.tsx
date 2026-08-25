@@ -50,7 +50,7 @@ import {
 import VariableEditor from './VariableEditor';
 import './index.css';
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
 const { TextArea } = Input;
 
 const creationMethodLabels: Record<
@@ -593,11 +593,10 @@ const AiCallLabPromptConfigPage = () => {
     <ListPage className="ai-call-prompt-config-page" title="AI Call 提示词配置">
       {messageContextHolder}
       <div className="ai-call-prompt-config-layout">
-        <Title level={3}>AI Call 提示词配置</Title>
         <Spin spinning={loading}>
           <Space orientation="vertical" size={16} style={{ width: '100%' }}>
             <Collapse
-              className="ai-call-prompt-common-collapse"
+              className="ai-call-prompt-common-collapse ai-call-prompt-common-card"
               items={[
                 {
                   key: 'common',

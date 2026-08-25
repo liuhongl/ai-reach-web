@@ -138,7 +138,9 @@ describe('跟进数据页面', () => {
   });
 
   it('默认查询有意向并支持四类切换和详情时间线', async () => {
-    render(<FollowUpDataPage />);
+    const { container } = render(<FollowUpDataPage />);
+
+    expect(container.querySelector('.recov-list-page')).toBeTruthy();
 
     await waitFor(() =>
       expect(listFollowUpData).toHaveBeenCalledWith(
@@ -157,6 +159,9 @@ describe('跟进数据页面', () => {
     for (const label of ['有意向', '持续跟进', '低价值', '已转化']) {
       expect(screen.getByRole('tab', { name: label })).toBeTruthy();
     }
+    const activeTab = screen.getByRole('tab', { name: '有意向' });
+    expect(activeTab.closest('.agent-follow-up-scope-tabs')).toBeTruthy();
+    expect(activeTab.closest('.recov-toolbar-card')).toBeNull();
     fireEvent.click(screen.getByRole('tab', { name: '持续跟进' }));
     await waitFor(() =>
       expect(listFollowUpData).toHaveBeenCalledWith(

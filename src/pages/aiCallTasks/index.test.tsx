@@ -19,8 +19,8 @@ import {
   resumeAiCallTask,
   startExceptionBatch,
   stopAiCallTask,
-  updateExceptionPolicy,
   updateAiCallTaskSchedule,
+  updateExceptionPolicy,
 } from './service';
 
 jest.mock('@umijs/max', () => ({
@@ -252,6 +252,9 @@ describe('AI Call task list page', () => {
 
     expect(container.querySelector('.recov-task-list-page')).toBeTruthy();
     expect(container.querySelector('.recov-task-list-card')).toBeTruthy();
+    expect(
+      screen.getByRole('heading', { name: '外呼任务' }).closest('.recov-toolbar-card'),
+    ).toBeTruthy();
     expect(screen.getAllByText('任务名称').length).toBeGreaterThan(0);
     expect(screen.getAllByText('任务状态').length).toBeGreaterThan(0);
     expect(screen.getByText('创建时间')).toBeTruthy();
