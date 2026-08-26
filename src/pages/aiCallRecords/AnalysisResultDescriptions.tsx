@@ -34,7 +34,7 @@ const analysisFieldLabels: Record<string, string> = {
   follow_up: '后续跟进建议',
   feedback_type: '客户反馈',
   key_points: '关键要点',
-  time_hint: '客户期望联系时间',
+  time_hint: '客户确认联系时间',
   tags: '分析标签',
   customer_intent: '客户意向',
   classification: 'AI 建议分类',
@@ -140,7 +140,11 @@ export const hasAnalysisResult = (
       analysisFieldOrder.some((key) => Object.hasOwn(analysisResult, key)),
   );
 
-const renderAnalysisValue = (key: string, value: unknown) => {
+const renderAnalysisValue = (
+  key: string,
+  value: unknown,
+  analysisResult?: Record<string, unknown> | null,
+) => {
   if (key === 'summary') {
     const text = String(value || '').trim();
     return text ? (
@@ -181,16 +185,27 @@ const renderAnalysisValue = (key: string, value: unknown) => {
     );
   }
   if (key === 'time_hint') {
-    if (value && typeof value === 'object') {
-      const hint = value as {
-        time_text?: unknown;
-        time_value?: unknown;
-      };
+    const followUp =
+      analysisResult?.follow_up &&
+      typeof analysisResult.follow_up === 'object'
+        ? (analysisResult.follow_up as Record<string, unknown>)
+        : undefined;
+    const hint =
+      value && typeof value === 'object'
+        ? (value as { time_text?: unknown; time_value?: unknown })
+        : undefined;
+    const timeHint = String(
+      hint?.time_text || hint?.time_value || value || '',
+    ).trim();
+    if (followUp?.consent === 'explicit') {
       return (
-        String(hint.time_text || hint.time_value || '').trim() || '客户未提及'
+        String(followUp.preferred_time || '').trim() ||
+        '客户已同意，未确认具体时间'
       );
     }
-    return String(value || '').trim() || '客户未提及';
+    return timeHint
+      ? `客户未确认（检测到时间线索：${timeHint}）`
+      : '客户未确认';
   }
   if (key === 'tags' && Array.isArray(value)) {
     return value.length ? (
@@ -278,10 +293,19 @@ const AnalysisResultDescriptions = ({
       styles={detailDescriptionStyles}
       items={analysisFieldOrder
         .filter((key) => Object.hasOwn(analysisResult || {}, key))
+        .filter(
+          (key) =>
+            key !== 'key_points' ||
+            !String(analysisResult?.summary || '').trim(),
+        )
         .map((key) => ({
           key,
           label: analysisFieldLabels[key],
-          children: renderAnalysisValue(key, analysisResult?.[key]),
+          children: renderAnalysisValue(
+            key,
+            analysisResult?.[key],
+            analysisResult,
+          ),
         }))}
     />
   );

@@ -1464,6 +1464,40 @@ describe('AI Call 通话记录页面', () => {
     expect(within(drawer).getByText('模拟：忙线')).toBeTruthy();
   });
 
+  it('未接通时不把空房间录音展示为通话录音', async () => {
+    const failedRecord = {
+      ...mockRecord,
+      entryType: 'sip_outbound',
+      callResult: 'call_failed',
+      status: 'completed',
+      answeredAt: null,
+    };
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: failedRecord,
+      executionConfig: null,
+    });
+    (getAiCallRecordRecording as jest.Mock).mockResolvedValue({
+      id: 'empty-room-recording',
+      callId: 'call-1',
+      status: 'completed',
+      durationMs: 300078,
+      playUrl: 'https://example.com/empty-room.mp3',
+    });
+
+    render(<AiCallRecordsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: '查看详情' }));
+    const drawer = await screen.findByRole('dialog', {
+      name: '通话记录详情',
+    });
+
+    expect(
+      within(drawer).getByText('未接通，无有效通话录音'),
+    ).toBeTruthy();
+    expect(
+      within(drawer).getByTestId('recording-player').querySelector('audio'),
+    ).toBeNull();
+  });
+
   it('详情使用业务化中文展示分析结果、录音和对话', async () => {
     (getAiCallRecordRecording as jest.Mock).mockResolvedValue({
       id: 'recording-1',
@@ -1498,6 +1532,11 @@ describe('AI Call 通话记录页面', () => {
       analysisStatus: '2',
       analysisResult: {
         summary: '客户希望进一步了解产品价格。',
+        follow_up: {
+          required: true,
+          consent: 'explicit',
+          preferred_time: '明天下午',
+        },
         feedback_type: '负向',
         key_points: ['客户要求转人工', '客户关注产品价格'],
         time_hint: {
@@ -1532,8 +1571,8 @@ describe('AI Call 通话记录页面', () => {
     ).toBe('nodownload');
     expect(screen.getAllByText('通话摘要').length).toBeGreaterThan(0);
     expect(screen.getByText('客户反馈')).toBeTruthy();
-    expect(screen.getByText('关键要点')).toBeTruthy();
-    expect(screen.getByText('客户期望联系时间')).toBeTruthy();
+    expect(screen.queryByText('关键要点')).toBeNull();
+    expect(screen.getByText('客户确认联系时间')).toBeTruthy();
     expect(screen.queryByText('联系时间', { exact: true })).toBeNull();
     expect(screen.getByText('分析标签')).toBeTruthy();
     const detailDrawer = screen.getByRole('dialog', {
@@ -1554,7 +1593,7 @@ describe('AI Call 通话记录页面', () => {
       within(detailDrawer).getByText('客户：希望进一步了解产品价格'),
     ).toBeTruthy();
     expect(screen.getByText('负向').closest('.ant-tag')).toBeTruthy();
-    expect(screen.getByText('客户要求转人工')).toBeTruthy();
+    expect(screen.queryByText('客户要求转人工')).toBeNull();
     expect(screen.getByText('明天下午')).toBeTruthy();
     expect(screen.getByText('价格敏感').closest('.ant-tag')).toBeTruthy();
     expect(screen.getByText('执行配置')).toBeTruthy();
@@ -1566,14 +1605,19 @@ describe('AI Call 通话记录页面', () => {
     expect(getAiCallRecordEvents).not.toHaveBeenCalled();
   });
 
-  it('详情字段标题使用正文黑色且客户未提供时间时显示明确文案', async () => {
+  it('客户未确认 AI 提议的联系时间时显示未确认', async () => {
     (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue({
       callId: 'call-1',
       analysisSceneCode: 'intro_geo',
       analysisStatus: '2',
       analysisResult: {
         summary: '客户询问服务效果。',
-        time_hint: {},
+        follow_up: {
+          required: true,
+          consent: 'missing',
+          preferred_time: null,
+        },
+        time_hint: { time_text: '一个小时后' },
       },
       analysisRetryCount: 0,
     });
@@ -1583,10 +1627,12 @@ describe('AI Call 通话记录页面', () => {
 
     const resultLabel = await screen.findByText('结束结果');
     expect(resultLabel.style.color).toBe('rgb(31, 31, 31)');
-    expect(screen.getByText('客户期望联系时间').style.color).toBe(
+    expect(screen.getByText('客户确认联系时间').style.color).toBe(
       'rgb(31, 31, 31)',
     );
-    expect(screen.getByText('客户未提及')).toBeTruthy();
+    expect(
+      screen.getByText('客户未确认（检测到时间线索：一个小时后）'),
+    ).toBeTruthy();
     expect(screen.getByTestId('recording-player')).toBeTruthy();
   });
 
@@ -1859,7 +1905,7 @@ describe('AI Call 通话记录页面', () => {
     ).toContain('ant-tag-orange');
   });
 
-  it('详情完整展示摘要、关键要点和分类建议', async () => {
+  it('有通话摘要时不重复展示关键要点', async () => {
     (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue({
       callId: 'call-1',
       analysisSceneCode: 'intro_geo',
@@ -1894,14 +1940,33 @@ describe('AI Call 通话记录页面', () => {
     const summary = within(detailDrawer).getByTestId('analysis-summary');
     expect(summary).toBeTruthy();
     expect(summary.textContent).toContain('留下联系方式');
-    expect(within(detailDrawer).getByText('询问 CU 能力')).toBeTruthy();
-    expect(within(detailDrawer).getByText('关注收费方式')).toBeTruthy();
-    expect(within(detailDrawer).getAllByText('接受试用安排')).toHaveLength(2);
-    expect(within(detailDrawer).getAllByText('留下联系方式')).toHaveLength(2);
+    expect(within(detailDrawer).queryByText('询问 CU 能力')).toBeNull();
+    expect(within(detailDrawer).queryByText('关注收费方式')).toBeNull();
+    expect(within(detailDrawer).getAllByText('接受试用安排')).toHaveLength(1);
+    expect(within(detailDrawer).getAllByText('留下联系方式')).toHaveLength(1);
     expect(within(detailDrawer).queryByText('其余 1 条')).toBeNull();
     expect(
       within(analysisSection).getByText('有意向').closest('.ant-tag'),
     ).toBeTruthy();
+  });
+
+  it('没有通话摘要时使用关键要点兜底', async () => {
+    (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue({
+      callId: 'call-1',
+      analysisSceneCode: 'intro_geo',
+      analysisStatus: '2',
+      analysisResult: { key_points: ['客户询问产品价格'] },
+      analysisRetryCount: 0,
+    });
+
+    render(<AiCallRecordsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: '查看详情' }));
+
+    const drawer = await screen.findByRole('dialog', {
+      name: '通话记录详情',
+    });
+    expect(within(drawer).getByText('关键要点')).toBeTruthy();
+    expect(within(drawer).getByText('客户询问产品价格')).toBeTruthy();
   });
 
   it('坐席话后处置不替换客户分类、AI 分析和转人工结果', async () => {

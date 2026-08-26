@@ -149,6 +149,14 @@ const callResultColors: Record<string, string> = {
   invalid_number: '#cf1322',
 };
 
+const unansweredCallResults = new Set([
+  'no_answer',
+  'busy',
+  'rejected',
+  'call_failed',
+  'invalid_number',
+]);
+
 const detailDescriptionStyles = {
   label: { color: '#1f1f1f' },
 };
@@ -1268,6 +1276,11 @@ const AiCallRecordsPage = () => {
     record?.recordingPlayUrl ||
     recording?.playUrl ||
     recording?.tracks?.find((track) => track.playUrl)?.playUrl;
+  const failedBeforeAnswer = Boolean(
+    record &&
+      !record.answeredAt &&
+      unansweredCallResults.has(record.callResult || ''),
+  );
   const qualityRecordingUrl =
     qualityRecord?.recordingPlayUrl ||
     qualityRecording?.playUrl ||
@@ -1610,6 +1623,11 @@ const AiCallRecordsPage = () => {
               <div data-testid="recording-player" style={{ marginBottom: 16 }}>
                 {detailErrors.recording ? (
                   <Alert showIcon title={detailErrors.recording} type="error" />
+                ) : failedBeforeAnswer ? (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="未接通，无有效通话录音"
+                  />
                 ) : recordingUrl ? (
                   // biome-ignore lint/a11y/useMediaCaption: 同一区域展示完整通话对话，录音暂无独立字幕轨道。
                   <audio
