@@ -1297,6 +1297,11 @@ const AiCallRecordsPage = () => {
       currentClassification !== aiClassification &&
       analysis?.classificationReviewStatus !== 'reviewed',
   );
+  const classificationReviewPrompt = classificationConflict
+    ? 'AI 建议分类与当前业务分类不一致，请在下方保留、采纳或修改分类，完成人工复核。'
+    : analysisResult.evidence_conflict === true
+      ? 'AI 分类依据与对话证据存在冲突，请在下方采纳 AI 分类或修改分类，完成人工复核。'
+      : 'AI 分类置信度较低，请在下方采纳 AI 分类或修改分类，完成人工复核。';
   const activeFollowUpId =
     detail?.followUpData?.activeFollowUpId ||
     (followUp?.status === 'pending' || followUp?.status === 'processing'
@@ -1765,10 +1770,10 @@ const AiCallRecordsPage = () => {
                     ]}
                   />
                 ) : null}
-                {needsClassificationReview && classificationConflict ? (
+                {needsClassificationReview ? (
                   <Alert
                     showIcon
-                    title="AI 建议分类与当前业务分类不一致，请先完成分类复核。"
+                    title={classificationReviewPrompt}
                     type="warning"
                   />
                 ) : null}
@@ -1778,18 +1783,20 @@ const AiCallRecordsPage = () => {
                       <>
                         {classificationConflict ? (
                           <Button
+                            color="primary"
                             loading={classificationReviewing}
                             size="small"
-                            type="primary"
+                            variant="outlined"
                             onClick={() => void retainCurrentClassification()}
                           >
                             保留当前分类
                           </Button>
                         ) : null}
                         <Button
+                          color="primary"
                           disabled={classificationReviewing}
                           size="small"
-                          type={classificationConflict ? 'default' : 'primary'}
+                          variant="outlined"
                           onClick={() => void adoptAiClassification()}
                         >
                           采纳 AI 分类
@@ -1798,10 +1805,10 @@ const AiCallRecordsPage = () => {
                     ) : null}
                     <Button
                       aria-label="修改分类"
+                      color="primary"
                       disabled={classificationReviewing}
-                      icon={<EditOutlined />}
                       size="small"
-                      type="link"
+                      variant="outlined"
                       onClick={openClassificationReview}
                     >
                       修改分类

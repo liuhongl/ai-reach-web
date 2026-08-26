@@ -745,7 +745,7 @@ describe('AI Call 通话记录页面', () => {
           valid_dialogue: true,
           reason: '客户询问产品演示',
           evidence: ['客户：可以先看演示'],
-          evidence_conflict: false,
+          evidence_conflict: true,
         },
         classificationRequiresReview: true,
         classificationReviewStatus: 'suggested',
@@ -761,7 +761,7 @@ describe('AI Call 通话记录页面', () => {
           valid_dialogue: true,
           reason: '客户询问产品演示',
           evidence: ['客户：可以先看演示'],
-          evidence_conflict: false,
+          evidence_conflict: true,
         },
         classificationRequiresReview: false,
         classificationReviewStatus: 'reviewed',
@@ -784,8 +784,35 @@ describe('AI Call 通话记录页面', () => {
     ).toBeTruthy();
     expect(within(detailDrawer).getByText('客户询问产品演示')).toBeTruthy();
     expect(within(detailDrawer).getByText('客户：可以先看演示')).toBeTruthy();
+    const customerFollowUpSection = within(detailDrawer).getByTestId(
+      'customer-follow-up-section',
+    );
+    expect(
+      within(customerFollowUpSection).getByText(
+        'AI 分类依据与对话证据存在冲突，请在下方采纳 AI 分类或修改分类，完成人工复核。',
+      ),
+    ).toBeTruthy();
+    const confidence = within(detailDrawer).getByTestId(
+      'classification-confidence',
+    );
+    expect(confidence.className).toContain('ant-tag-error');
+    expect(
+      within(detailDrawer).getByText(
+        'AI 分类依据与对话证据不一致，需人工确认最终分类。',
+      ),
+    ).toBeTruthy();
+    const adoptButton = within(customerFollowUpSection).getByRole('button', {
+      name: '采纳 AI 分类',
+    });
+    const editButton = within(customerFollowUpSection).getByRole('button', {
+      name: '修改分类',
+    });
+    for (const button of [adoptButton, editButton]) {
+      expect(button.className).toContain('ant-btn-color-primary');
+      expect(button.className).toContain('ant-btn-variant-outlined');
+    }
     fireEvent.click(
-      within(detailDrawer).getByRole('button', { name: '采纳 AI 分类' }),
+      adoptButton,
     );
 
     await waitFor(() =>
@@ -1671,7 +1698,7 @@ describe('AI Call 通话记录页面', () => {
     expect(within(customerFollowUpSection).getByText('低价值')).toBeTruthy();
     expect(
       within(customerFollowUpSection).getByText(
-        'AI 建议分类与当前业务分类不一致，请先完成分类复核。',
+        'AI 建议分类与当前业务分类不一致，请在下方保留、采纳或修改分类，完成人工复核。',
       ),
     ).toBeTruthy();
     expect(

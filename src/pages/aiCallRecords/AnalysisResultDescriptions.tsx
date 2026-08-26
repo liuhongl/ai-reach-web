@@ -105,6 +105,12 @@ const followUpConfidenceLabels: Record<string, string> = {
   low: '低',
 };
 
+const followUpConfidenceColors: Record<string, string> = {
+  high: 'success',
+  medium: 'warning',
+  low: 'error',
+};
+
 const followUpConsentLabels: Record<string, string> = {
   explicit: '明确同意',
   missing: '未提及',
@@ -225,10 +231,28 @@ const renderAnalysisValue = (key: string, value: unknown) => {
   }
   if (key === 'confidence') {
     const confidence = String(value || '');
-    return followUpConfidenceLabels[confidence] || confidence || '-';
+    return (
+      <Tag
+        color={followUpConfidenceColors[confidence] || 'default'}
+        data-testid="classification-confidence"
+      >
+        {followUpConfidenceLabels[confidence] || confidence || '-'}
+      </Tag>
+    );
   }
   if (key === 'evidence_conflict') {
-    return value === true ? '有冲突，建议人工复核' : '无';
+    return value === true ? (
+      <Flex align="center" gap={8} wrap>
+        <Tag color="warning" style={{ marginInlineEnd: 0 }}>
+          需人工复核
+        </Tag>
+        <Text type="secondary">
+          AI 分类依据与对话证据不一致，需人工确认最终分类。
+        </Text>
+      </Flex>
+    ) : (
+      '无'
+    );
   }
   if (key === 'valid_dialogue') {
     return value === true ? '是' : '否';
