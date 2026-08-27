@@ -6,7 +6,7 @@ describe('TaskConfirmation', () => {
   it('marks its root so the enclosing card can expand to fit the summary', () => {
     const { container } = render(
       <TaskConfirmation
-        answerMode="web"
+        answerMode="linphone"
         taskName="转人工测试"
         targetCount={1}
         promptName="GEO 产品介绍"
@@ -21,5 +21,8 @@ describe('TaskConfirmation', () => {
     );
 
     expect(container.querySelector('.ai-call-task-confirmation')).toBeTruthy();
+    expect(container.textContent).toContain('客户接听端');
+    expect(container.textContent).toContain('电话（SIP 线路）');
+    expect(container.textContent).not.toContain('Linphone');
   });
 });

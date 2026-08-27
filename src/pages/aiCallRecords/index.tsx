@@ -83,6 +83,7 @@ import {
   getQualityReviewPresentation,
   getQualityScorePresentation,
   hasUnstablePostCallData,
+  isFormalOutboundRecord,
   type StatusPresentation,
 } from './status';
 import './index.less';
@@ -281,9 +282,7 @@ const qualityReviewOptions: Array<{
 ];
 
 const canOpenQualityReview = (row: AiCallRecord) =>
-  row.entryType === 'outbound' ||
-  row.entryType === 'sip_outbound' ||
-  (row.entryType === 'web' && Boolean(row.taskId));
+  isFormalOutboundRecord(row) && row.callResult === 'connected';
 
 const buildQualityFallback = (row: AiCallRecord): AiCallQualityDetail => {
   if (
@@ -327,7 +326,7 @@ const maskPhoneNumber = (value?: string | null) => {
 };
 
 const describeError = (row: AiCallRecord) =>
-  row.failureMessage ||
+  (row.failureMessage ? describeEndReason(row.failureMessage) : undefined) ||
   (row.endReason
     ? describeEndReason(row.endReason)
     : row.status === 'failed'
@@ -352,12 +351,14 @@ const describeCallResult = (row: AiCallRecord) =>
     ? describeMockResult(row)
     : row.callResult
       ? callResultLabels[row.callResult] || row.callResult
-      : describeRecordStatus(row);
+      : row.answeredAt
+        ? callResultLabels.connected
+        : row.status === 'failed'
+          ? callResultLabels.call_failed
+          : '-';
 
 const describeEndResult = (row: AiCallRecord) =>
-  row.entryType === 'outbound_mock'
-    ? describeMockResult(row)
-    : describeError(row);
+  row.entryType === 'outbound_mock' ? '-' : describeError(row);
 
 const renderPostCallStatus = (
   presentation: StatusPresentation | null,
@@ -1044,7 +1045,7 @@ const AiCallRecordsPage = () => {
         ),
       },
       {
-        title: '任务信息',
+        title: '任务名称',
         key: 'task',
         search: false,
         width: 180,
@@ -1059,27 +1060,37 @@ const AiCallRecordsPage = () => {
         key: 'call',
         search: false,
         width: 160,
-        render: (_, row) => (
-          <Flex vertical gap={4}>
-            <Text
-              strong
-              style={{
-                color:
-                  row.entryType === 'outbound_mock'
-                    ? '#1677ff'
-                    : callResultColors[row.callResult || ''] || '#1f1f1f',
-              }}
-            >
-              {describeCallResult(row)}
-            </Text>
-            <Text type="secondary">
-              {getEntryTypeLabel(row)}
-              {row.entryType !== 'sip_callback' && row.attemptNo
-                ? ` · 第 ${row.attemptNo} 次`
-                : ''}
-            </Text>
-          </Flex>
-        ),
+        render: (_, row) => {
+          const failureReason = describeError(row);
+          return (
+            <Flex vertical gap={4}>
+              <Text
+                strong
+                style={{
+                  color:
+                    row.entryType === 'outbound_mock'
+                      ? '#1677ff'
+                      : callResultColors[row.callResult || ''] || '#1f1f1f',
+                }}
+              >
+                {describeCallResult(row)}
+              </Text>
+              <Text type="secondary">
+                {getEntryTypeLabel(row)}
+                {row.entryType !== 'sip_callback' && row.attemptNo
+                  ? ` · 第 ${row.attemptNo} 次`
+                  : ''}
+              </Text>
+              {row.callResult !== 'connected' && failureReason !== '-' ? (
+                <Tooltip title={failureReason}>
+                  <Text type="danger" style={{ fontSize: 12 }}>
+                    {`原因：${failureReason}`}
+                  </Text>
+                </Tooltip>
+              ) : null}
+            </Flex>
+          );
+        },
       },
       {
         title: '通话摘要',
@@ -1421,7 +1432,7 @@ const AiCallRecordsPage = () => {
                   },
                   {
                     key: 'status',
-                    label: '通话状态',
+                    label: '处理状态',
                     children: describeRecordStatus(record),
                   },
                   {
@@ -1461,8 +1472,14 @@ const AiCallRecordsPage = () => {
                     children: formatDuration(record.durationMs),
                   },
                   {
-                    key: 'result',
-                    label: '结束结果',
+                    key: 'callResult',
+                    label: '呼叫结果',
+                    children: describeCallResult(record),
+                    span: 2,
+                  },
+                  {
+                    key: 'endResult',
+                    label: '结束原因',
                     children: describeEndResult(record),
                     span: 2,
                   },
@@ -1772,7 +1789,7 @@ const AiCallRecordsPage = () => {
                                     ? classificationLabels[
                                         currentClassification
                                       ]
-                                  : '-'
+                                    : '-'
                               }`
                             : `已确认最终分类：${
                                 currentClassification
@@ -1935,6 +1952,16 @@ const AiCallRecordsPage = () => {
                           ),
                           span: 2,
                         },
+                        ...(handoff.failureMessage
+                          ? [
+                              {
+                                key: 'failureMessage',
+                                label: '失败原因',
+                                children: handoff.failureMessage,
+                                span: 2,
+                              },
+                            ]
+                          : []),
                       ]}
                     />
                   ))}

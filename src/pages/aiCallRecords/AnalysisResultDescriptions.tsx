@@ -25,6 +25,9 @@ const endReasonLabels: Record<string, string> = {
   runtime_failed: '运行异常',
   reconnect_timeout: '重连超时',
   handoff_timeout: '转人工等待超时',
+  no_online_agent: '无在线坐席，转人工失败后结束',
+  user_unavailable: '被叫暂时不可用（SIP 480）',
+  sip_480: '被叫暂时不可用（SIP 480）',
   sip_participant_left: '对方挂断',
   unknown: '未知原因',
 };
@@ -129,8 +132,17 @@ const lowValueReasonLabels: Record<string, string> = {
 export const describeBusinessScene = (value?: string | null) =>
   value ? businessSceneLabels[value] || value : '-';
 
-export const describeEndReason = (value?: string | null) =>
-  value ? endReasonLabels[value] || value : '-';
+export const describeEndReason = (value?: string | null) => {
+  const normalized = String(value || '').trim();
+  if (!normalized) return '-';
+  if (
+    /\bSIP[_\s:-]?480\b/i.test(normalized) ||
+    /\bUSER_UNAVAILABLE\b/i.test(normalized)
+  ) {
+    return endReasonLabels.sip_480;
+  }
+  return endReasonLabels[normalized] || normalized;
+};
 
 export const hasAnalysisResult = (
   analysisResult?: Record<string, unknown> | null,
@@ -186,16 +198,26 @@ const renderAnalysisValue = (
   }
   if (key === 'time_hint') {
     const followUp =
-      analysisResult?.follow_up &&
-      typeof analysisResult.follow_up === 'object'
+      analysisResult?.follow_up && typeof analysisResult.follow_up === 'object'
         ? (analysisResult.follow_up as Record<string, unknown>)
         : undefined;
     const hint =
       value && typeof value === 'object'
-        ? (value as { time_text?: unknown; time_value?: unknown })
+        ? (value as {
+            time_text?: unknown;
+            time_value?: unknown;
+            original_texts?: unknown;
+          })
         : undefined;
+    const originalText = Array.isArray(hint?.original_texts)
+      ? hint.original_texts.map(String).find((item) => item.trim())
+      : '';
     const timeHint = String(
-      hint?.time_text || hint?.time_value || value || '',
+      hint?.time_text ||
+        hint?.time_value ||
+        originalText ||
+        (typeof value === 'object' ? '' : value) ||
+        '',
     ).trim();
     if (followUp?.consent === 'explicit') {
       return (

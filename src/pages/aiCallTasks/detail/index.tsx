@@ -59,8 +59,20 @@ const callResultLabels: Record<string, string> = {
   connected: '已接通',
   no_answer: '无人接听',
   busy: '占线',
+  rejected: '电话拒接',
+  early_hangup: '主动挂断（≤5秒）',
   call_failed: '呼叫失败',
   invalid_number: '号码无效',
+};
+
+const callResultColors: Record<string, string> = {
+  connected: 'success',
+  no_answer: 'default',
+  busy: 'warning',
+  rejected: 'error',
+  early_hangup: 'warning',
+  call_failed: 'error',
+  invalid_number: 'error',
 };
 
 const getTaskExecutionLabel = (task: AiCallTask) => {
@@ -190,9 +202,7 @@ const AiCallTaskDetailPage = () => {
   }
 
   if (loading || !task) {
-    return (
-      <ListPage breadcrumbRender={false} loading title="外呼任务详情" />
-    );
+    return <ListPage breadcrumbRender={false} loading title="外呼任务详情" />;
   }
 
   const columns: ProColumns<AiCallTaskTarget>[] = [
@@ -203,7 +213,21 @@ const AiCallTaskDetailPage = () => {
       renderText: (value) => value || '—',
     },
     {
-      title: '处理状态',
+      title: '最近呼叫结果',
+      dataIndex: 'latestResult',
+      width: 160,
+      search: false,
+      render: (_, target) =>
+        target.latestResult ? (
+          <Tag color={callResultColors[target.latestResult] || 'default'}>
+            {getLatestResultLabel(target)}
+          </Tag>
+        ) : (
+          <Text type="secondary">—</Text>
+        ),
+    },
+    {
+      title: '执行状态',
       dataIndex: 'status',
       width: 120,
       valueType: 'select',
@@ -219,13 +243,6 @@ const AiCallTaskDetailPage = () => {
       dataIndex: 'attemptCount',
       width: 100,
       search: false,
-    },
-    {
-      title: '最近结果',
-      dataIndex: 'latestResult',
-      width: 160,
-      search: false,
-      renderText: (_value, target) => getLatestResultLabel(target),
     },
     {
       title: '更新时间',
@@ -349,11 +366,11 @@ const AiCallTaskDetailPage = () => {
               },
               {
                 key: 'answerMode',
-                label: '接听方式',
+                label: '客户接听端',
                 children:
                   task.answerMode === 'web'
                     ? 'Web（浏览器）'
-                    : 'Linphone（SIP）',
+                    : '电话（SIP 线路）',
               },
             ]}
             styles={{

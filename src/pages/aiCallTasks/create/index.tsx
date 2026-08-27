@@ -410,11 +410,11 @@ const CreateAiCallTaskPage = () => {
             </Form.Item>
 
             {taskMode === 'single' ? (
-              <Form.Item label="接听方式" name="answerMode">
+              <Form.Item label="客户接听端" name="answerMode">
                 <Radio.Group
                   options={[
                     { label: 'Web（浏览器）', value: 'web' },
-                    { label: 'Linphone（SIP）', value: 'linphone' },
+                    { label: '电话（SIP 线路）', value: 'linphone' },
                   ]}
                 />
               </Form.Item>

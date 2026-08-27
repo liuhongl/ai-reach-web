@@ -245,7 +245,7 @@ describe('single target AI Call task creation', () => {
     render(<AiCallTaskCreatePage />);
     await screen.findAllByText('客户回访 / intro_follow_up');
 
-    fireEvent.click(screen.getByRole('radio', { name: 'Linphone（SIP）' }));
+    fireEvent.click(screen.getByRole('radio', { name: '电话（SIP 线路）' }));
     await screen.findByPlaceholderText('请输入手机号');
     fireEvent.change(screen.getByPlaceholderText('请输入任务名称'), {
       target: { value: '重点客户回访' },
@@ -311,7 +311,7 @@ describe('single target AI Call task creation', () => {
       expect.objectContaining({ taskMode: 'single', answerMode: 'web' }),
     );
     expect(request).not.toHaveProperty('phoneNumber');
-    expect(await screen.findAllByText('接听方式')).toHaveLength(2);
+    expect(await screen.findAllByText('客户接听端')).toHaveLength(2);
     expect(screen.getByText('浏览器接听')).toBeTruthy();
   });
 

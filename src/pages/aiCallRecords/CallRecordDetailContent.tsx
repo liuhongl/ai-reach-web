@@ -63,6 +63,16 @@ const statusLabels: Record<string, string> = {
   failed: '失败',
 };
 
+const callResultLabels: Record<string, string> = {
+  connected: '已接通',
+  no_answer: '无人接听',
+  busy: '忙线',
+  rejected: '电话拒接',
+  early_hangup: '主动挂断（≤5秒）',
+  call_failed: '呼叫失败',
+  invalid_number: '号码无效',
+};
+
 const analysisStatusLabels: Record<string, string> = {
   '0': '待分析',
   '1': '分析中',
@@ -106,8 +116,19 @@ const formatDuration = (durationMs?: number | null) => {
 const describeRecordStatus = (record: AiCallRecord) =>
   statusLabels[record.status] || record.status;
 
+const describeCallResult = (record: AiCallRecord) =>
+  record.callResult
+    ? callResultLabels[record.callResult] || record.callResult
+    : record.answeredAt
+      ? callResultLabels.connected
+      : record.status === 'failed'
+        ? callResultLabels.call_failed
+        : '-';
+
 const describeEndResult = (record: AiCallRecord) =>
-  record.failureMessage ||
+  (record.failureMessage
+    ? describeEndReason(record.failureMessage)
+    : undefined) ||
   (record.endReason
     ? describeEndReason(record.endReason)
     : record.status === 'failed'
@@ -213,7 +234,7 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
             },
             {
               key: 'status',
-              label: '通话状态',
+              label: '处理状态',
               children: describeRecordStatus(record),
             },
             {
@@ -249,8 +270,14 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
               children: formatDuration(record.durationMs),
             },
             {
-              key: 'result',
-              label: '结束结果',
+              key: 'callResult',
+              label: '呼叫结果',
+              children: describeCallResult(record),
+              span: 2,
+            },
+            {
+              key: 'endResult',
+              label: '结束原因',
               children: describeEndResult(record),
               span: 2,
             },
@@ -437,6 +464,16 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
                     children: getHandoffReasonLabel(handoff.requestReason),
                     span: 2,
                   },
+                  ...(handoff.failureMessage
+                    ? [
+                        {
+                          key: 'failureMessage',
+                          label: '失败原因',
+                          children: handoff.failureMessage,
+                          span: 2,
+                        },
+                      ]
+                    : []),
                 ]}
               />
             ))}

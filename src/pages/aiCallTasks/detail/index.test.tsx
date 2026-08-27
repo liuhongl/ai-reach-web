@@ -78,6 +78,7 @@ describe('AI Call task detail page', () => {
       taskId: 'task-1',
       taskName: '批量客户回访',
       taskMode: 'batch',
+      answerMode: 'linphone',
       status: 'RUNNING',
       totalTargets: 100,
       completedTargets: 30,
@@ -114,7 +115,7 @@ describe('AI Call task detail page', () => {
           phoneNumber: '19900001001',
           status: 'COMPLETED',
           attemptCount: 2,
-          latestResult: '已接通',
+          latestResult: 'connected',
           updatedAt: '2026-07-27 09:30:00',
         },
       ],
@@ -154,7 +155,20 @@ describe('AI Call task detail page', () => {
     expect(taskConfig.classList.contains('recov-toolbar-card')).toBe(true);
     expect(screen.queryByText('手机号')).toBeNull();
     expect(screen.getAllByText('客户名称').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('处理状态').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('执行状态').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('最近呼叫结果').length).toBeGreaterThan(0);
+    expect(screen.getByText('客户接听端')).toBeTruthy();
+    expect(screen.getByText('电话（SIP 线路）')).toBeTruthy();
+    expect(screen.queryByText('Linphone（SIP）')).toBeNull();
+    expect(
+      screen
+        .getAllByRole('columnheader')
+        .map((column) => column.textContent)
+        .slice(0, 4),
+    ).toEqual(['客户名称', '最近呼叫结果', '执行状态', '拨打次数']);
+    expect(
+      (await screen.findByText('已接通')).closest('.ant-tag'),
+    ).toBeTruthy();
     expect(
       (await screen.findByText('已完成')).closest('.ant-tag')?.className,
     ).toContain('ant-tag-success');

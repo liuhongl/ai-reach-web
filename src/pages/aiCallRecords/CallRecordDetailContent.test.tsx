@@ -167,6 +167,46 @@ describe('CallRecordDetailContent', () => {
     expect(screen.getByText('持续跟进')).toBeTruthy();
   });
 
+  it('区分处理状态、失败结果和转人工失败原因', async () => {
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: {
+        id: 'record-failed',
+        callId: 'call-failed',
+        entryType: 'sip_outbound',
+        status: 'completed',
+        callResult: 'no_answer',
+        failureMessage:
+          'SIP 480 Temporarily Unavailable; hangup_cause=USER_UNAVAILABLE',
+        startedAt: '2026-08-27T10:30:08+08:00',
+      },
+    });
+    (getAiCallRecordRecording as jest.Mock).mockResolvedValue(null);
+    (getAiCallRecordDialogue as jest.Mock).mockResolvedValue({
+      rows: [],
+      total: 0,
+    });
+    (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue(null);
+    (getAiCallRecordHandoffs as jest.Mock).mockResolvedValue({
+      rows: [
+        {
+          handoffId: 'handoff-failed',
+          status: 'failed',
+          requestReason: 'customer_request',
+          failureMessage: '当前场景没有在线可接范围坐席',
+        },
+      ],
+      total: 1,
+    });
+
+    render(<CallRecordDetailContent callId="call-failed" />);
+
+    expect(await screen.findByText('处理状态')).toBeTruthy();
+    expect(screen.getByText('呼叫结果')).toBeTruthy();
+    expect(screen.getByText('无人接听')).toBeTruthy();
+    expect(screen.getByText('被叫暂时不可用（SIP 480）')).toBeTruthy();
+    expect(screen.getByText('当前场景没有在线可接范围坐席')).toBeTruthy();
+  });
+
   it('展示新版话后分类作为坐席处置结果', async () => {
     (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
       record: {

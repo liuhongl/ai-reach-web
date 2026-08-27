@@ -325,7 +325,7 @@ describe('AI Call 通话记录页面', () => {
       '通话时间范围',
       '通话时间',
       '客户信息',
-      '任务信息',
+      '任务名称',
       '呼叫情况',
       '通话摘要',
       '客户意向',
@@ -362,7 +362,7 @@ describe('AI Call 通话记录页面', () => {
       Array.from(tableColumns.children)
         .map((element) => element.textContent)
         .slice(0, 5),
-    ).toEqual(['客户信息', '任务信息', '呼叫情况', '通话摘要', '通话时间']);
+    ).toEqual(['客户信息', '任务名称', '呼叫情况', '通话摘要', '通话时间']);
     expect(
       within(searchFields).queryByText('手机号', { exact: true }),
     ).toBeNull();
@@ -373,7 +373,7 @@ describe('AI Call 通话记录页面', () => {
     for (const text of [
       '通话时间',
       '客户信息',
-      '任务信息',
+      '任务名称',
       '呼叫情况',
       '通话摘要',
     ]) {
@@ -523,6 +523,50 @@ describe('AI Call 通话记录页面', () => {
     expect(screen.getByText('138****8000')).toBeTruthy();
     expect(screen.queryByText('13800138000')).toBeNull();
     expect(screen.queryByText('人工回拨 · 第 1 次')).toBeNull();
+  });
+
+  it('失败记录展示 SIP 480 中文原因、处理状态与呼叫结果，且不提供人工质检入口', async () => {
+    const failedRecord = {
+      ...mockRecord,
+      entryType: 'sip_outbound',
+      status: 'completed',
+      callResult: 'no_answer',
+      endReason: 'user_unavailable',
+      failureMessage:
+        'SIP 480 Temporarily Unavailable; hangup_cause=USER_UNAVAILABLE',
+      answeredAt: null,
+      qualityScoreStatus: 'not_applicable',
+      qualityReviewResult: null,
+    };
+    (listAiCallRecords as jest.Mock).mockResolvedValue({
+      rows: [failedRecord],
+      total: 1,
+    });
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: failedRecord,
+      executionConfig: null,
+    });
+
+    render(<AiCallRecordsPage />);
+
+    expect(await screen.findByText('无人接听')).toBeTruthy();
+    expect(screen.getByText(/原因：被叫暂时不可用（SIP 480）/)).toBeTruthy();
+    expect(screen.queryByText('未复核')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: '查看详情' }));
+    const detailDrawer = await screen.findByRole('dialog', {
+      name: '通话记录详情',
+    });
+    expect(within(detailDrawer).getByText('处理状态')).toBeTruthy();
+    expect(within(detailDrawer).getByText('呼叫结果')).toBeTruthy();
+    expect(within(detailDrawer).getByText('无人接听')).toBeTruthy();
+    expect(
+      within(detailDrawer).getByText('被叫暂时不可用（SIP 480）'),
+    ).toBeTruthy();
+    expect(within(detailDrawer).queryByText('user_unavailable')).toBeNull();
+    expect(
+      within(detailDrawer).queryByText(/SIP 480 Temporarily Unavailable/),
+    ).toBeNull();
   });
 
   it('在列表展示 AI 评分和人工质检，并提供复核入口', async () => {
@@ -811,9 +855,7 @@ describe('AI Call 通话记录页面', () => {
       expect(button.className).toContain('ant-btn-color-primary');
       expect(button.className).toContain('ant-btn-variant-outlined');
     }
-    fireEvent.click(
-      adoptButton,
-    );
+    fireEvent.click(adoptButton);
 
     await waitFor(() =>
       expect(reviewAiCallRecordClassification).toHaveBeenCalledWith(
@@ -1286,9 +1328,7 @@ describe('AI Call 通话记录页面', () => {
     render(<AiCallRecordsPage />);
 
     const summaryNode = await screen.findByText(summary);
-    await waitFor(() =>
-      expect(summaryNode.style.webkitLineClamp).toBe('2'),
-    );
+    await waitFor(() => expect(summaryNode.style.webkitLineClamp).toBe('2'));
     fireEvent.mouseEnter(summaryNode);
     expect((await screen.findByRole('tooltip')).textContent).toBe(summary);
     expect(screen.getByText('正向')).toBeTruthy();
@@ -1490,9 +1530,7 @@ describe('AI Call 通话记录页面', () => {
       name: '通话记录详情',
     });
 
-    expect(
-      within(drawer).getByText('未接通，无有效通话录音'),
-    ).toBeTruthy();
+    expect(within(drawer).getByText('未接通，无有效通话录音')).toBeTruthy();
     expect(
       within(drawer).getByTestId('recording-player').querySelector('audio'),
     ).toBeNull();
@@ -1625,7 +1663,7 @@ describe('AI Call 通话记录页面', () => {
     render(<AiCallRecordsPage />);
     fireEvent.click(await screen.findByRole('button', { name: '查看详情' }));
 
-    const resultLabel = await screen.findByText('结束结果');
+    const resultLabel = await screen.findByText('结束原因');
     expect(resultLabel.style.color).toBe('rgb(31, 31, 31)');
     expect(screen.getByText('客户确认联系时间').style.color).toBe(
       'rgb(31, 31, 31)',
@@ -1634,6 +1672,25 @@ describe('AI Call 通话记录页面', () => {
       screen.getByText('客户未确认（检测到时间线索：一个小时后）'),
     ).toBeTruthy();
     expect(screen.getByTestId('recording-player')).toBeTruthy();
+  });
+
+  it('空的结构化时间线索只显示客户未确认', async () => {
+    (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue({
+      callId: 'call-1',
+      analysisSceneCode: 'intro_geo',
+      analysisStatus: '2',
+      analysisResult: {
+        summary: '客户询问服务效果。',
+        time_hint: { time_text: '', time_value: '', original_texts: [] },
+      },
+      analysisRetryCount: 0,
+    });
+
+    render(<AiCallRecordsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: '查看详情' }));
+
+    expect(await screen.findByText('客户未确认')).toBeTruthy();
+    expect(screen.queryByText(/\[object Object\]/)).toBeNull();
   });
 
   it('缺少执行快照时使用紧凑且准确的历史数据提示', async () => {
@@ -1712,6 +1769,7 @@ describe('AI Call 通话记录页面', () => {
           status: 'expired',
           requestReason: 'customer_request',
           humanAgentIdentity: 'agent-admin',
+          failureMessage: '当前场景没有在线可接范围坐席',
         },
       ],
       total: 1,
@@ -1783,7 +1841,33 @@ describe('AI Call 通话记录页面', () => {
     expect(within(analysisSection).getByText('非目标客户')).toBeTruthy();
     expect(within(handoffSection).getByText('客户要求转人工')).toBeTruthy();
     expect(within(handoffSection).getByText('等待超时')).toBeTruthy();
+    expect(
+      within(handoffSection).getByText('当前场景没有在线可接范围坐席'),
+    ).toBeTruthy();
     expect(within(detailDrawer).queryByText('customer_request')).toBeNull();
+  });
+
+  it('将无在线坐席结束原因展示为完整中文业务说明', async () => {
+    const record = { ...mockRecord, endReason: 'no_online_agent' };
+    (listAiCallRecords as jest.Mock).mockResolvedValue({
+      rows: [record],
+      total: 1,
+    });
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record,
+      executionConfig: null,
+    });
+
+    render(<AiCallRecordsPage />);
+    fireEvent.click(await screen.findByRole('button', { name: '查看详情' }));
+
+    const detailDrawer = await screen.findByRole('dialog', {
+      name: '通话记录详情',
+    });
+    expect(
+      within(detailDrawer).getByText('无在线坐席，转人工失败后结束'),
+    ).toBeTruthy();
+    expect(within(detailDrawer).queryByText('no_online_agent')).toBeNull();
   });
 
   it('详情将外呼记录关键枚举和分区间距展示为业务化中文', async () => {

@@ -121,6 +121,9 @@ export type AiCallTaskTarget = {
   attemptCount: number;
   latestResult?: string | null;
   latestDialerType?: string | null;
+  providerStatusCode?: string | null;
+  providerReason?: string | null;
+  hangupCause?: string | null;
   activeCallId?: string | null;
   activeCallStatus?: string | null;
   updatedAt: string;

@@ -47,8 +47,8 @@ const TaskConfirmation = ({
         },
         {
           key: 'answerMode',
-          label: '接听方式',
-          children: answerMode === 'web' ? 'Web（浏览器）' : 'Linphone（SIP）',
+          label: '客户接听端',
+          children: answerMode === 'web' ? 'Web（浏览器）' : '电话（SIP 线路）',
         },
         ...(answerMode === 'web'
           ? [{ key: 'receiver', label: '客户终端', children: '浏览器接听' }]
