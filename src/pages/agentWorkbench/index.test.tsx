@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import * as React from 'react';
 import AgentWorkbenchPage from './index';
@@ -50,6 +52,8 @@ const basePresence = {
 };
 
 describe('AgentWorkbenchPage presence shell', () => {
+  const styles = fs.readFileSync(path.join(__dirname, 'index.css'), 'utf8');
+
   afterEach(() => {
     cleanup();
     jest.clearAllMocks();
@@ -137,6 +141,15 @@ describe('AgentWorkbenchPage presence shell', () => {
     expect(
       view.container.querySelector('.agent-workbench-viewport'),
     ).toBeTruthy();
+  });
+
+  it('constrains the nested PageContainer wrappers so card content can scroll', () => {
+    expect(styles).toMatch(
+      /\.agent-workbench-viewport > \.ant-pro-grid-content,[\s\S]*?> \.ant-pro-grid-content-children[\s\S]*?\{[\s\S]*?height: 100%;[\s\S]*?min-height: 0;[\s\S]*?\}/,
+    );
+    expect(styles).toMatch(
+      /> \.ant-pro-page-container-children-container[\s\S]*?\{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;[\s\S]*?height: 100%;[\s\S]*?min-height: 0;[\s\S]*?\}/,
+    );
   });
 
   it('centers active call controls horizontally without using the empty-state layout', () => {
