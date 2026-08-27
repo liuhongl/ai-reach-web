@@ -335,6 +335,9 @@ const FollowUpPanel = ({
   const callbackInProgress = ['claiming', 'in_call', 'reconnecting'].includes(
     agentStatus,
   );
+  const canSubmitHandlingResult = (task: FollowUpTaskDto) =>
+    !callbackInProgress &&
+    (!callbackEnabled || Boolean(task.awaiting_handling_result));
 
   const finishHandlingSubmission = async () => {
     messageApi.success('处理结果已提交');
@@ -393,9 +396,7 @@ const FollowUpPanel = ({
               {agentStatus === 'available' ? '呼叫客户' : '上线并呼叫'}
             </Button>
           ) : null}
-          {task.status !== 'processing' ||
-          task.awaiting_handling_result ||
-          !callbackInProgress ? (
+          {canSubmitHandlingResult(task) ? (
             <Button
               type="link"
               size="small"

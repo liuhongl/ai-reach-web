@@ -246,6 +246,31 @@ describe('FollowUpPanel', () => {
     );
   });
 
+  it('hides the handling result before the first callback finishes', async () => {
+    const services = createServices();
+    services.list.mockResolvedValue({
+      code: 200,
+      data: {
+        rows: [{ ...unanswered, owner_agent_identity: 'agent-1' }],
+        total: 1,
+      },
+    });
+
+    render(
+      <FollowUpPanel
+        callbackEnabled
+        consoleSessionId="session-1"
+        services={services}
+      />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
+
+    expect(
+      await screen.findByRole('button', { name: '呼叫客户' }),
+    ).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '提交处理结果' })).toBeNull();
+  });
+
   it('brings an offline agent online before calling the customer', async () => {
     const services = createServices();
     const onPrepareCallback = jest.fn().mockResolvedValue(true);
@@ -799,7 +824,7 @@ describe('FollowUpPanel', () => {
       },
     });
 
-    render(<FollowUpPanel services={services} />);
+    render(<FollowUpPanel callbackEnabled services={services} />);
     await screen.findByText('138****0000');
     fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     fireEvent.click(
