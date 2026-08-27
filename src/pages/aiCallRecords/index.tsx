@@ -84,6 +84,7 @@ import {
   getQualityScorePresentation,
   hasUnstablePostCallData,
   isFormalOutboundRecord,
+  resolveCallResult,
   type StatusPresentation,
 } from './status';
 import './index.less';
@@ -349,13 +350,7 @@ const describeMockResult = (row: AiCallRecord) => {
 const describeCallResult = (row: AiCallRecord) =>
   row.entryType === 'outbound_mock'
     ? describeMockResult(row)
-    : row.callResult
-      ? callResultLabels[row.callResult] || row.callResult
-      : row.answeredAt
-        ? callResultLabels.connected
-        : row.status === 'failed'
-          ? callResultLabels.call_failed
-          : '-';
+    : callResultLabels[resolveCallResult(row) || ''] || '-';
 
 const describeEndResult = (row: AiCallRecord) =>
   row.entryType === 'outbound_mock' ? '-' : describeError(row);

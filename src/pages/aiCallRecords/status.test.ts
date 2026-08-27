@@ -5,6 +5,7 @@ import {
   getQualityReviewPresentation,
   getQualityScorePresentation,
   hasUnstablePostCallData,
+  resolveCallResult,
 } from './status';
 
 const baseRecord = {
@@ -16,6 +17,23 @@ const baseRecord = {
 } as const;
 
 describe('通话记录话后状态映射', () => {
+  it('把已结束但未接通的旧记录识别为呼叫失败', () => {
+    expect(
+      resolveCallResult({
+        status: 'completed',
+        answeredAt: null,
+        endedAt: '2026-08-27T10:30:21+08:00',
+      }),
+    ).toBe('call_failed');
+    expect(
+      resolveCallResult({
+        status: 'completed',
+        answeredAt: '2026-08-27T10:30:24+08:00',
+        endedAt: '2026-08-27T10:33:49+08:00',
+      }),
+    ).toBe('connected');
+  });
+
   it('区分语义分析中、失败和客户意向', () => {
     expect(
       getCustomerIntentPresentation({

@@ -26,6 +26,7 @@ import {
   getAiCallRecordRecording,
   getAiCallRecordSemanticAnalysis,
 } from './service';
+import { resolveCallResult } from './status';
 
 const { Text, Title } = Typography;
 
@@ -117,13 +118,7 @@ const describeRecordStatus = (record: AiCallRecord) =>
   statusLabels[record.status] || record.status;
 
 const describeCallResult = (record: AiCallRecord) =>
-  record.callResult
-    ? callResultLabels[record.callResult] || record.callResult
-    : record.answeredAt
-      ? callResultLabels.connected
-      : record.status === 'failed'
-        ? callResultLabels.call_failed
-        : '-';
+  callResultLabels[resolveCallResult(record) || ''] || '-';
 
 const describeEndResult = (record: AiCallRecord) =>
   (record.failureMessage

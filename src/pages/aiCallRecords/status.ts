@@ -131,6 +131,19 @@ export const isFormalOutboundRecord = (
   record.entryType === 'sip_outbound' ||
   (record.entryType === 'web' && Boolean(record.taskId));
 
+export const resolveCallResult = (
+  record: Pick<
+    AiCallRecord,
+    'callResult' | 'answeredAt' | 'endedAt' | 'status'
+  >,
+) =>
+  record.callResult ||
+  (record.answeredAt
+    ? 'connected'
+    : record.status === 'failed' || record.endedAt
+      ? 'call_failed'
+      : undefined);
+
 export const getCustomerIntentPresentation = (
   record: Pick<
     AiCallRecord,
@@ -158,10 +171,7 @@ export const getCustomerIntentPresentation = (
 export const getFollowUpPresentation = (
   record: Pick<
     AiCallRecord,
-    | 'entryType'
-    | 'taskId'
-    | 'followUpId'
-    | 'followUpStatus'
+    'entryType' | 'taskId' | 'followUpId' | 'followUpStatus'
   >,
 ): StatusPresentation | null => {
   if (!isFormalOutboundRecord(record)) {
