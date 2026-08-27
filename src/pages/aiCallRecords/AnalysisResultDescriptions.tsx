@@ -228,12 +228,6 @@ const renderAnalysisValue = (
             ),
           },
           {
-            key: 'reason',
-            label: '原因',
-            children: String(followUp.reason || '-'),
-            span: 2,
-          },
-          {
             key: 'preferredTime',
             label: '期望时间',
             children: String(followUp.preferred_time || '未确认'),
@@ -249,6 +243,12 @@ const renderAnalysisValue = (
                 {followUpConfidenceLabels[confidence] || confidence || '-'}
               </Tag>
             ),
+          },
+          {
+            key: 'reason',
+            label: '原因',
+            children: String(followUp.reason || '-'),
+            span: 2,
           },
         ]}
       />

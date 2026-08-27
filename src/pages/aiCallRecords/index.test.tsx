@@ -1900,6 +1900,11 @@ describe('AI Call 通话记录页面', () => {
     expect(within(followUpSuggestion).getByText('未确认')).toBeTruthy();
     expect(within(followUpSuggestion).getByText('置信度')).toBeTruthy();
     expect(within(followUpSuggestion).getByText('高')).toBeTruthy();
+    expect(
+      Array.from(
+        followUpSuggestion.querySelectorAll('.ant-descriptions-item-label'),
+      ).map((label) => label.textContent),
+    ).toEqual(['需要跟进', '客户同意', '期望时间', '置信度', '原因']);
     expect(within(analysisSection).getByText('有效业务对话')).toBeTruthy();
     expect(within(analysisSection).getByText('低价值原因')).toBeTruthy();
     expect(within(analysisSection).getByText('非目标客户')).toBeTruthy();
