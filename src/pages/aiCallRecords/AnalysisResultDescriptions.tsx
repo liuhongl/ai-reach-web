@@ -125,6 +125,11 @@ const followUpConsentLabels: Record<string, string> = {
   refused: '明确拒绝',
 };
 
+const followUpConsentColors: Record<string, string> = {
+  explicit: 'success',
+  refused: 'error',
+};
+
 const lowValueReasonLabels: Record<string, string> = {
   explicit_rejection: '明确拒绝',
   no_current_need: '暂无需求',
@@ -157,13 +162,18 @@ export const hasAnalysisResult = (
       analysisFieldOrder.some((key) => Object.hasOwn(analysisResult, key)),
   );
 
+export const formatAnalysisSummary = (value: unknown) =>
+  String(value || '')
+    .trim()
+    .replace(/^[\s，,。；;、’”"'）)]+/u, '');
+
 const renderAnalysisValue = (
   key: string,
   value: unknown,
   analysisResult?: Record<string, unknown> | null,
 ) => {
   if (key === 'summary') {
-    const text = String(value || '').trim();
+    const text = formatAnalysisSummary(value);
     return text ? (
       <Typography.Paragraph
         data-testid="analysis-summary"
@@ -177,13 +187,72 @@ const renderAnalysisValue = (
   }
   if (key === 'follow_up' && value && typeof value === 'object') {
     const followUp = value as Record<string, unknown>;
-    return [
-      `需要跟进：${followUp.required === true ? '是' : followUp.required === false ? '否' : '-'}`,
-      `客户同意：${followUpConsentLabels[String(followUp.consent || '')] || followUp.consent || '-'}`,
-      `原因：${followUp.reason || '-'}`,
-      `期望时间：${followUp.preferred_time || '-'}`,
-      `置信度：${followUpConfidenceLabels[String(followUp.confidence || '')] || followUp.confidence || '-'}`,
-    ].join('；');
+    const consent = String(followUp.consent || '');
+    const confidence = String(followUp.confidence || '');
+    const required =
+      followUp.required === true
+        ? '是'
+        : followUp.required === false
+          ? '否'
+          : '-';
+    return (
+      <Descriptions
+        colon={false}
+        column={2}
+        data-testid="analysis-follow-up"
+        size="small"
+        styles={detailDescriptionStyles}
+        items={[
+          {
+            key: 'required',
+            label: '需要跟进',
+            children: (
+              <Tag
+                color={followUp.required === true ? 'success' : 'default'}
+                style={{ marginInlineEnd: 0 }}
+              >
+                {required}
+              </Tag>
+            ),
+          },
+          {
+            key: 'consent',
+            label: '客户同意',
+            children: (
+              <Tag
+                color={followUpConsentColors[consent] || 'default'}
+                style={{ marginInlineEnd: 0 }}
+              >
+                {followUpConsentLabels[consent] || consent || '-'}
+              </Tag>
+            ),
+          },
+          {
+            key: 'reason',
+            label: '原因',
+            children: String(followUp.reason || '-'),
+            span: 2,
+          },
+          {
+            key: 'preferredTime',
+            label: '期望时间',
+            children: String(followUp.preferred_time || '未确认'),
+          },
+          {
+            key: 'confidence',
+            label: '置信度',
+            children: (
+              <Tag
+                color={followUpConfidenceColors[confidence] || 'default'}
+                style={{ marginInlineEnd: 0 }}
+              >
+                {followUpConfidenceLabels[confidence] || confidence || '-'}
+              </Tag>
+            ),
+          },
+        ]}
+      />
+    );
   }
   if (key === 'feedback_type') {
     const text = String(value || '-');
@@ -323,7 +392,7 @@ const AnalysisResultDescriptions = ({
         .filter(
           (key) =>
             key !== 'key_points' ||
-            !String(analysisResult?.summary || '').trim(),
+            !formatAnalysisSummary(analysisResult?.summary),
         )
         .map((key) => ({
           key,

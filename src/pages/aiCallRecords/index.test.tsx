@@ -1361,7 +1361,7 @@ describe('AI Call 通话记录页面', () => {
     const outboundRecord = {
       ...mockRecord,
       entryType: 'outbound',
-      summary,
+      summary: `）。${summary}`,
       analysisStatus: '2',
       customerIntent: 'positive',
       classificationReviewStatus: 'suggested',
@@ -1377,6 +1377,7 @@ describe('AI Call 通话记录页面', () => {
     await waitFor(() => expect(summaryNode.style.webkitLineClamp).toBe('2'));
     fireEvent.mouseEnter(summaryNode);
     expect((await screen.findByRole('tooltip')).textContent).toBe(summary);
+    expect(screen.queryByText(/^）。/)).toBeNull();
     expect(screen.getByText('正向')).toBeTruthy();
     expect(screen.getByText('建议复核')).toBeTruthy();
   });
@@ -1679,7 +1680,7 @@ describe('AI Call 通话记录页面', () => {
     ).toBeTruthy();
     expect(screen.getByText('负向').closest('.ant-tag')).toBeTruthy();
     expect(screen.queryByText('客户要求转人工')).toBeNull();
-    expect(screen.getByText('明天下午')).toBeTruthy();
+    expect(screen.getAllByText('明天下午')).toHaveLength(2);
     expect(screen.getByText('价格敏感').closest('.ant-tag')).toBeTruthy();
     expect(screen.getByText('执行配置')).toBeTruthy();
     expect(screen.getByText('新品回访提示词')).toBeTruthy();
@@ -1790,6 +1791,7 @@ describe('AI Call 通话记录页面', () => {
       analysisSceneCode: 'intro_geo',
       analysisStatus: '2',
       analysisResult: {
+        summary: '）。客户主动提出转人工，随后对话偏离业务主题。',
         classification: 'low_value',
         low_value_reason: 'non_target_customer',
         valid_dialogue: true,
@@ -1875,19 +1877,37 @@ describe('AI Call 通话记录页面', () => {
     expect(within(analysisSection).getByText('AI 建议分类')).toBeTruthy();
     expect(within(analysisSection).getByText('低价值')).toBeTruthy();
     expect(
+      within(analysisSection).getByText(
+        '客户主动提出转人工，随后对话偏离业务主题。',
+      ),
+    ).toBeTruthy();
+    expect(within(analysisSection).queryByText(/^）。/)).toBeNull();
+    expect(
       within(analysisSection).getByText('客户未确认后续需求'),
     ).toBeTruthy();
     expect(within(analysisSection).getByText('后续跟进建议')).toBeTruthy();
+    const followUpSuggestion =
+      within(analysisSection).getByTestId('analysis-follow-up');
+    expect(within(followUpSuggestion).getByText('需要跟进')).toBeTruthy();
+    expect(within(followUpSuggestion).getByText('是')).toBeTruthy();
+    expect(within(followUpSuggestion).getByText('客户同意')).toBeTruthy();
+    expect(within(followUpSuggestion).getByText('明确同意')).toBeTruthy();
+    expect(within(followUpSuggestion).getByText('原因')).toBeTruthy();
     expect(
-      within(analysisSection).getByText(
-        /需要跟进：是；客户同意：明确同意；原因：客户同意后续回访/,
-      ),
+      within(followUpSuggestion).getByText('客户同意后续回访'),
     ).toBeTruthy();
+    expect(within(followUpSuggestion).getByText('期望时间')).toBeTruthy();
+    expect(within(followUpSuggestion).getByText('未确认')).toBeTruthy();
+    expect(within(followUpSuggestion).getByText('置信度')).toBeTruthy();
+    expect(within(followUpSuggestion).getByText('高')).toBeTruthy();
     expect(within(analysisSection).getByText('有效业务对话')).toBeTruthy();
     expect(within(analysisSection).getByText('低价值原因')).toBeTruthy();
     expect(within(analysisSection).getByText('非目标客户')).toBeTruthy();
     expect(within(handoffSection).getByText('客户要求转人工')).toBeTruthy();
     expect(within(handoffSection).getByText('等待超时')).toBeTruthy();
+    expect(
+      await within(handoffSection).findByText('本地联调管理员'),
+    ).toBeTruthy();
     expect(
       within(handoffSection).getByText('当前场景没有在线可接范围坐席'),
     ).toBeTruthy();

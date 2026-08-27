@@ -53,6 +53,7 @@ import {
 import AnalysisResultDescriptions, {
   describeBusinessScene,
   describeEndReason,
+  formatAnalysisSummary,
   hasAnalysisResult,
 } from './AnalysisResultDescriptions';
 import DialogueSegments from './DialogueSegments';
@@ -1093,17 +1094,20 @@ const AiCallRecordsPage = () => {
         key: 'analysis',
         search: false,
         width: 240,
-        render: (_, row) => (
-          <Tooltip placement="topLeft" title={row.summary || undefined}>
-            <Paragraph
-              ellipsis={{ rows: 2 }}
-              type={row.summary ? undefined : 'secondary'}
-              style={{ marginBottom: 0 }}
-            >
-              {row.summary || '暂无摘要'}
-            </Paragraph>
-          </Tooltip>
-        ),
+        render: (_, row) => {
+          const summary = formatAnalysisSummary(row.summary);
+          return (
+            <Tooltip placement="topLeft" title={summary || undefined}>
+              <Paragraph
+                ellipsis={{ rows: 2 }}
+                type={summary ? undefined : 'secondary'}
+                style={{ marginBottom: 0 }}
+              >
+                {summary || '暂无摘要'}
+              </Paragraph>
+            </Tooltip>
+          );
+        },
       },
       {
         title: '通话时间',
