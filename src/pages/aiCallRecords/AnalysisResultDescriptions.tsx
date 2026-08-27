@@ -28,7 +28,7 @@ const endReasonLabels: Record<string, string> = {
   no_online_agent: '无在线坐席，转人工失败后结束',
   user_unavailable: '被叫暂时不可用（SIP 480）',
   sip_480: '被叫暂时不可用（SIP 480）',
-  sip_participant_left: '对方挂断',
+  sip_participant_left: 'SIP 通话结束（原因未记录）',
   unknown: '未知原因',
 };
 

@@ -1923,7 +1923,9 @@ describe('AI Call 通话记录页面', () => {
     const detailDrawer = await screen.findByRole('dialog', {
       name: '通话记录详情',
     });
-    expect(within(detailDrawer).getByText('对方挂断')).toBeTruthy();
+    expect(
+      within(detailDrawer).getByText('SIP 通话结束（原因未记录）'),
+    ).toBeTruthy();
     expect(within(detailDrawer).queryByText('sip_participant_left')).toBeNull();
   });
 
