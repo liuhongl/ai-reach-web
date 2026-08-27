@@ -283,6 +283,9 @@ export const hasUnstablePostCallData = (
   >,
 ) =>
   records.some((record) => {
+    if (record.entryType === 'sip_callback') {
+      return record.status !== 'completed' && record.status !== 'failed';
+    }
     if (!isFormalOutboundRecord(record)) {
       return false;
     }

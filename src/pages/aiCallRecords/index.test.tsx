@@ -203,6 +203,7 @@ const mockRecord = {
   sceneCode: 'intro_geo',
   status: 'completed',
   startedAt: '2026-07-27T03:13:09',
+  answeredAt: '2026-07-27T03:13:11',
   endedAt: '2026-07-27T03:13:52',
   durationMs: 43000,
   endReason: 'agent_completed',
@@ -566,6 +567,51 @@ describe('AI Call 通话记录页面', () => {
     expect(within(detailDrawer).queryByText('user_unavailable')).toBeNull();
     expect(
       within(detailDrawer).queryByText(/SIP 480 Temporarily Unavailable/),
+    ).toBeNull();
+  });
+
+  it('未接通的人工回拨展示失败样式且不开放分类与回访操作', async () => {
+    const callbackRecord = {
+      ...mockRecord,
+      entryType: 'sip_callback',
+      callResult: 'no_answer',
+      status: 'completed',
+      answeredAt: null,
+      endReason: 'callback_no_answer',
+    };
+    (listAiCallRecords as jest.Mock).mockResolvedValue({
+      rows: [callbackRecord],
+      total: 1,
+    });
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: callbackRecord,
+      executionConfig: null,
+      followUpData: {
+        id: 'follow-up-data-1',
+        classification: 'nurturing',
+        version: 1,
+      },
+    });
+
+    render(<AiCallRecordsPage />);
+
+    expect(await screen.findByText('无人接听')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: '查看详情' }));
+    const detailDrawer = await screen.findByRole('dialog', {
+      name: '通话记录详情',
+    });
+    expect(
+      within(detailDrawer).getByText('无人接听').closest('.ant-tag'),
+    ).not.toBeNull();
+    expect(within(detailDrawer).getByText('未接通')).toBeTruthy();
+    expect(
+      within(detailDrawer).getByTestId('customer-follow-up-section').hidden,
+    ).toBe(true);
+    expect(
+      within(detailDrawer).queryByRole('button', { name: '修改分类' }),
+    ).toBeNull();
+    expect(
+      within(detailDrawer).queryByRole('button', { name: '安排回访' }),
     ).toBeNull();
   });
 

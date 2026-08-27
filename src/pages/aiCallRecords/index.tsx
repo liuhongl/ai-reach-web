@@ -1057,6 +1057,7 @@ const AiCallRecordsPage = () => {
         width: 160,
         render: (_, row) => {
           const failureReason = describeError(row);
+          const callResult = resolveCallResult(row);
           return (
             <Flex vertical gap={4}>
               <Text
@@ -1065,7 +1066,7 @@ const AiCallRecordsPage = () => {
                   color:
                     row.entryType === 'outbound_mock'
                       ? '#1677ff'
-                      : callResultColors[row.callResult || ''] || '#1f1f1f',
+                      : callResultColors[callResult || ''] || '#1f1f1f',
                 }}
               >
                 {describeCallResult(row)}
@@ -1076,7 +1077,7 @@ const AiCallRecordsPage = () => {
                   ? ` · 第 ${row.attemptNo} 次`
                   : ''}
               </Text>
-              {row.callResult !== 'connected' && failureReason !== '-' ? (
+              {callResult !== 'connected' && failureReason !== '-' ? (
                 <Tooltip title={failureReason}>
                   <Text type="danger" style={{ fontSize: 12 }}>
                     {`原因：${failureReason}`}
@@ -1282,10 +1283,14 @@ const AiCallRecordsPage = () => {
     record?.recordingPlayUrl ||
     recording?.playUrl ||
     recording?.tracks?.find((track) => track.playUrl)?.playUrl;
+  const resolvedCallResult = record ? resolveCallResult(record) : undefined;
+  const connectedCall = Boolean(
+    record?.answeredAt && resolvedCallResult === 'connected',
+  );
   const failedBeforeAnswer = Boolean(
     record &&
       !record.answeredAt &&
-      unansweredCallResults.has(record.callResult || ''),
+      unansweredCallResults.has(resolvedCallResult || ''),
   );
   const qualityRecordingUrl =
     qualityRecord?.recordingPlayUrl ||
@@ -1330,7 +1335,8 @@ const AiCallRecordsPage = () => {
     activeFollowUpId && followUp?.id === activeFollowUpId,
   );
   const canScheduleFollowUp = Boolean(
-    detail?.followUpData &&
+    connectedCall &&
+      detail?.followUpData &&
       !detailErrors.analysis &&
       !needsClassificationReview &&
       !activeFollowUpId &&
@@ -1464,7 +1470,7 @@ const AiCallRecordsPage = () => {
                   {
                     key: 'duration',
                     label:
-                      resolveCallResult(record) === 'connected'
+                      resolvedCallResult === 'connected'
                         ? '通话时长'
                         : '呼叫耗时',
                     children: formatDuration(record.durationMs),
@@ -1472,7 +1478,13 @@ const AiCallRecordsPage = () => {
                   {
                     key: 'callResult',
                     label: '呼叫结果',
-                    children: describeCallResult(record),
+                    children: resolvedCallResult ? (
+                      <Tag color={callResultColors[resolvedCallResult]}>
+                        {describeCallResult(record)}
+                      </Tag>
+                    ) : (
+                      '-'
+                    ),
                     span: 2,
                   },
                   {
@@ -1722,7 +1734,10 @@ const AiCallRecordsPage = () => {
               </section>
             ) : null}
 
-            <section data-testid="customer-follow-up-section">
+            <section
+              data-testid="customer-follow-up-section"
+              hidden={!connectedCall}
+            >
               <Title level={5}>客户分类与回访</Title>
               <Flex vertical gap={12}>
                 <Descriptions

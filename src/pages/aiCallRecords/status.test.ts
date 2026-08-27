@@ -226,6 +226,15 @@ describe('通话记录话后状态映射', () => {
       hasUnstablePostCallData([
         {
           ...baseRecord,
+          entryType: 'sip_callback',
+          status: 'running',
+        },
+      ]),
+    ).toBe(true);
+    expect(
+      hasUnstablePostCallData([
+        {
+          ...baseRecord,
           entryType: 'outbound_mock',
           status: 'running',
         },
