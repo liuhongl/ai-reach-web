@@ -175,6 +175,8 @@ describe('CallRecordDetailContent', () => {
         entryType: 'sip_outbound',
         status: 'completed',
         callResult: 'no_answer',
+        answeredAt: null,
+        durationMs: 9_000,
         failureMessage:
           'SIP 480 Temporarily Unavailable; hangup_cause=USER_UNAVAILABLE',
         startedAt: '2026-08-27T10:30:08+08:00',
@@ -203,6 +205,7 @@ describe('CallRecordDetailContent', () => {
     expect(await screen.findByText('处理状态')).toBeTruthy();
     expect(screen.getByText('呼叫结果')).toBeTruthy();
     expect(screen.getByText('无人接听')).toBeTruthy();
+    expect(screen.getByText('呼叫耗时')).toBeTruthy();
     expect(screen.getByText('被叫暂时不可用（SIP 480）')).toBeTruthy();
     expect(screen.getByText('当前场景没有在线可接范围坐席')).toBeTruthy();
   });

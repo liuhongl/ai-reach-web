@@ -1531,6 +1531,7 @@ describe('AI Call 通话记录页面', () => {
     });
 
     expect(within(drawer).getByText('未接通，无有效通话录音')).toBeTruthy();
+    expect(within(drawer).getByText('呼叫耗时')).toBeTruthy();
     expect(
       within(drawer).getByTestId('recording-player').querySelector('audio'),
     ).toBeNull();

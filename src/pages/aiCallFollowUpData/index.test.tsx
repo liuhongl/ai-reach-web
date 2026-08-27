@@ -59,6 +59,10 @@ jest.mock('@/pages/agentWorkbench/components/CurrentCallPanel', () => ({
   __esModule: true,
   default: () => <div>人工外呼通话面板</div>,
 }));
+jest.mock('@/pages/agentWorkbench/components/AgentName', () => ({
+  __esModule: true,
+  default: ({ identity }: { identity: string }) => <span>{identity}</span>,
+}));
 jest.mock('@/services/ruoyi/agent-console', () => ({
   endFollowUpDataCall: jest.fn(),
   startFollowUpDataCall: jest.fn(),
@@ -190,6 +194,33 @@ describe('跟进数据页面', () => {
     expect(
       await screen.findByRole('button', { name: '查看回访任务' }),
     ).toBeTruthy();
+  });
+
+  it('未接通的人工回访显示结果和呼叫耗时且无需提交话后结果', async () => {
+    (getFollowUpData as jest.Mock).mockResolvedValue({
+      ...row,
+      timeline: [
+        {
+          type: 'call',
+          call_id: 'call-no-answer',
+          occurred_at: '2026-08-27T14:11:10+08:00',
+          entry_type: 'sip_callback',
+          status: 'completed',
+          end_reason: 'callback_no_answer',
+          duration_ms: 9_000,
+          operator_agent_identity: 'agent-admin',
+          after_call_result_status: 'not_applicable',
+        },
+      ],
+    });
+
+    render(<FollowUpDataPage />);
+    fireEvent.click(await screen.findByRole('button', { name: '详情' }));
+    const drawer = await findDialogByTitle('跟进数据详情');
+
+    expect(within(drawer).getByText('未接通')).toBeTruthy();
+    expect(within(drawer).getByText(/呼叫耗时 0分9秒/)).toBeTruthy();
+    expect(within(drawer).queryByText('待提交话后结果')).toBeNull();
   });
 
   it('提供调整分类和安排后续回访表单', async () => {

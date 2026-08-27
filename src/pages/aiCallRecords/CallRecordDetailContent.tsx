@@ -261,7 +261,10 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
             },
             {
               key: 'duration',
-              label: '通话时长',
+              label:
+                resolveCallResult(record) === 'connected'
+                  ? '通话时长'
+                  : '呼叫耗时',
               children: formatDuration(record.durationMs),
             },
             {

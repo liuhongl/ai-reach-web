@@ -93,6 +93,14 @@ const callStatusLabels: Record<string, string> = {
   failed: '呼叫失败',
 };
 
+const callbackEndReasonLabels: Record<string, string> = {
+  callback_no_answer: '未接通',
+  callback_busy: '忙线',
+  callback_rejected: '已拒接',
+  callback_invalid_contact: '联系方式无效',
+  callback_technical_failure: '呼叫失败',
+};
+
 const formatDateTime = (value?: string | null) =>
   value ? dayjs(value).format('YYYY-MM-DD HH:mm:ss') : '-';
 
@@ -290,26 +298,30 @@ const FollowUpDataDetailDrawer = ({
                     ? '人工回访'
                     : '转人工通话'
                   : '原始 AI 通话';
+                const callbackEndLabel =
+                  callbackEndReasonLabels[item.end_reason || ''];
+                const needsAfterCallResult =
+                  item.after_call_result_status === 'pending' &&
+                  !callbackEndLabel;
                 return {
-                  color:
-                    item.after_call_result_status === 'pending'
-                      ? 'blue'
-                      : 'green',
+                  color: needsAfterCallResult ? 'blue' : 'green',
                   content: (
                     <Flex vertical gap={4}>
                       <Flex gap={4} align="center" wrap>
                         <Text strong>{title}</Text>
                         <Tag>
-                          {callStatusLabels[item.status || ''] ||
+                          {callbackEndLabel ||
+                            callStatusLabels[item.status || ''] ||
                             item.status ||
                             '状态未知'}
                         </Tag>
-                        {item.after_call_result_status === 'pending' ? (
+                        {needsAfterCallResult ? (
                           <Tag color="processing">待提交话后结果</Tag>
                         ) : null}
                       </Flex>
                       <Text type="secondary">
-                        {formatDateTime(item.occurred_at)} · 通话时长{' '}
+                        {formatDateTime(item.occurred_at)} ·{' '}
+                        {callbackEndLabel ? '呼叫耗时' : '通话时长'}{' '}
                         {formatDuration(item.duration_ms)}
                         {item.operator_agent_identity ? (
                           <>
