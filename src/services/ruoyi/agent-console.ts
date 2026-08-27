@@ -125,8 +125,7 @@ export type AgentPresenceDto = {
 export type AdminAgentDto = AgentProfileDto & {
   presence?: AgentPresenceDto | null;
   runtime_status?: AgentStatus;
-  abnormal_occupied?: boolean;
-  abnormal_reason?: string | null;
+  stale_occupied?: boolean;
 };
 
 export type DialogueTurnDto = {

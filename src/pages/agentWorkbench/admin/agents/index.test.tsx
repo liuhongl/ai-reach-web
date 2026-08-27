@@ -49,6 +49,8 @@ describe('agent administration page', () => {
     ])
       expect(source).toContain(text);
     expect(source).toContain('releaseStaleAgent');
+    expect(source).toContain('row.stale_occupied');
+    expect(source).toContain('metrics.stale_occupied');
     expect(source).toContain('Modal.confirm');
     expect(source).toContain('showLabels');
     expect(source).not.toContain('最大并发');

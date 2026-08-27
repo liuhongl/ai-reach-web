@@ -209,7 +209,7 @@ const AgentAdminPage = () => {
                 onClick: () => void showDetail(row),
               },
               { key: 'edit', label: '编辑坐席', onClick: () => openEdit(row) },
-              ...(row.abnormal_occupied
+              ...(row.stale_occupied
                 ? [
                     {
                       key: 'release',
@@ -272,7 +272,7 @@ const AgentAdminPage = () => {
           {
             key: 'abnormal',
             label: '异常占用',
-            value: metrics.abnormal ?? 0,
+            value: metrics.stale_occupied ?? 0,
             tone: 'red',
           },
         ]}
