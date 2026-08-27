@@ -101,4 +101,42 @@ describe('FollowUpCallDetail', () => {
         ?.getAttribute('controlslist'),
     ).toBe('nodownload');
   });
+
+  it('将未接通回拨的结束状态展示为中文', async () => {
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: {
+        id: 'record-no-answer',
+        callId: 'call-no-answer',
+        entryType: 'sip_callback',
+        status: 'completed',
+        endReason: 'callback_no_answer',
+        startedAt: '2026-08-27T18:23:28+08:00',
+        durationMs: 10000,
+      },
+    });
+    (getAiCallRecordRecording as jest.Mock).mockResolvedValue(null);
+    (getAiCallRecordDialogue as jest.Mock).mockResolvedValue({
+      rows: [],
+      total: 0,
+    });
+
+    render(
+      <FollowUpCallDetail
+        callId="call-no-answer"
+        followUp={{
+          id: 'follow-up-no-answer',
+          source_type: 'after_call_work',
+          source_call_id: 'call-source',
+          source_handoff_id: null,
+          scene_code: 'intro_geo',
+          status: 'processing',
+          follow_up_reason: '客户要求回访',
+          created_at: '2026-08-27T18:04:48+08:00',
+        }}
+      />,
+    );
+
+    expect(await screen.findByText('未接通')).toBeTruthy();
+    expect(screen.queryByText('callback_no_answer')).toBeNull();
+  });
 });

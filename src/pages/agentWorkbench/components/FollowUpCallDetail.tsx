@@ -48,6 +48,13 @@ const endReasonLabels: Record<string, string> = {
   remote_hangup: '远端挂断',
   sip_participant_left: '对方挂断',
   handoff_timeout: '转人工等待超时',
+  callback_completed: '已结束',
+  callback_ended_by_agent: '坐席结束',
+  callback_no_answer: '未接通',
+  callback_busy: '忙线',
+  callback_rejected: '已拒接',
+  callback_invalid_contact: '联系方式无效',
+  callback_technical_failure: '呼叫失败',
 };
 
 const formatDateTime = (value?: string | null) =>
