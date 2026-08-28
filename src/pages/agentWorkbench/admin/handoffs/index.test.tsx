@@ -43,7 +43,6 @@ describe('handoff administration page', () => {
       '查看详情',
       'getHandoffReasonLabel',
       'getDialogueSpeakerLabel',
-      'getAfterCallWorkLabel',
       'getRecordingStatusLabel',
       'statusColors',
       'getHandoffCustomerIdentity',
@@ -70,6 +69,9 @@ describe('handoff administration page', () => {
     expect(source).not.toContain('修改正常结果');
     expect(source).not.toContain("row.status === 'failed'");
     expect(source).not.toContain('followUpTaskName');
+    expect(source).not.toContain('getAfterCallWorkLabel');
+    expect(source).not.toContain('Reflect.get(afterCallWork');
+    expect(source).not.toContain('Reflect.get(followUp');
   });
 
   it('keeps the filter area to common conditions and reuses record dialogue bubbles', () => {

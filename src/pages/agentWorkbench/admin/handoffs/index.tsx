@@ -32,7 +32,6 @@ import {
 import {
   AdminMetricRow,
   formatDateTime,
-  getAfterCallWorkLabel,
   getDialogueSpeakerLabel,
   getHandoffCustomerIdentity,
   getHandoffReasonLabel,
@@ -294,21 +293,11 @@ const HandoffAdminPage = () => {
     recording?.playUrl ||
     recording?.tracks?.find((track) => track.playUrl)?.playUrl;
   const afterCallWork = detail?.afterCallWork;
-  const afterCallClassification = afterCallWork
-    ? String(Reflect.get(afterCallWork, 'classification') || '')
-    : '';
-  const afterCallDisposition = afterCallWork
-    ? String(Reflect.get(afterCallWork, 'disposition_code') || '')
-    : '';
-  const afterCallNeedsFollowUp =
-    afterCallWork && Reflect.get(afterCallWork, 'needs_follow_up') === true;
-  const afterCallNextFollowUpAt = afterCallWork
-    ? (Reflect.get(afterCallWork, 'next_follow_up_at') as string | undefined)
-    : undefined;
+  const afterCallClassification = afterCallWork?.classification || '';
+  const afterCallNeedsFollowUp = afterCallWork?.needs_follow_up === true;
+  const afterCallNextFollowUpAt = afterCallWork?.next_follow_up_at;
   const followUp = detail?.followUp;
-  const followUpStatus = followUp
-    ? String(Reflect.get(followUp, 'status') || '')
-    : '';
+  const followUpStatus = followUp?.status || '';
 
   return (
     <ListPage className="agent-admin-page" title="转人工记录">
@@ -603,11 +592,13 @@ const HandoffAdminPage = () => {
                     {
                       key: 'classification',
                       label: '客户分类',
-                      children: (
+                      children: afterCallClassification ? (
                         <Tag>
                           {classificationLabels[afterCallClassification] ||
-                            getAfterCallWorkLabel(afterCallDisposition)}
+                            afterCallClassification}
                         </Tag>
+                      ) : (
+                        '-'
                       ),
                     },
                     {
@@ -622,30 +613,20 @@ const HandoffAdminPage = () => {
                     {
                       key: 'summary',
                       label: '沟通结论',
-                      children:
-                        String(Reflect.get(afterCallWork, 'summary') || '') ||
-                        '-',
+                      children: afterCallWork.summary || '-',
                       span: 2,
                     },
                     {
                       key: 'agent',
                       label: '提交坐席',
                       children: (
-                        <AgentName
-                          identity={String(
-                            Reflect.get(afterCallWork, 'agent_identity') || '',
-                          )}
-                        />
+                        <AgentName identity={afterCallWork.agent_identity} />
                       ),
                     },
                     {
                       key: 'submittedAt',
                       label: '提交时间',
-                      children: formatDateTime(
-                        Reflect.get(afterCallWork, 'submitted_at') as
-                          | string
-                          | undefined,
-                      ),
+                      children: formatDateTime(afterCallWork.submitted_at),
                     },
                   ]}
                 />
@@ -666,23 +647,23 @@ const HandoffAdminPage = () => {
                     {
                       key: 'id',
                       label: '任务编号',
-                      children: String(Reflect.get(followUp, 'id') || '-'),
+                      children: followUp.id || '-',
                     },
                     {
                       key: 'status',
                       label: '任务状态',
                       children: (
                         <Tag color={statusColors[followUpStatus]}>
-                          {statusLabels[followUpStatus] || followUpStatus || '-'}
+                          {statusLabels[followUpStatus] ||
+                            followUpStatus ||
+                            '-'}
                         </Tag>
                       ),
                     },
                     {
                       key: 'reason',
                       label: '跟进原因',
-                      children: String(
-                        Reflect.get(followUp, 'follow_up_reason') || '-',
-                      ),
+                      children: followUp.follow_up_reason || '-',
                       span: 2,
                     },
                     {
@@ -690,9 +671,7 @@ const HandoffAdminPage = () => {
                       label: '负责坐席',
                       children: (
                         <AgentName
-                          identity={String(
-                            Reflect.get(followUp, 'owner_agent_identity') || '',
-                          )}
+                          identity={followUp.owner_agent_identity}
                           emptyText="待认领"
                         />
                       ),
@@ -700,11 +679,7 @@ const HandoffAdminPage = () => {
                     {
                       key: 'callbackAt',
                       label: '应回访时间',
-                      children: formatDateTime(
-                        Reflect.get(followUp, 'customer_callback_at') as
-                          | string
-                          | undefined,
-                      ),
+                      children: formatDateTime(followUp.customer_callback_at),
                     },
                   ]}
                 />

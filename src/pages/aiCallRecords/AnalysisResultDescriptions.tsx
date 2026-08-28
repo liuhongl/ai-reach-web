@@ -336,7 +336,9 @@ const renderAnalysisValue = (
           仅展示 AI 用于分类判断的客户原话，不是完整对话。
         </Text>
         {evidence.map((item) => (
-          <Text key={item}>{`客户：${item.replace(/^客户[:：]\s*/u, '')}`}</Text>
+          <Text
+            key={item}
+          >{`客户：${item.replace(/^客户[:：]\s*/u, '')}`}</Text>
         ))}
       </Flex>
     ) : (

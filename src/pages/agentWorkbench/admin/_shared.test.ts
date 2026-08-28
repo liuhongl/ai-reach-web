@@ -9,6 +9,7 @@ import {
   normalizeHandoffDetail,
   normalizeHandoffMetrics,
   statusColors,
+  statusLabels,
 } from './_shared';
 
 describe('agent administration presentation', () => {
@@ -29,6 +30,7 @@ describe('agent administration presentation', () => {
     expect(statusColors.completed).toBe('success');
     expect(statusColors.failed).toBe('error');
     expect(statusColors.expired).toBe('orange');
+    expect(statusLabels.processing).toBe('已认领待处理');
   });
 
   it('translates detail enums and missing recording state for operators', () => {

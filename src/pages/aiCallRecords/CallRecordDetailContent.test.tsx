@@ -288,7 +288,7 @@ describe('CallRecordDetailContent', () => {
 
     expect(await screen.findByText('人工回拨')).toBeTruthy();
     expect(screen.getByText('录音与对话')).toBeTruthy();
-    expect(screen.getByTestId('analysis-result-section').hidden).toBe(true);
+    expect(screen.getByTestId('post-call-result-section').hidden).toBe(true);
     expect(screen.getByTestId('handoff-result-section').hidden).toBe(true);
   });
 });

@@ -114,7 +114,7 @@ const getEntryTypeLabel = (
 const statusLabels: Record<string, string> = {
   created: '已创建',
   pending: '待处理',
-  processing: '处理中',
+  processing: '已认领待处理',
   starting: '启动中',
   running: '通话中',
   active: '通话中',
@@ -1012,7 +1012,7 @@ const AiCallRecordsPage = () => {
         valueEnum: {
           none: { text: '未安排' },
           pending: { text: '待处理' },
-          processing: { text: '处理中' },
+          processing: { text: '已认领待处理' },
           completed: { text: '已完成' },
           closed: { text: '已关闭' },
         },

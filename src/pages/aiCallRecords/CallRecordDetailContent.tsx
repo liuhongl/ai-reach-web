@@ -54,7 +54,7 @@ const getEntryTypeLabel = (
 const statusLabels: Record<string, string> = {
   created: '已创建',
   pending: '待处理',
-  processing: '处理中',
+  processing: '已认领待处理',
   starting: '启动中',
   running: '通话中',
   active: '通话中',
@@ -349,7 +349,7 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
         )}
       </section>
       <section
-        data-testid="analysis-result-section"
+        data-testid="post-call-result-section"
         hidden={isManualCallback && !afterCallWork}
       >
         {afterCallWork ? (

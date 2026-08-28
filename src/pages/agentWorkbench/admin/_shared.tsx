@@ -39,7 +39,7 @@ export const statusLabels: Record<string, string> = {
   canceled: '已取消',
   failed: '失败',
   pending: '待处理',
-  processing: '处理中',
+  processing: '已认领待处理',
   closed: '已关闭',
 };
 
@@ -135,8 +135,8 @@ export const getHandoffCustomerIdentity = (row: {
 export type HandoffAdminDetail = {
   handoff: HandoffDto;
   record?: Record<string, unknown> | null;
-  afterCallWork?: AfterCallWorkDto | Record<string, unknown> | null;
-  followUp?: FollowUpTaskDto | Record<string, unknown> | null;
+  afterCallWork?: AfterCallWorkDto | null;
+  followUp?: FollowUpTaskDto | null;
 };
 
 export const normalizeHandoffDetail = (
@@ -157,12 +157,10 @@ export const normalizeHandoffDetail = (
         | undefined,
       afterCallWork: Reflect.get(data, 'after_call_work') as
         | AfterCallWorkDto
-        | Record<string, unknown>
         | null
         | undefined,
       followUp: Reflect.get(data, 'follow_up') as
         | FollowUpTaskDto
-        | Record<string, unknown>
         | null
         | undefined,
     };
