@@ -32,6 +32,7 @@ import {
   updateAdminAgentSceneScopes,
 } from '@/services/ruoyi/agent-console';
 import { listUsers, type RuoyiUser } from '@/services/ruoyi/user';
+import AgentName from '../../components/AgentName';
 import {
   AdminMetricRow,
   formatDateTime,
@@ -63,7 +64,7 @@ const AgentAdminPage = () => {
   const [detailRecord, setDetailRecord] = useState<AdminAgentDto>();
   const [detailPresence, setDetailPresence] = useState<AgentPresenceDto>();
   const [userOptions, setUserOptions] = useState<
-    { label: string; value: string }[]
+    { label: React.ReactNode; value: string }[]
   >([]);
 
   const loadUsers = async (keyword = '') => {
@@ -100,7 +101,7 @@ const AgentAdminPage = () => {
     setUserOptions([
       {
         value: record.user_id,
-        label: `${record.nick_name || record.user_name || record.agent_identity}`,
+        label: <AgentName identity={record.agent_identity} />,
       },
     ]);
     setFormOpen(true);
@@ -164,7 +165,7 @@ const AgentAdminPage = () => {
         render: (_, row) => (
           <div>
             <Text strong>
-              {row.nick_name || row.user_name || row.agent_identity}
+              <AgentName identity={row.agent_identity} />
             </Text>
             <div>
               <Text type="secondary">{row.agent_identity}</Text>
@@ -218,7 +219,14 @@ const AgentAdminPage = () => {
                       onClick: () =>
                         Modal.confirm({
                           title: '确认释放异常占用',
-                          content: `仅在已确认没有活动 Room 或客户通话后执行。将释放坐席 ${row.agent_identity} 的异常占用，并记录审计。`,
+                          content: (
+                            <>
+                              仅在已确认没有活动 Room
+                              或客户通话后执行。将释放坐席{' '}
+                              <AgentName identity={row.agent_identity} />
+                              的异常占用，并记录审计。
+                            </>
+                          ),
                           okText: '确认释放',
                           okType: 'danger',
                           cancelText: '取消',
@@ -416,10 +424,7 @@ const AgentAdminPage = () => {
             {
               key: 'agent',
               label: '坐席',
-              children:
-                detailRecord?.nick_name ||
-                detailRecord?.user_name ||
-                detailRecord?.agent_identity,
+              children: <AgentName identity={detailRecord?.agent_identity} />,
             },
             {
               key: 'status',

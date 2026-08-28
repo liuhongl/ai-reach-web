@@ -4,27 +4,39 @@ import {
   type AdminAgentDto,
   listAdminAgents,
 } from '@/services/ruoyi/agent-console';
+import { listUsers, type RuoyiUser } from '@/services/ruoyi/user';
 
 type AgentNameMap = Record<string, string>;
 
 let agentNamesPromise: Promise<AgentNameMap> | undefined;
 
+const pageRows = <T,>(response: unknown): T[] => {
+  if (!response || typeof response !== 'object') return [];
+  const data = Reflect.get(response, 'data');
+  const rows =
+    Reflect.get(response, 'rows') ||
+    (data && typeof data === 'object' ? Reflect.get(data, 'rows') : undefined);
+  return Array.isArray(rows) ? (rows as T[]) : [];
+};
+
 const loadAgentNames = () => {
-  agentNamesPromise ??= listAdminAgents({ pageSize: 100 }).then((response) => {
-    const data =
-      response && typeof response === 'object' && Reflect.get(response, 'data')
-        ? Reflect.get(response, 'data')
-        : response;
-    const rows =
-      data &&
-      typeof data === 'object' &&
-      Array.isArray(Reflect.get(data, 'rows'))
-        ? (Reflect.get(data, 'rows') as AdminAgentDto[])
-        : [];
+  agentNamesPromise ??= Promise.all([
+    listAdminAgents({ pageSize: 100 }),
+    listUsers({ pageNum: 1, pageSize: 100 }).catch(() => undefined),
+  ]).then(([agentResponse, userResponse]) => {
+    const agents = pageRows<AdminAgentDto>(agentResponse);
+    const userNames = new Map<string, string>();
+    for (const user of pageRows<RuoyiUser>(userResponse)) {
+      const name = user.nickName || user.userName;
+      if (user.userId != null && name) userNames.set(String(user.userId), name);
+    }
     return Object.fromEntries(
-      rows.map((row) => [
+      agents.map((row) => [
         row.agent_identity,
-        row.nick_name || row.user_name || row.agent_identity,
+        userNames.get(String(row.user_id)) ||
+          row.nick_name ||
+          row.user_name ||
+          row.agent_identity,
       ]),
     );
   });
