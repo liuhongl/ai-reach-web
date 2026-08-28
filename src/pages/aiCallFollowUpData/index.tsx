@@ -148,6 +148,7 @@ const ClassificationTag = ({ row }: { row: FollowUpDataRow }) => (
       {row.classification_source ? (
         <Tag>{classificationSourceLabels[row.classification_source]}</Tag>
       ) : null}
+      {row.suggest_review ? <Tag color="warning">待人工复核</Tag> : null}
       {row.after_call_result_status === 'pending' ? (
         <Tag color="processing">话后结果待提交</Tag>
       ) : null}
@@ -813,7 +814,8 @@ const FollowUpDataPage = () => {
               >
                 查看回访任务
               </Button>
-            ) : ['interested', 'nurturing'].includes(row.classification) ? (
+            ) : !row.suggest_review &&
+              ['interested', 'nurturing'].includes(row.classification) ? (
               <Button
                 type="link"
                 size="small"

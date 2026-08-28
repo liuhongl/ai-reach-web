@@ -1328,8 +1328,8 @@ const AiCallRecordsPage = () => {
   const classificationReviewPrompt = classificationConflict
     ? 'AI 建议分类与当前业务分类不一致，请在下方保留、采纳或修改分类，完成人工复核。'
     : analysisResult.evidence_conflict === true
-      ? 'AI 分类依据与对话证据存在冲突，请在下方采纳 AI 分类或修改分类，完成人工复核。'
-      : 'AI 分类置信度较低，请在下方采纳 AI 分类或修改分类，完成人工复核。';
+      ? 'AI 分类与当前业务分类一致，但分类依据与对话证据存在冲突，请确认当前分类或修改分类，完成人工复核。'
+      : 'AI 分类与当前业务分类一致，但分类置信度较低，请确认当前分类或修改分类，完成人工复核。';
   const activeFollowUpId =
     detail?.followUpData?.activeFollowUpId ||
     (followUp?.status === 'pending' || followUp?.status === 'processing'
@@ -1851,7 +1851,9 @@ const AiCallRecordsPage = () => {
                           variant="outlined"
                           onClick={() => void adoptAiClassification()}
                         >
-                          采纳 AI 分类
+                          {classificationConflict
+                            ? '采纳 AI 分类'
+                            : '确认当前分类'}
                         </Button>
                       </>
                     ) : null}

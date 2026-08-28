@@ -879,7 +879,7 @@ describe('AI Call 通话记录页面', () => {
     );
     expect(
       within(customerFollowUpSection).getByText(
-        'AI 分类依据与对话证据存在冲突，请在下方采纳 AI 分类或修改分类，完成人工复核。',
+        'AI 分类与当前业务分类一致，但分类依据与对话证据存在冲突，请确认当前分类或修改分类，完成人工复核。',
       ),
     ).toBeTruthy();
     const confidence = within(detailDrawer).getByTestId(
@@ -891,17 +891,22 @@ describe('AI Call 通话记录页面', () => {
         'AI 分类依据与对话证据不一致，需人工确认最终分类。',
       ),
     ).toBeTruthy();
-    const adoptButton = within(customerFollowUpSection).getByRole('button', {
-      name: '采纳 AI 分类',
+    const confirmButton = within(customerFollowUpSection).getByRole('button', {
+      name: '确认当前分类',
     });
+    expect(
+      within(customerFollowUpSection).queryByRole('button', {
+        name: '采纳 AI 分类',
+      }),
+    ).toBeNull();
     const editButton = within(customerFollowUpSection).getByRole('button', {
       name: '修改分类',
     });
-    for (const button of [adoptButton, editButton]) {
+    for (const button of [confirmButton, editButton]) {
       expect(button.className).toContain('ant-btn-color-primary');
       expect(button.className).toContain('ant-btn-variant-outlined');
     }
-    fireEvent.click(adoptButton);
+    fireEvent.click(confirmButton);
 
     await waitFor(() =>
       expect(reviewAiCallRecordClassification).toHaveBeenCalledWith(

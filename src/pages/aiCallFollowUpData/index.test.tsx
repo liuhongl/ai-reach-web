@@ -247,6 +247,20 @@ describe('跟进数据页面', () => {
     expect(within(scheduleDialog).getByText('计划回访时间')).toBeTruthy();
   });
 
+  it('待人工复核时标记状态并禁止安排后续回访', async () => {
+    (listFollowUpData as jest.Mock).mockResolvedValue({
+      rows: [{ ...row, suggest_review: true }],
+      total: 1,
+    });
+
+    render(<FollowUpDataPage />);
+
+    expect(await screen.findByText('待人工复核')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: '安排后续回访' })).toBeNull();
+    expect(screen.getByRole('button', { name: '立即人工外呼' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '调整分类' })).toBeTruthy();
+  });
+
   it('调整分类时同时提交人工修正后的沟通结论', async () => {
     render(<FollowUpDataPage />);
 
