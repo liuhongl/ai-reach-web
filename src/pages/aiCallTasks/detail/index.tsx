@@ -95,6 +95,13 @@ const getConnectedStatTitle = (task: AiCallTask) => {
 
 const getLatestResultLabel = (target: AiCallTaskTarget) => {
   if (!target.latestResult) return '—';
+  if (
+    target.latestResult === 'no_answer' &&
+    (target.providerStatusCode === '480' ||
+      target.hangupCause === 'USER_UNAVAILABLE')
+  ) {
+    return '被叫暂时不可用（SIP 480）';
+  }
   const result = callResultLabels[target.latestResult] || target.latestResult;
   if (target.latestDialerType !== 'mock') return result;
   return target.latestResult === 'connected'
@@ -372,6 +379,21 @@ const AiCallTaskDetailPage = () => {
                     ? 'Web（浏览器）'
                     : '电话（SIP 线路）',
               },
+              {
+                key: 'executionMode',
+                label: '执行计划',
+                children:
+                  task.executionMode === 'scheduled' ? '定时执行' : '立即执行',
+              },
+              ...(task.executionMode === 'scheduled'
+                ? [
+                    {
+                      key: 'scheduledAt',
+                      label: '计划执行时间',
+                      children: task.scheduledAt || '—',
+                    },
+                  ]
+                : []),
             ]}
             styles={{
               content: { minWidth: 0, overflowWrap: 'anywhere' },

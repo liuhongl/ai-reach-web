@@ -291,4 +291,46 @@ describe('AI Call task detail page', () => {
     expect(await screen.findByText('模拟执行完成')).toBeTruthy();
     expect(screen.queryByText('已接通')).toBeNull();
   });
+
+  it('shows the planned execution time for a scheduled task', async () => {
+    const task = await mockedGetTask();
+    mockedGetTask.mockResolvedValue({
+      ...task,
+      executionMode: 'scheduled',
+      scheduledAt: '2026-08-28 20:30:00',
+    });
+
+    render(<AiCallTaskDetailPage />);
+
+    expect(await screen.findByText('执行计划')).toBeTruthy();
+    expect(screen.getByText('定时执行')).toBeTruthy();
+    expect(screen.getByText('计划执行时间')).toBeTruthy();
+    expect(screen.getByText('2026-08-28 20:30:00')).toBeTruthy();
+  });
+
+  it('does not flatten SIP 480 into generic no answer', async () => {
+    mockedListTargets.mockResolvedValue({
+      rows: [
+        {
+          targetId: 'target-1',
+          taskId: 'task-1',
+          customerName: '张先生',
+          phoneNumber: '19900001001',
+          status: 'COMPLETED',
+          attemptCount: 1,
+          latestResult: 'no_answer',
+          providerStatusCode: '480',
+          providerReason: 'SIP 480 Temporarily Unavailable',
+          hangupCause: 'USER_UNAVAILABLE',
+          updatedAt: '2026-08-28 20:29:51',
+        },
+      ],
+      total: 1,
+    });
+
+    render(<AiCallTaskDetailPage />);
+
+    expect(await screen.findByText('被叫暂时不可用（SIP 480）')).toBeTruthy();
+    expect(screen.queryByText('无人接听')).toBeNull();
+  });
 });
