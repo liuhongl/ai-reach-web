@@ -31,6 +31,14 @@ describe('handoff administration page', () => {
       '暂无可播放录音',
       '快速话后结果',
       '关联跟进任务',
+      '客户分类',
+      '沟通结论',
+      '后续安排',
+      '提交坐席',
+      '任务状态',
+      '跟进原因',
+      '负责坐席',
+      '应回访时间',
       '重新核对状态',
       '查看详情',
       'getHandoffReasonLabel',
@@ -61,6 +69,7 @@ describe('handoff administration page', () => {
     expect(source).not.toContain('重新补偿');
     expect(source).not.toContain('修改正常结果');
     expect(source).not.toContain("row.status === 'failed'");
+    expect(source).not.toContain('followUpTaskName');
   });
 
   it('keeps the filter area to common conditions and reuses record dialogue bubbles', () => {

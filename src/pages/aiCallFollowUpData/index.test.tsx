@@ -175,7 +175,7 @@ describe('跟进数据页面', () => {
 
     fireEvent.click(await screen.findByRole('button', { name: '详情' }));
     expect(getFollowUpData).toHaveBeenCalledWith('100');
-    const drawer = await findDialogByTitle('跟进数据详情');
+    const drawer = await findDialogByTitle('客户跟进档案详情');
     expect(within(drawer).getByText('客户要求安排产品演示')).toBeTruthy();
     fireEvent.click(
       within(drawer).getByRole('button', { name: '查看本次通话详情' }),
@@ -216,7 +216,7 @@ describe('跟进数据页面', () => {
 
     render(<FollowUpDataPage />);
     fireEvent.click(await screen.findByRole('button', { name: '详情' }));
-    const drawer = await findDialogByTitle('跟进数据详情');
+    const drawer = await findDialogByTitle('客户跟进档案详情');
 
     expect(within(drawer).getByText('未接通')).toBeTruthy();
     expect(within(drawer).getByText(/呼叫耗时 0分9秒/)).toBeTruthy();

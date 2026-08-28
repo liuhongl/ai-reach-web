@@ -348,12 +348,15 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
           />
         )}
       </section>
-      <section hidden={isManualCallback && !afterCallWork}>
+      <section
+        data-testid="analysis-result-section"
+        hidden={isManualCallback && !afterCallWork}
+      >
         {afterCallWork ? (
           <>
             <Title level={5}>坐席最终处置</Title>
             <Descriptions
-              column={1}
+              column={2}
               styles={detailDescriptionStyles}
               items={[
                 {
@@ -378,11 +381,6 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
                   ),
                 },
                 {
-                  key: 'summary',
-                  label: '处理备注',
-                  children: afterCallWork.summary || '-',
-                },
-                {
                   key: 'agent',
                   label: '提交坐席',
                   children: (
@@ -390,16 +388,23 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
                   ),
                 },
                 {
+                  key: 'summary',
+                  label: '处理备注',
+                  children: afterCallWork.summary || '-',
+                  span: 2,
+                },
+                {
                   key: 'time',
                   label: '提交时间',
                   children: formatDateTime(afterCallWork.submittedAt),
+                  span: 2,
                 },
               ]}
             />
           </>
         ) : (
           <>
-            <Title level={5}>AI 分析与转人工</Title>
+            <Title level={5}>AI 分析结果</Title>
             {errors.analysis ? (
               <Alert showIcon title={errors.analysis} type="error" />
             ) : analysis ? (
@@ -429,18 +434,13 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
             )}
           </>
         )}
+      </section>
+      <section data-testid="handoff-result-section" hidden={isManualCallback}>
+        <Title level={5}>转人工结果</Title>
         {errors.handoffs ? (
-          <div hidden={isManualCallback}>
-            <Alert showIcon title={errors.handoffs} type="error" />
-          </div>
+          <Alert showIcon title={errors.handoffs} type="error" />
         ) : handoffs.length ? (
-          <Flex
-            data-testid="handoff-details"
-            hidden={isManualCallback}
-            vertical
-            gap={8}
-            style={{ marginTop: 16 }}
-          >
+          <Flex data-testid="handoff-details" vertical gap={8}>
             {handoffs.map((handoff) => (
               <Descriptions
                 key={handoff.handoffId}
@@ -481,12 +481,10 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
             ))}
           </Flex>
         ) : (
-          <div hidden={isManualCallback}>
-            <Empty
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              description="本次未转人工"
-            />
-          </div>
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="本次未转人工"
+          />
         )}
       </section>
     </Flex>

@@ -53,6 +53,13 @@ const detailDescriptionStyles = {
   label: { color: '#1f1f1f' },
 };
 
+const classificationLabels: Record<string, string> = {
+  interested: '有意向',
+  nurturing: '持续跟进',
+  low_value: '低价值',
+  converted: '已转化',
+};
+
 const terminalHandoffStatuses = new Set([
   'completed',
   'expired',
@@ -286,19 +293,22 @@ const HandoffAdminPage = () => {
   const recordingUrl =
     recording?.playUrl ||
     recording?.tracks?.find((track) => track.playUrl)?.playUrl;
-  const afterCallWorkSummary = detail?.afterCallWork
-    ? Reflect.get(detail.afterCallWork, 'summary')
+  const afterCallWork = detail?.afterCallWork;
+  const afterCallClassification = afterCallWork
+    ? String(Reflect.get(afterCallWork, 'classification') || '')
+    : '';
+  const afterCallDisposition = afterCallWork
+    ? String(Reflect.get(afterCallWork, 'disposition_code') || '')
+    : '';
+  const afterCallNeedsFollowUp =
+    afterCallWork && Reflect.get(afterCallWork, 'needs_follow_up') === true;
+  const afterCallNextFollowUpAt = afterCallWork
+    ? (Reflect.get(afterCallWork, 'next_follow_up_at') as string | undefined)
     : undefined;
-  const followUpReason = detail?.followUp
-    ? Reflect.get(detail.followUp, 'follow_up_reason')
-    : undefined;
-  const followUpSummary = detail?.followUp
-    ? Reflect.get(detail.followUp, 'summary')
-    : undefined;
-  const followUpTaskName =
-    (typeof followUpReason === 'string' && followUpReason.trim()) ||
-    (typeof followUpSummary === 'string' && followUpSummary.trim()) ||
-    '无';
+  const followUp = detail?.followUp;
+  const followUpStatus = followUp
+    ? String(Reflect.get(followUp, 'status') || '')
+    : '';
 
   return (
     <ListPage className="agent-admin-page" title="转人工记录">
@@ -585,23 +595,125 @@ const HandoffAdminPage = () => {
             </section>
             <section className="agent-admin-detail-section">
               <Title level={5}>快速话后结果</Title>
-              <Text>
-                {typeof afterCallWorkSummary === 'string' &&
-                afterCallWorkSummary.trim()
-                  ? afterCallWorkSummary
-                  : getAfterCallWorkLabel(
-                      detail?.afterCallWork
-                        ? (Reflect.get(
-                            detail.afterCallWork,
-                            'disposition_code',
-                          ) as string | undefined)
-                        : undefined,
-                    )}
-              </Text>
+              {afterCallWork ? (
+                <Descriptions
+                  column={2}
+                  styles={detailDescriptionStyles}
+                  items={[
+                    {
+                      key: 'classification',
+                      label: '客户分类',
+                      children: (
+                        <Tag>
+                          {classificationLabels[afterCallClassification] ||
+                            getAfterCallWorkLabel(afterCallDisposition)}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      key: 'schedule',
+                      label: '后续安排',
+                      children: afterCallNeedsFollowUp
+                        ? afterCallNextFollowUpAt
+                          ? formatDateTime(afterCallNextFollowUpAt)
+                          : '需要跟进，暂未约定时间'
+                        : '暂不安排回访',
+                    },
+                    {
+                      key: 'summary',
+                      label: '沟通结论',
+                      children:
+                        String(Reflect.get(afterCallWork, 'summary') || '') ||
+                        '-',
+                      span: 2,
+                    },
+                    {
+                      key: 'agent',
+                      label: '提交坐席',
+                      children: (
+                        <AgentName
+                          identity={String(
+                            Reflect.get(afterCallWork, 'agent_identity') || '',
+                          )}
+                        />
+                      ),
+                    },
+                    {
+                      key: 'submittedAt',
+                      label: '提交时间',
+                      children: formatDateTime(
+                        Reflect.get(afterCallWork, 'submitted_at') as
+                          | string
+                          | undefined,
+                      ),
+                    },
+                  ]}
+                />
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="尚未提交话后结果"
+                />
+              )}
             </section>
             <section className="agent-admin-detail-section">
               <Title level={5}>关联跟进任务</Title>
-              <Text>{followUpTaskName}</Text>
+              {followUp ? (
+                <Descriptions
+                  column={2}
+                  styles={detailDescriptionStyles}
+                  items={[
+                    {
+                      key: 'id',
+                      label: '任务编号',
+                      children: String(Reflect.get(followUp, 'id') || '-'),
+                    },
+                    {
+                      key: 'status',
+                      label: '任务状态',
+                      children: (
+                        <Tag color={statusColors[followUpStatus]}>
+                          {statusLabels[followUpStatus] || followUpStatus || '-'}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      key: 'reason',
+                      label: '跟进原因',
+                      children: String(
+                        Reflect.get(followUp, 'follow_up_reason') || '-',
+                      ),
+                      span: 2,
+                    },
+                    {
+                      key: 'owner',
+                      label: '负责坐席',
+                      children: (
+                        <AgentName
+                          identity={String(
+                            Reflect.get(followUp, 'owner_agent_identity') || '',
+                          )}
+                          emptyText="待认领"
+                        />
+                      ),
+                    },
+                    {
+                      key: 'callbackAt',
+                      label: '应回访时间',
+                      children: formatDateTime(
+                        Reflect.get(followUp, 'customer_callback_at') as
+                          | string
+                          | undefined,
+                      ),
+                    },
+                  ]}
+                />
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="未创建关联跟进任务"
+                />
+              )}
             </section>
           </div>
         ) : null}

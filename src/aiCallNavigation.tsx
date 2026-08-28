@@ -54,12 +54,12 @@ export const AI_CALL_NAV_ITEMS: AiCallNavItem[] = [
     permission: 'ai_call:agent:manage',
   },
   {
-    name: '跟进总览',
+    name: '回访任务总览',
     path: '/ai-call/follow-up-overview',
     permission: 'ai_call:agent:manage',
   },
   {
-    name: '跟进数据',
+    name: '客户跟进档案',
     path: '/ai-call/follow-up-data',
     permission: 'ai_call:agent:manage',
   },
@@ -111,7 +111,7 @@ const AI_CALL_MENU: AiCallMenuItem[] = [
   },
   {
     name: '跟进',
-    children: [findNavItem('跟进总览'), findNavItem('跟进数据')],
+    children: [findNavItem('回访任务总览'), findNavItem('客户跟进档案')],
   },
   {
     name: '规则配置',

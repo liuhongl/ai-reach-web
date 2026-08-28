@@ -7,10 +7,36 @@
   margin-bottom: 0;
 }
 
+.agent-after-call-result-form .ant-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+}
+
+.agent-after-call-result-section {
+  padding: 20px;
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  background: #fafafa;
+}
+
+.agent-after-call-result-section > .ant-typography {
+  margin-top: 0;
+}
+
 .agent-after-call-result-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-top: 4px;
+  padding-top: 4px;
+}
+
+.agent-after-call-result-footer > :first-child {
+  margin-inline-end: auto;
+}
+
+.agent-after-call-result-footer .ant-btn-primary {
+  min-width: 112px;
 }

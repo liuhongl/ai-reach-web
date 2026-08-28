@@ -31,7 +31,7 @@ const sourceLabels: Record<string, string> = {
 
 const followUpStatusLabels: Record<FollowUpTaskDto['status'], string> = {
   pending: '待处理',
-  processing: '处理中',
+  processing: '已认领待处理',
   completed: '已办结',
   closed: '已终止',
 };
@@ -250,7 +250,7 @@ export const FollowUpOverviewPage = () => {
   );
 
   return (
-    <ListPage className="agent-admin-page" title="跟进总览">
+    <ListPage className="agent-admin-page" title="回访任务总览">
       <AdminMetricRow
         items={[
           {

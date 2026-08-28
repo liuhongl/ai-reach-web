@@ -428,7 +428,11 @@ describe('AI Call 通话记录页面', () => {
     const drawer = await screen.findByRole('dialog', {
       name: '通话记录详情',
     });
-    expect(within(drawer).getByText('待提交话后结果')).toBeTruthy();
+    expect(
+      within(drawer)
+        .getByText('待提交话后结果')
+        .closest('.agent-after-call-result-section'),
+    ).toBeTruthy();
     fireEvent.click(
       within(drawer).getByRole('button', { name: '提交话后结果' }),
     );
@@ -1671,7 +1675,12 @@ describe('AI Call 通话记录页面', () => {
     expect(within(detailDrawer).getByText('客户意向')).toBeTruthy();
     expect(within(analysisSection).getByText('AI 建议分类')).toBeTruthy();
     expect(within(detailDrawer).getByText('分类原因')).toBeTruthy();
-    expect(within(detailDrawer).getByText('判断依据')).toBeTruthy();
+    expect(within(detailDrawer).getByText('客户原话依据')).toBeTruthy();
+    expect(
+      within(detailDrawer).getByText(
+        '仅展示 AI 用于分类判断的客户原话，不是完整对话。',
+      ),
+    ).toBeTruthy();
     expect(within(detailDrawer).getByText('分类置信度')).toBeTruthy();
     expect(
       within(detailDrawer).getByText('客户明确表达了解产品价格的意向'),
@@ -2101,8 +2110,12 @@ describe('AI Call 通话记录页面', () => {
     expect(summary.textContent).toContain('留下联系方式');
     expect(within(detailDrawer).queryByText('询问 CU 能力')).toBeNull();
     expect(within(detailDrawer).queryByText('关注收费方式')).toBeNull();
-    expect(within(detailDrawer).getAllByText('接受试用安排')).toHaveLength(1);
-    expect(within(detailDrawer).getAllByText('留下联系方式')).toHaveLength(1);
+    expect(
+      within(detailDrawer).getAllByText('客户：接受试用安排'),
+    ).toHaveLength(1);
+    expect(
+      within(detailDrawer).getAllByText('客户：留下联系方式'),
+    ).toHaveLength(1);
     expect(within(detailDrawer).queryByText('其余 1 条')).toBeNull();
     expect(
       within(analysisSection).getByText('有意向').closest('.ant-tag'),

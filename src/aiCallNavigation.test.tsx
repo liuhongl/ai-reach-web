@@ -37,7 +37,7 @@ describe('AI Call navigation', () => {
       menu
         .find((item) => item.name === '跟进')
         ?.children?.map((item) => item.name),
-    ).toEqual(['跟进总览', '跟进数据']);
+    ).toEqual(['回访任务总览', '客户跟进档案']);
     expect(
       menu
         .find((item) => item.name === '规则配置')

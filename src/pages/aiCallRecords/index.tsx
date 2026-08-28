@@ -1503,7 +1503,7 @@ const AiCallRecordsPage = () => {
             </section>
 
             {record.afterCallResultStatus === 'pending' ? (
-              <section>
+              <section className="agent-after-call-result-section">
                 <Title level={5}>待提交话后结果</Title>
                 <Alert
                   type="warning"
@@ -1692,7 +1692,7 @@ const AiCallRecordsPage = () => {
               <section>
                 <Title level={5}>坐席最终处置</Title>
                 <Descriptions
-                  column={1}
+                  column={2}
                   styles={detailDescriptionStyles}
                   items={[
                     {
@@ -1718,11 +1718,6 @@ const AiCallRecordsPage = () => {
                       ),
                     },
                     {
-                      key: 'summary',
-                      label: '处理备注',
-                      children: afterCallWork.summary || '-',
-                    },
-                    {
                       key: 'agent',
                       label: '提交坐席',
                       children: (
@@ -1730,9 +1725,16 @@ const AiCallRecordsPage = () => {
                       ),
                     },
                     {
+                      key: 'summary',
+                      label: '处理备注',
+                      children: afterCallWork.summary || '-',
+                      span: 2,
+                    },
+                    {
                       key: 'submittedAt',
                       label: '提交时间',
                       children: formatDateTime(afterCallWork.submittedAt),
+                      span: 2,
                     },
                   ]}
                 />

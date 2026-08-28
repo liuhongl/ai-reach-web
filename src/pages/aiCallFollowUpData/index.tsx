@@ -186,14 +186,14 @@ const FollowUpDataDetailDrawer = ({
 
   return (
     <Drawer
-      title={selectedCallId ? '通话记录详情' : '跟进数据详情'}
+      title={selectedCallId ? '通话记录详情' : '客户跟进档案详情'}
       open={open}
       loading={loading}
       size={selectedCallId ? 860 : 620}
       extra={
         selectedCallId ? (
           <Button type="link" onClick={() => setSelectedCallId(undefined)}>
-            返回跟进数据详情
+            返回客户跟进档案详情
           </Button>
         ) : null
       }
@@ -640,7 +640,7 @@ const FollowUpDataPage = () => {
       if (requestId === detailRequestIdRef.current) setDetail(nextDetail);
     } catch {
       if (requestId === detailRequestIdRef.current) {
-        setDetailError('跟进数据详情加载失败，请重试');
+        setDetailError('客户跟进档案详情加载失败，请重试');
       }
     } finally {
       if (requestId === detailRequestIdRef.current) setDetailLoading(false);
@@ -832,7 +832,7 @@ const FollowUpDataPage = () => {
   );
 
   return (
-    <ListPage title="跟进数据">
+    <ListPage title="客户跟进档案">
       {messageContextHolder}
       <Tabs
         className="agent-follow-up-scope-tabs"

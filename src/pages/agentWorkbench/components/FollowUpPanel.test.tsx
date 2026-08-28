@@ -136,7 +136,9 @@ describe('FollowUpPanel', () => {
     expect(await screen.findByText('138****0000')).toBeTruthy();
     expect(screen.getByRole('columnheader', { name: '客户' })).toBeTruthy();
     expect(screen.getByRole('columnheader', { name: '所属任务' })).toBeTruthy();
-    expect(screen.getByRole('columnheader', { name: '创建时间' })).toBeTruthy();
+    expect(
+      screen.getByRole('columnheader', { name: '任务创建时间' }),
+    ).toBeTruthy();
     expect(screen.getByLabelText('客户姓名')).toBeTruthy();
     expect(screen.queryByLabelText('业务场景')).toBeNull();
     expect(screen.queryByLabelText('回访状态')).toBeNull();
@@ -464,7 +466,7 @@ describe('FollowUpPanel', () => {
     fireEvent.click(screen.getByRole('tab', { name: /我的任务/ }));
     expect(await screen.findByText('张三')).toBeTruthy();
     expect(screen.getByText('GEO 产品回访')).toBeTruthy();
-    expect(screen.getByText('处理中')).toBeTruthy();
+    expect(screen.getByText('已认领待处理')).toBeTruthy();
     expect(screen.queryByRole('button', { name: '提交处理结果' })).toBeNull();
     expect(screen.queryByRole('button', { name: '登记联系结果' })).toBeNull();
     expect(screen.queryByRole('button', { name: '完成任务' })).toBeNull();

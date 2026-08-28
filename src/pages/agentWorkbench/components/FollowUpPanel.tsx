@@ -100,7 +100,7 @@ const unwrapData = (response: unknown) =>
 
 const followUpStatusLabels: Record<FollowUpTaskDto['status'], string> = {
   pending: '待认领',
-  processing: '处理中',
+  processing: '已认领待处理',
   completed: '已办结',
   closed: '已终止',
 };
@@ -443,7 +443,7 @@ const FollowUpPanel = ({
       renderText: (value) => value || '-',
     },
     {
-      title: '创建时间',
+      title: '任务创建时间',
       dataIndex: 'createdAtRange',
       valueType: 'dateRange',
       width: 180,
@@ -470,7 +470,7 @@ const FollowUpPanel = ({
             valueType: 'select' as const,
             valueEnum: {
               pending: { text: '待跟进' },
-              processing: { text: '处理中' },
+              processing: { text: '已认领待处理' },
               completed: { text: '已办结' },
               closed: { text: '已终止' },
             },

@@ -144,7 +144,9 @@ describe('CallRecordDetailContent', () => {
         feedback_type: '中性',
         classification: 'nurturing',
         reason: '客户有初步兴趣，但未约定下一步',
+        evidence: ['你们是怎么优化的？'],
         confidence: 'low',
+        low_value_reason: 'no_current_need',
       },
       analysisRetryCount: 0,
     });
@@ -165,6 +167,12 @@ describe('CallRecordDetailContent', () => {
     expect(screen.getByText('客户询问了试用方案。')).toBeTruthy();
     expect(screen.getByText('AI 建议分类')).toBeTruthy();
     expect(screen.getByText('持续跟进')).toBeTruthy();
+    expect(screen.getByText('客户原话依据')).toBeTruthy();
+    expect(
+      screen.getByText('仅展示 AI 用于分类判断的客户原话，不是完整对话。'),
+    ).toBeTruthy();
+    expect(screen.getByText('客户：你们是怎么优化的？')).toBeTruthy();
+    expect(screen.queryByText('低价值原因')).toBeNull();
   });
 
   it('区分处理状态、失败结果和转人工失败原因', async () => {
@@ -233,13 +241,22 @@ describe('CallRecordDetailContent', () => {
     });
     (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue(null);
     (getAiCallRecordHandoffs as jest.Mock).mockResolvedValue({
-      rows: [],
-      total: 0,
+      rows: [
+        {
+          handoffId: 'handoff-acw',
+          status: 'completed',
+          requestReason: 'customer_request',
+          humanAgentIdentity: 'agent-admin',
+        },
+      ],
+      total: 1,
     });
 
     render(<CallRecordDetailContent callId="call-acw" />);
 
     expect(await screen.findByText('持续跟进')).toBeTruthy();
+    expect(screen.getByText('转人工结果')).toBeTruthy();
+    expect(screen.getByTestId('handoff-result-section')).toBeTruthy();
   });
 
   it('人工回拨详情不展示 AI 分析和转人工模块', async () => {
@@ -271,8 +288,7 @@ describe('CallRecordDetailContent', () => {
 
     expect(await screen.findByText('人工回拨')).toBeTruthy();
     expect(screen.getByText('录音与对话')).toBeTruthy();
-    expect(screen.getByText('AI 分析与转人工').closest('section')?.hidden).toBe(
-      true,
-    );
+    expect(screen.getByTestId('analysis-result-section').hidden).toBe(true);
+    expect(screen.getByTestId('handoff-result-section').hidden).toBe(true);
   });
 });

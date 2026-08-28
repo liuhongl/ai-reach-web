@@ -47,7 +47,7 @@ const analysisFieldLabels: Record<string, string> = {
   customer_intent: '客户意向',
   classification: 'AI 建议分类',
   reason: '分类原因',
-  evidence: '判断依据',
+  evidence: '客户原话依据',
   confidence: '分类置信度',
   evidence_conflict: '证据冲突',
   valid_dialogue: '有效业务对话',
@@ -332,8 +332,11 @@ const renderAnalysisValue = (
     const evidence = Array.from(new Set(value.map(String)));
     return evidence.length ? (
       <Flex vertical gap={4}>
+        <Text type="secondary">
+          仅展示 AI 用于分类判断的客户原话，不是完整对话。
+        </Text>
         {evidence.map((item) => (
-          <Text key={item}>{item}</Text>
+          <Text key={item}>{`客户：${item.replace(/^客户[:：]\s*/u, '')}`}</Text>
         ))}
       </Flex>
     ) : (
@@ -393,6 +396,11 @@ const AnalysisResultDescriptions = ({
           (key) =>
             key !== 'key_points' ||
             !formatAnalysisSummary(analysisResult?.summary),
+        )
+        .filter(
+          (key) =>
+            key !== 'low_value_reason' ||
+            analysisResult?.classification === 'low_value',
         )
         .map((key) => ({
           key,
