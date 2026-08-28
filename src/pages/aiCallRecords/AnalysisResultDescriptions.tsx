@@ -40,7 +40,7 @@ const endReasonLabels: Record<string, string> = {
 const analysisFieldLabels: Record<string, string> = {
   summary: '通话摘要',
   follow_up: '后续跟进建议',
-  feedback_type: '客户反馈',
+  feedback_type: '客户态度（AI）',
   key_points: '关键要点',
   time_hint: '客户确认联系时间',
   tags: '分析标签',

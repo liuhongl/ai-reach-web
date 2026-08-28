@@ -1661,7 +1661,7 @@ describe('AI Call 通话记录页面', () => {
         ?.getAttribute('controlslist'),
     ).toBe('nodownload');
     expect(screen.getAllByText('通话摘要').length).toBeGreaterThan(0);
-    expect(screen.getByText('客户反馈')).toBeTruthy();
+    expect(screen.getByText('客户态度（AI）')).toBeTruthy();
     expect(screen.queryByText('关键要点')).toBeNull();
     expect(screen.getByText('客户确认联系时间')).toBeTruthy();
     expect(screen.queryByText('联系时间', { exact: true })).toBeNull();
