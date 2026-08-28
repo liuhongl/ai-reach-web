@@ -20,7 +20,7 @@ import {
   retryBatchValidation,
   validateSingleTarget,
 } from '../service';
-import AiCallTaskCreatePage from './index';
+import AiCallTaskCreatePage, { getPromptDisplayName } from './index';
 
 const mockPush = jest.fn();
 
@@ -71,6 +71,22 @@ const findFileInput = async (container: HTMLElement) => {
 };
 
 describe('single target AI Call task creation', () => {
+  it('仅在提示词中文名重复时附带场景编码区分', () => {
+    const profiles = [
+      { id: 'prompt-1', name: '客户回访', sceneCode: 'intro_follow_up' },
+      { id: 'prompt-2', name: '客户回访', sceneCode: 'intro_sales' },
+      { id: 'prompt-3', name: '产品介绍', sceneCode: 'intro_product' },
+    ];
+
+    expect(getPromptDisplayName(profiles[0], profiles)).toBe(
+      '客户回访（intro_follow_up）',
+    );
+    expect(getPromptDisplayName(profiles[1], profiles)).toBe(
+      '客户回访（intro_sales）',
+    );
+    expect(getPromptDisplayName(profiles[2], profiles)).toBe('产品介绍');
+  });
+
   beforeEach(() => {
     mockPush.mockReset();
     mockedPromptProfiles.mockReset();

@@ -1799,7 +1799,7 @@ const AiCallRecordsPage = () => {
                         label: '分类复核',
                         children: `${
                           analysis.followUpReviewStatus === 'confirmed'
-                            ? `已采纳 AI 分类：${
+                            ? `已确认分类：${
                                 aiClassification
                                   ? classificationLabels[aiClassification]
                                   : currentClassification

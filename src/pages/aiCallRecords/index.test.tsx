@@ -920,7 +920,7 @@ describe('AI Call 通话记录页面', () => {
     );
     expect(scheduleFollowUpData).not.toHaveBeenCalled();
     expect(
-      await within(detailDrawer).findByText(/已采纳 AI 分类/),
+      await within(detailDrawer).findByText(/已确认分类/),
     ).toBeTruthy();
   });
 
@@ -1030,7 +1030,7 @@ describe('AI Call 通话记录页面', () => {
     });
 
     expect(
-      within(detailDrawer).getByText(/已采纳 AI 分类：有意向/),
+      within(detailDrawer).getByText(/已确认分类：有意向/),
     ).toBeTruthy();
     expect(within(detailDrawer).getByText('持续跟进')).toBeTruthy();
   });
@@ -1191,7 +1191,7 @@ describe('AI Call 通话记录页面', () => {
       ),
     );
     expect(
-      await within(detailDrawer).findByText(/已采纳 AI 分类：低价值/),
+      await within(detailDrawer).findByText(/已确认分类：低价值/),
     ).toBeTruthy();
     expect(
       within(detailDrawer).queryByRole('button', { name: '安排回访' }),
@@ -2000,7 +2000,9 @@ describe('AI Call 通话记录页面', () => {
     const detailDrawer = await screen.findByRole('dialog', {
       name: '通话记录详情',
     });
-    expect(within(detailDrawer).getByText('对方挂断')).toBeTruthy();
+    expect(
+      within(detailDrawer).getByText('通话已结束（挂断方未确认）'),
+    ).toBeTruthy();
     expect(within(detailDrawer).queryByText('sip_participant_left')).toBeNull();
   });
 

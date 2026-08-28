@@ -78,6 +78,18 @@ const formatRuleSummary = (rule: AiCallRule) => {
 const getPromptKey = (profile: AiCallLabPromptProfile) =>
   String(profile.id ?? profile.sceneCode);
 
+export const getPromptDisplayName = (
+  profile: AiCallLabPromptProfile,
+  profiles: AiCallLabPromptProfile[],
+) =>
+  profiles.some(
+    (candidate) =>
+      candidate.name === profile.name &&
+      getPromptKey(candidate) !== getPromptKey(profile),
+  )
+    ? `${profile.name}（${profile.sceneCode}）`
+    : profile.name;
+
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : '操作失败，请稍后重试';
 
@@ -486,7 +498,7 @@ const CreateAiCallTaskPage = () => {
                   loading={loadingConfig}
                   options={promptProfiles.map((profile) => ({
                     value: getPromptKey(profile),
-                    label: profile.name,
+                    label: getPromptDisplayName(profile, promptProfiles),
                   }))}
                   placeholder="请选择提示词"
                 />
@@ -602,7 +614,10 @@ const CreateAiCallTaskPage = () => {
                     : validatedTask.request.scheduledAt || '—'
                 }
                 phoneNumber={validatedTask.values.phoneNumber}
-                promptName={validatedTask.prompt.name}
+                promptName={getPromptDisplayName(
+                  validatedTask.prompt,
+                  promptProfiles,
+                )}
                 ruleName={validatedTask.rule.ruleName}
                 ruleSummary={formatRuleSummary(validatedTask.rule)}
                 taskName={validatedTask.values.taskName}
