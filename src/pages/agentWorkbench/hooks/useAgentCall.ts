@@ -66,6 +66,7 @@ type AgentCallServices = {
 
 export type UseAgentCallOptions = {
   credential?: MediaCredentialDto;
+  resumeHandoff?: HandoffDto;
   consoleSessionId?: string;
   roomFactory?: () => AgentRoomConnection;
   services?: AgentCallServices;
@@ -149,17 +150,21 @@ const stageErrorMessages: Partial<Record<AgentCallConnectionStage, string>> = {
 };
 
 const unwrapCredential = (response: unknown): MediaCredentialDto => {
-  if (response && typeof response === 'object') {
-    const data = Reflect.get(response, 'data');
-    if (
-      data &&
-      typeof data === 'object' &&
-      Reflect.get(data, 'participant_token')
-    ) {
-      return data as MediaCredentialDto;
-    }
+  const payload =
+    response &&
+    typeof response === 'object' &&
+    'data' in response &&
+    (response as { data?: unknown }).data
+      ? (response as { data: unknown }).data
+      : response;
+  if (payload && typeof payload === 'object' && 'seat_token' in payload) {
+    const result = payload as {
+      handoff: HandoffDto;
+      seat_token: Omit<MediaCredentialDto, 'handoff'>;
+    };
+    return { handoff: result.handoff, ...result.seat_token };
   }
-  return response as MediaCredentialDto;
+  return payload as MediaCredentialDto;
 };
 
 export const createLiveKitAgentRoom = (): AgentRoomConnection => {
@@ -273,6 +278,7 @@ const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number) => {
 
 export const useAgentCall = ({
   credential,
+  resumeHandoff,
   consoleSessionId,
   roomFactory = createLiveKitAgentRoom,
   services = defaultServices,
@@ -289,6 +295,7 @@ export const useAgentCall = ({
     useState<AgentNetworkQuality>('unknown');
   const [errorMessage, setErrorMessage] = useState('');
   const roomRef = useRef<AgentRoomConnection | undefined>(undefined);
+  const activeCredentialRef = useRef<MediaCredentialDto | undefined>(undefined);
   const generationRef = useRef(0);
   const connectionStageRef = useRef<AgentCallConnectionStage>('idle');
   const intentionalDisconnectRef = useRef(false);
@@ -322,6 +329,7 @@ export const useAgentCall = ({
 
   const connectCredential = useCallback(
     async (nextCredential: MediaCredentialDto, reconnecting: boolean) => {
+      activeCredentialRef.current = nextCredential;
       const generation = ++generationRef.current;
       const room = roomFactory();
       roomRef.current = room;
@@ -428,13 +436,30 @@ export const useAgentCall = ({
   );
 
   useEffect(() => {
-    if (!credential || !consoleSessionId) {
+    const resumeHandoffId = resumeHandoff?.handoff_id;
+    if ((!credential && !resumeHandoffId) || !consoleSessionId) {
+      activeCredentialRef.current = undefined;
       setPhase('idle');
       updateConnectionStage('idle');
       return;
     }
     let active = true;
-    void connectCredential(credential, false).catch(async (error) => {
+    const restoreAndConnect = async () => {
+      if (credential) {
+        await connectCredential(credential, false);
+        return;
+      }
+      if (!resumeHandoffId) return;
+      setPhase('reconnecting');
+      setErrorMessage('');
+      const response = await services.reconnectToken(
+        resumeHandoffId,
+        idempotencyInput(consoleSessionId),
+      );
+      if (!active) return;
+      await connectCredential(unwrapCredential(response), true);
+    };
+    void restoreAndConnect().catch(async (error) => {
       if (!active) return;
       await disconnectCurrentRoom();
       setPhase('error');
@@ -454,6 +479,8 @@ export const useAgentCall = ({
     consoleSessionId,
     credential,
     disconnectCurrentRoom,
+    resumeHandoff?.handoff_id,
+    services,
     updateConnectionStage,
   ]);
 
@@ -468,8 +495,9 @@ export const useAgentCall = ({
   }, []);
 
   const endCall = useCallback(async () => {
+    const activeCredential = activeCredentialRef.current;
     if (
-      !credential ||
+      !activeCredential ||
       !consoleSessionId ||
       phase === 'ending' ||
       endingRef.current
@@ -481,12 +509,12 @@ export const useAgentCall = ({
     setErrorMessage('');
     try {
       await services.complete(
-        credential.handoff.handoff_id,
+        activeCredential.handoff.handoff_id,
         idempotencyInput(consoleSessionId),
       );
       await disconnectCurrentRoom();
       setPhase('ended');
-      onWrapUp?.(credential.handoff);
+      onWrapUp?.(activeCredential.handoff);
     } catch (error) {
       setPhase('connected');
       setErrorMessage(getErrorMessage(error, '结束通话失败，请重试'));
@@ -498,14 +526,7 @@ export const useAgentCall = ({
     } finally {
       endingRef.current = false;
     }
-  }, [
-    consoleSessionId,
-    credential,
-    disconnectCurrentRoom,
-    onWrapUp,
-    phase,
-    services,
-  ]);
+  }, [consoleSessionId, disconnectCurrentRoom, onWrapUp, phase, services]);
 
   return {
     phase,

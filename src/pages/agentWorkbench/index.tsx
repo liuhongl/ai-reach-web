@@ -92,7 +92,17 @@ const AgentWorkbenchPage = () => {
         setHandoffs([]);
         return;
       }
-      if (agent.status !== 'available' || claimedCredential) return;
+      if (
+        ![
+          'available',
+          'claiming',
+          'in_call',
+          'reconnecting',
+          'wrap_up_quick',
+        ].includes(agent.status)
+      ) {
+        return;
+      }
       if (showLoading) setHandoffsLoading(true);
       try {
         const response = await readWithGatewayRetry(
@@ -127,7 +137,7 @@ const AgentWorkbenchPage = () => {
         if (showLoading) setHandoffsLoading(false);
       }
     },
-    [agent.consoleSessionId, agent.profile, agent.status, claimedCredential],
+    [agent.consoleSessionId, agent.profile, agent.status],
   );
 
   const pollHandoffs = useCallback(() => loadHandoffs(false), [loadHandoffs]);
@@ -142,13 +152,18 @@ const AgentWorkbenchPage = () => {
     refresh: refreshWorkbench,
     pollRefresh: pollHandoffs,
   });
+  const currentHandoff = claimedCredential?.handoff ?? agent.currentHandoff;
+  const resumeHandoff =
+    !claimedCredential && ['in_call', 'reconnecting'].includes(agent.status)
+      ? agent.currentHandoff
+      : undefined;
   const agentCall = useAgentCall({
     credential: claimedCredential,
+    resumeHandoff,
     consoleSessionId: agent.consoleSessionId,
     refresh: loadHandoffs,
     onWrapUp: handleWrapUp,
   });
-  const currentHandoff = claimedCredential?.handoff ?? agent.currentHandoff;
   const nextHandoff = handoffs[0];
   const contextHandoff = currentHandoff ?? nextHandoff;
   const handoffContext = useHandoffContext({

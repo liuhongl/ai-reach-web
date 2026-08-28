@@ -63,7 +63,14 @@ const createServices = () => ({
   mediaReady: jest.fn().mockResolvedValue({ code: 200 }),
   reconnectToken: jest.fn().mockResolvedValue({
     code: 200,
-    data: { ...credential, participant_token: 'reconnect-token' },
+    data: {
+      handoff: credential.handoff,
+      seat_token: {
+        livekit_url: credential.livekit_url,
+        participant_token: 'reconnect-token',
+        participant_identity: credential.participant_identity,
+      },
+    },
   }),
   complete: jest.fn().mockResolvedValue({ code: 200 }),
 });
@@ -104,6 +111,47 @@ describe('useAgentCall', () => {
       />,
     );
     await waitFor(() => expect(roomFactory).toHaveBeenCalledTimes(1));
+  });
+
+  it('reconnects a server-restored active handoff and keeps the hang-up action available', async () => {
+    const room = createRoom();
+    const services = createServices();
+    const onWrapUp = jest.fn();
+    const resumeHandoff = {
+      ...credential.handoff,
+      status: 'connected' as const,
+    };
+
+    render(
+      <Harness
+        options={{
+          resumeHandoff,
+          consoleSessionId: 'session-1',
+          roomFactory: () => room,
+          services,
+          onWrapUp,
+        }}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId('phase').textContent).toBe('connected'),
+    );
+    expect(services.reconnectToken).toHaveBeenCalledWith(
+      resumeHandoff.handoff_id,
+      expect.objectContaining({ consoleSessionId: 'session-1' }),
+    );
+    expect(services.mediaReady).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: '结束' }));
+
+    await waitFor(() =>
+      expect(services.complete).toHaveBeenCalledWith(
+        resumeHandoff.handoff_id,
+        expect.objectContaining({ consoleSessionId: 'session-1' }),
+      ),
+    );
+    expect(onWrapUp).toHaveBeenCalledWith(credential.handoff);
   });
 
   it('reports media-ready only after the microphone is published', async () => {

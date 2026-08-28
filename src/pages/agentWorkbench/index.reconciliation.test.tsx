@@ -124,8 +124,11 @@ describe('AgentWorkbenchPage server reconciliation', () => {
       requestNotificationPermission: jest.fn(),
     });
     mockUseAgentCall.mockImplementation(
-      (options: { credential?: unknown }) => ({
-        phase: options.credential ? 'wrap_up_quick' : 'idle',
+      (options: { credential?: unknown; resumeHandoff?: unknown }) => ({
+        phase:
+          options.credential || options.resumeHandoff
+            ? 'wrap_up_quick'
+            : 'idle',
         connectionStage: 'idle',
         microphoneEnabled: true,
         remoteAudioReady: false,
@@ -163,6 +166,31 @@ describe('AgentWorkbenchPage server reconciliation', () => {
     render(<AgentWorkbenchPage />);
 
     expect(screen.getByText('旧通话话后面板')).toBeTruthy();
+  });
+
+  it('passes a restored active handoff back to the media hook', () => {
+    const activeHandoff = {
+      ...mockCredential.handoff,
+      status: 'connected' as const,
+    };
+    mockPresence = {
+      ...mockPresence,
+      status: 'in_call',
+      presence: {
+        ...mockPresence.presence,
+        status: 'in_call',
+      },
+      currentHandoff: activeHandoff,
+    };
+
+    render(<AgentWorkbenchPage />);
+
+    expect(mockUseAgentCall).toHaveBeenCalledWith(
+      expect.objectContaining({
+        credential: undefined,
+        resumeHandoff: activeHandoff,
+      }),
+    );
   });
 
   it('drops stale local wrap-up state after the server releases the agent', () => {

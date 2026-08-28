@@ -97,6 +97,9 @@ describe('HandoffContextPanel', () => {
   });
 
   it('keeps Ant Design spin wrappers shrinkable so the conversation can scroll', () => {
+    expect(styles).toMatch(
+      /\.agent-handoff-context \{[\s\S]*?height: 100%;[\s\S]*?overflow: hidden;[\s\S]*?\}/,
+    );
     expect(styles).toContain(
       '.agent-handoff-dialogue > .ant-spin-nested-loading,',
     );
@@ -104,7 +107,10 @@ describe('HandoffContextPanel', () => {
       '> .ant-spin-nested-loading > .ant-spin-container',
     );
     expect(styles).toMatch(
-      /\.agent-handoff-dialogue > \.ant-spin-nested-loading,[\s\S]*?\{[\s\S]*?display: flex;[\s\S]*?min-height: 0;[\s\S]*?flex: 1 1 auto;[\s\S]*?flex-direction: column;[\s\S]*?\}/,
+      /\.agent-handoff-dialogue > \.ant-spin-nested-loading,[\s\S]*?\{[\s\S]*?display: flex;[\s\S]*?height: 100%;[\s\S]*?min-height: 0;[\s\S]*?flex: 1 1 auto;[\s\S]*?flex-direction: column;[\s\S]*?overflow: hidden;[\s\S]*?\}/,
+    );
+    expect(styles).toMatch(
+      /\.agent-handoff-dialogue-scroll \{[\s\S]*?height: 100%;[\s\S]*?overflow-y: scroll;[\s\S]*?scrollbar-gutter: stable;[\s\S]*?\}/,
     );
   });
 });

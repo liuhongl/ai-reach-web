@@ -150,6 +150,10 @@ describe('AgentWorkbenchPage presence shell', () => {
     expect(styles).toMatch(
       /> \.ant-pro-page-container-children-container[\s\S]*?\{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;[\s\S]*?height: 100%;[\s\S]*?min-height: 0;[\s\S]*?\}/,
     );
+    expect(styles).toMatch(
+      /\.agent-workbench-context-card \{[\s\S]*?width: 100%;[\s\S]*?max-width: none;[\s\S]*?\}/,
+    );
+    expect(styles).toContain('minmax(440px, 1.2fr)');
   });
 
   it('centers active call controls horizontally without using the empty-state layout', () => {
@@ -307,7 +311,7 @@ describe('AgentWorkbenchPage presence shell', () => {
     expect(screen.queryByText('人工跟进测试替身')).toBeNull();
   });
 
-  it('keeps the last queue snapshot visible when the agent enters a call', async () => {
+  it('keeps refreshing the waiting pool while the agent is in a call', async () => {
     const availablePresence = {
       ...basePresence,
       status: 'available',
@@ -332,6 +336,24 @@ describe('AgentWorkbenchPage presence shell', () => {
         total: 1,
       },
     });
+    mockGetPendingHandoffs.mockResolvedValueOnce({
+      code: 200,
+      data: {
+        rows: [
+          {
+            handoff_id: 'handoff-new-during-call',
+            call_id: 'call-new-during-call',
+            scene_code: 'intro_geo',
+            status: 'requested',
+            masked_customer_name: '王**',
+            masked_contact: '137****0000',
+            request_message: '通话中到达的新请求',
+            requested_at: new Date().toISOString(),
+          },
+        ],
+        total: 1,
+      },
+    });
 
     const view = render(<AgentWorkbenchPage />);
     expect(await screen.findAllByText('李** · 139****0000')).toHaveLength(2);
@@ -343,7 +365,9 @@ describe('AgentWorkbenchPage presence shell', () => {
     view.rerender(<AgentWorkbenchPage />);
     await act(async () => Promise.resolve());
 
-    expect(screen.getAllByText('李** · 139****0000')).toHaveLength(2);
-    expect(mockGetPendingHandoffs).toHaveBeenCalledTimes(1);
+    expect(await screen.findAllByText('王** · 137****0000')).toHaveLength(2);
+    expect(screen.queryByText('李** · 139****0000')).toBeNull();
+    expect(screen.getByText('通话中，暂不可接管')).toBeTruthy();
+    expect(mockGetPendingHandoffs).toHaveBeenCalledTimes(2);
   });
 });
