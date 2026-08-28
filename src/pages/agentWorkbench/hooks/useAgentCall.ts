@@ -415,13 +415,11 @@ export const useAgentCall = ({
         connectTimeoutMs,
       );
       if (generation !== generationRef.current) return;
-      if (!reconnecting) {
-        updateConnectionStage('media_ready_reporting');
-        await services.mediaReady(nextCredential.handoff.handoff_id, {
-          ...idempotencyInput(consoleSessionId || ''),
-          participantIdentity: nextCredential.participant_identity,
-        });
-      }
+      updateConnectionStage('media_ready_reporting');
+      await services.mediaReady(nextCredential.handoff.handoff_id, {
+        ...idempotencyInput(consoleSessionId || ''),
+        participantIdentity: nextCredential.participant_identity,
+      });
       updateConnectionStage('connected');
       setPhase('connected');
     },

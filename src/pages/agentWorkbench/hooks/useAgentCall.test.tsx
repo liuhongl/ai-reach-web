@@ -141,7 +141,13 @@ describe('useAgentCall', () => {
       resumeHandoff.handoff_id,
       expect.objectContaining({ consoleSessionId: 'session-1' }),
     );
-    expect(services.mediaReady).not.toHaveBeenCalled();
+    expect(services.mediaReady).toHaveBeenCalledWith(
+      resumeHandoff.handoff_id,
+      expect.objectContaining({
+        consoleSessionId: 'session-1',
+        participantIdentity: credential.participant_identity,
+      }),
+    );
 
     fireEvent.click(screen.getByRole('button', { name: '结束' }));
 
@@ -323,6 +329,7 @@ describe('useAgentCall', () => {
         'reconnect-token',
       ),
     );
+    await waitFor(() => expect(services.mediaReady).toHaveBeenCalledTimes(2));
   });
 
   it('enters wrap-up without reconnecting when LiveKit deletes the room', async () => {
