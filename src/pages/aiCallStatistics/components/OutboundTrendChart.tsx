@@ -16,10 +16,7 @@ const TREND_COLORS = {
   connectRate: '#5B8F8B',
 };
 
-const OutboundTrendChart = ({
-  data,
-  granularity,
-}: OutboundTrendChartProps) => {
+const OutboundTrendChart = ({ data, granularity }: OutboundTrendChartProps) => {
   if (data.length === 0) {
     return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} />;
   }
@@ -89,7 +86,9 @@ const OutboundTrendChart = ({
       legend={{
         color: {
           itemLabelText: (datum: { label?: string }) =>
-            datum.label === 'dialAttempts' ? '拨打次数' : '接通率',
+            datum.label === 'dialAttempts'
+              ? '拨打次数（柱）'
+              : '接通率（折线）',
         },
       }}
     />

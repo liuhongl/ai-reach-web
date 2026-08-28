@@ -107,6 +107,7 @@ describe('AI Call 外呼统计页面', () => {
     expect(screen.getByText('24.0')).toBeTruthy();
     expect(screen.getByText('5')).toBeTruthy();
     expect(screen.getByText('38')).toBeTruthy();
+    expect(screen.getByText('当前待处理总量')).toBeTruthy();
     expect(screen.getByText('38').parentElement?.style.color).toBe(
       'rgb(22, 119, 255)',
     );
@@ -121,7 +122,10 @@ describe('AI Call 外呼统计页面', () => {
     expect(screen.getByTestId('outbound-trend-chart')).toBeTruthy();
     expect(screen.getByTestId('call-result-chart')).toBeTruthy();
     expect(
-      screen.getByText('外呼趋势').closest('.ant-card')?.getAttribute('style'),
+      screen
+        .getByText('外呼趋势：拨打次数（柱）/ 接通率（折线）')
+        .closest('.ant-card')
+        ?.getAttribute('style'),
     ).toContain('height: 100%');
     expect(
       screen

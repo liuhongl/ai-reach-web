@@ -410,7 +410,7 @@ const AiCallStatisticsPage = () => {
                   title="待跟进"
                   value={statistics.overview.pendingFollowUps.toLocaleString()}
                   unit="条"
-                  comparison="当前筛选范围"
+                  comparison="当前待处理总量"
                   icon={<ScheduleOutlined />}
                   tone="error"
                   emphasized
@@ -420,7 +420,10 @@ const AiCallStatisticsPage = () => {
 
             <Row gutter={[16, 16]}>
               <Col xs={24} xl={16}>
-                <Card title="外呼趋势" style={{ height: '100%' }}>
+                <Card
+                  title="外呼趋势：拨打次数（柱）/ 接通率（折线）"
+                  style={{ height: '100%' }}
+                >
                   <OutboundTrendChart
                     data={statistics.trend}
                     granularity={appliedQuery.granularity}
