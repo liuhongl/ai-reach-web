@@ -486,7 +486,7 @@ const CreateAiCallTaskPage = () => {
                   loading={loadingConfig}
                   options={promptProfiles.map((profile) => ({
                     value: getPromptKey(profile),
-                    label: `${profile.name} / ${profile.sceneCode}`,
+                    label: profile.name,
                   }))}
                   placeholder="请选择提示词"
                 />
@@ -605,7 +605,6 @@ const CreateAiCallTaskPage = () => {
                 promptName={validatedTask.prompt.name}
                 ruleName={validatedTask.rule.ruleName}
                 ruleSummary={formatRuleSummary(validatedTask.rule)}
-                sceneCode={validatedTask.prompt.sceneCode}
                 taskName={validatedTask.values.taskName}
                 targetCount={validatedTask.validation.validTargetCount}
                 voiceName={validatedTask.voice.displayName}

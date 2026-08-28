@@ -33,7 +33,7 @@ const endReasonLabels: Record<string, string> = {
   callback_technical_failure: '呼叫失败',
   user_unavailable: '被叫暂时不可用（SIP 480）',
   sip_480: '被叫暂时不可用（SIP 480）',
-  sip_participant_left: 'SIP 通话结束（原因未记录）',
+  sip_participant_left: '对方挂断',
   unknown: '未知原因',
 };
 

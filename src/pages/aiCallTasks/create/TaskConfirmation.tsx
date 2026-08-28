@@ -9,7 +9,6 @@ type TaskConfirmationProps = {
   phoneNumber?: string;
   customerName?: string;
   promptName: string;
-  sceneCode: string;
   voiceName: string;
   ruleName: string;
   ruleSummary: string;
@@ -25,7 +24,6 @@ const TaskConfirmation = ({
   phoneNumber,
   customerName,
   promptName,
-  sceneCode,
   voiceName,
   ruleName,
   ruleSummary,
@@ -55,15 +53,13 @@ const TaskConfirmation = ({
           : phoneNumber
             ? [{ key: 'phoneNumber', label: '手机号', children: phoneNumber }]
             : []),
-        {
-          key: 'customerName',
-          label: '客户名称',
-          children: customerName || '—',
-        },
+        ...(customerName
+          ? [{ key: 'customerName', label: '客户名称', children: customerName }]
+          : []),
         {
           key: 'prompt',
           label: '提示词',
-          children: `${promptName} / ${sceneCode}`,
+          children: promptName,
         },
         { key: 'voice', label: '音色', children: voiceName },
         {

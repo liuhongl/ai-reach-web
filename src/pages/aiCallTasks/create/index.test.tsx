@@ -150,7 +150,7 @@ describe('single target AI Call task creation', () => {
 
   it('is a single page with only the approved single-target fields', async () => {
     render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
 
     expect(
       (screen.getByRole('radio', { name: '单个客户' }) as HTMLInputElement)
@@ -177,7 +177,7 @@ describe('single target AI Call task creation', () => {
 
   it('loads only available voices and links to voice management', async () => {
     render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
 
     expect(mockedVoiceProfiles).toHaveBeenCalledWith({
       availableOnly: true,
@@ -210,7 +210,7 @@ describe('single target AI Call task creation', () => {
       });
 
       const { container } = render(<AiCallTaskCreatePage />);
-      await screen.findAllByText('客户回访 / intro_follow_up');
+      await screen.findByText('客户回访');
       const ruleSummary = await screen.findByText('00:00–23:59，最多重试 1 次');
 
       const pageStack = container.querySelector('.recov-list-stack');
@@ -243,7 +243,7 @@ describe('single target AI Call task creation', () => {
 
   it('validates a target, shows an inline confirmation and creates once', async () => {
     render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
 
     fireEvent.click(screen.getByRole('radio', { name: '电话（SIP 线路）' }));
     await screen.findByPlaceholderText('请输入手机号');
@@ -275,9 +275,8 @@ describe('single target AI Call task creation', () => {
       .getByText('校验通过')
       .closest('.ant-pro-card');
     expect(validationCard?.classList.contains('recov-toolbar-card')).toBe(true);
-    expect(
-      screen.getAllByText('客户回访 / intro_follow_up').length,
-    ).toBeGreaterThan(1);
+    expect(screen.getAllByText('客户回访').length).toBeGreaterThan(1);
+    expect(screen.queryByText(/intro_follow_up/)).toBeNull();
 
     const confirm = screen.getByRole('button', { name: '确认启动' });
     fireEvent.click(confirm);
@@ -290,7 +289,7 @@ describe('single target AI Call task creation', () => {
 
   it('defaults to Web reception and validates without a phone number', async () => {
     render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
 
     expect(
       (
@@ -317,7 +316,7 @@ describe('single target AI Call task creation', () => {
 
   it('downloads the template and directly uploads one xlsx list for validation', async () => {
     const { container } = render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
 
     fireEvent.click(screen.getByRole('radio', { name: '名单外呼' }));
     fireEvent.click(
@@ -369,7 +368,7 @@ describe('single target AI Call task creation', () => {
     );
 
     const { container } = render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
     fireEvent.click(screen.getByRole('radio', { name: '名单外呼' }));
     fireEvent.change(screen.getByPlaceholderText('请输入任务名称'), {
       target: { value: '批量客户回访' },
@@ -402,7 +401,7 @@ describe('single target AI Call task creation', () => {
     });
 
     const { container } = render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
     fireEvent.click(screen.getByRole('radio', { name: '名单外呼' }));
     fireEvent.change(screen.getByPlaceholderText('请输入任务名称'), {
       target: { value: '批量客户回访' },
@@ -441,7 +440,7 @@ describe('single target AI Call task creation', () => {
     );
 
     const { container } = render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
     fireEvent.click(screen.getByRole('radio', { name: '名单外呼' }));
     const taskNameInput = screen.getByPlaceholderText('请输入任务名称');
     fireEvent.change(taskNameInput, {
@@ -492,7 +491,7 @@ describe('single target AI Call task creation', () => {
     );
 
     const { container } = render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
     fireEvent.click(screen.getByRole('radio', { name: '名单外呼' }));
     fireEvent.change(screen.getByPlaceholderText('请输入任务名称'), {
       target: { value: '批量任务' },
@@ -550,7 +549,7 @@ describe('single target AI Call task creation', () => {
     );
 
     const { container } = render(<AiCallTaskCreatePage />);
-    await screen.findAllByText('客户回访 / intro_follow_up');
+    await screen.findByText('客户回访');
     fireEvent.click(screen.getByRole('radio', { name: '名单外呼' }));
     fireEvent.change(screen.getByPlaceholderText('请输入任务名称'), {
       target: { value: '慢校验任务' },
