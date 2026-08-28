@@ -245,6 +245,21 @@ describe('跟进总览深链', () => {
     });
   });
 
+  it('将手动安排来源展示为中文', async () => {
+    mockDeepLinkFollowUpId = '';
+
+    render(<FollowUpOverviewPage />);
+
+    await waitFor(() => expect(listAdminFollowUps).toHaveBeenCalled());
+    const sourceColumn = (
+      latestProTableProps.columns as {
+        dataIndex?: string;
+        renderText?: (value: string) => string;
+      }[]
+    ).find((column) => column.dataIndex === 'source_type');
+    expect(sourceColumn?.renderText?.('manual_schedule')).toBe('手动安排回访');
+  });
+
   it('只展示当前提交结果对应的跟进指标', async () => {
     mockDeepLinkFollowUpId = '';
     (listAdminFollowUps as jest.Mock).mockResolvedValue({

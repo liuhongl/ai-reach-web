@@ -210,6 +210,7 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
   }
   const executionConfig = detail?.executionConfig;
   const afterCallWork = detail?.afterCallWork;
+  const isManualCallback = record.entryType === 'sip_callback';
   const recordingUrl =
     recording?.playUrl ||
     record.recordingPlayUrl ||
@@ -347,7 +348,7 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
           />
         )}
       </section>
-      <section>
+      <section hidden={isManualCallback && !afterCallWork}>
         {afterCallWork ? (
           <>
             <Title level={5}>坐席最终处置</Title>
@@ -429,10 +430,13 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
           </>
         )}
         {errors.handoffs ? (
-          <Alert showIcon title={errors.handoffs} type="error" />
+          <div hidden={isManualCallback}>
+            <Alert showIcon title={errors.handoffs} type="error" />
+          </div>
         ) : handoffs.length ? (
           <Flex
             data-testid="handoff-details"
+            hidden={isManualCallback}
             vertical
             gap={8}
             style={{ marginTop: 16 }}
@@ -477,10 +481,12 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
             ))}
           </Flex>
         ) : (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="本次未转人工"
-          />
+          <div hidden={isManualCallback}>
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description="本次未转人工"
+            />
+          </div>
         )}
       </section>
     </Flex>

@@ -1310,6 +1310,7 @@ const AiCallRecordsPage = () => {
   const executionConfig = detail?.executionConfig;
   const exceptionHandling = detail?.exceptionHandling;
   const afterCallWork = detail?.afterCallWork;
+  const isManualCallback = record?.entryType === 'sip_callback';
   const followUp = detail?.followUp;
   const currentClassification = detail?.followUpData?.classification;
   const analysisResult = analysis?.analysisResult || {};
@@ -1740,7 +1741,7 @@ const AiCallRecordsPage = () => {
 
             <section
               data-testid="customer-follow-up-section"
-              hidden={!connectedCall}
+              hidden={!connectedCall || isManualCallback}
             >
               <Title level={5}>客户分类与回访</Title>
               <Flex vertical gap={12}>
@@ -1890,7 +1891,10 @@ const AiCallRecordsPage = () => {
               </Flex>
             </section>
 
-            <section data-testid="analysis-result-section">
+            <section
+              data-testid="analysis-result-section"
+              hidden={isManualCallback}
+            >
               <Title level={5}>AI 分析结果</Title>
               {detailErrors.analysis ? (
                 <Alert showIcon title={detailErrors.analysis} type="error" />
@@ -1937,7 +1941,10 @@ const AiCallRecordsPage = () => {
               )}
             </section>
 
-            <section data-testid="handoff-result-section">
+            <section
+              data-testid="handoff-result-section"
+              hidden={isManualCallback}
+            >
               <Title level={5}>转人工结果</Title>
               {detailErrors.handoffs ? (
                 <Alert showIcon title={detailErrors.handoffs} type="error" />

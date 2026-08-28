@@ -919,9 +919,7 @@ describe('AI Call 通话记录页面', () => {
       ),
     );
     expect(scheduleFollowUpData).not.toHaveBeenCalled();
-    expect(
-      await within(detailDrawer).findByText(/已确认分类/),
-    ).toBeTruthy();
+    expect(await within(detailDrawer).findByText(/已确认分类/)).toBeTruthy();
   });
 
   it('无分类冲突时仍可修改分类', async () => {
@@ -1029,9 +1027,7 @@ describe('AI Call 通话记录页面', () => {
       name: '通话记录详情',
     });
 
-    expect(
-      within(detailDrawer).getByText(/已确认分类：有意向/),
-    ).toBeTruthy();
+    expect(within(detailDrawer).getByText(/已确认分类：有意向/)).toBeTruthy();
     expect(within(detailDrawer).getByText('持续跟进')).toBeTruthy();
   });
 
@@ -2246,6 +2242,15 @@ describe('AI Call 通话记录页面', () => {
     ).toBeTruthy();
     expect(within(detailDrawer).queryByText('原始通话')).toBeNull();
     expect(within(detailDrawer).queryByText('历次回拨')).toBeNull();
+    expect(
+      within(detailDrawer).getByTestId('customer-follow-up-section').hidden,
+    ).toBe(true);
+    expect(
+      within(detailDrawer).getByTestId('analysis-result-section').hidden,
+    ).toBe(true);
+    expect(
+      within(detailDrawer).getByTestId('handoff-result-section').hidden,
+    ).toBe(true);
   });
 
   it('从跟进次要入口进入时只筛选单条记录且不自动展开详情', async () => {

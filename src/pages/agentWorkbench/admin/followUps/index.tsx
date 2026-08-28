@@ -26,6 +26,7 @@ const sourceLabels: Record<string, string> = {
   after_call_work: '接通后跟进',
   handoff_unanswered: '人工未接回访',
   ai_post_call: 'AI 话后跟进',
+  manual_schedule: '手动安排回访',
 };
 
 const followUpStatusLabels: Record<FollowUpTaskDto['status'], string> = {

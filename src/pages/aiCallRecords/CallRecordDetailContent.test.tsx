@@ -241,4 +241,38 @@ describe('CallRecordDetailContent', () => {
 
     expect(await screen.findByText('持续跟进')).toBeTruthy();
   });
+
+  it('人工回拨详情不展示 AI 分析和转人工模块', async () => {
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: {
+        id: 'record-callback',
+        callId: 'call-callback',
+        entryType: 'sip_callback',
+        status: 'completed',
+        startedAt: '2026-08-28T16:19:39+08:00',
+      },
+    });
+    (getAiCallRecordRecording as jest.Mock).mockResolvedValue(null);
+    (getAiCallRecordDialogue as jest.Mock).mockResolvedValue({
+      rows: [],
+      total: 0,
+    });
+    (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue({
+      callId: 'call-callback',
+      analysisStatus: '2',
+      analysisRetryCount: 0,
+    });
+    (getAiCallRecordHandoffs as jest.Mock).mockResolvedValue({
+      rows: [],
+      total: 0,
+    });
+
+    render(<CallRecordDetailContent callId="call-callback" />);
+
+    expect(await screen.findByText('人工回拨')).toBeTruthy();
+    expect(screen.getByText('录音与对话')).toBeTruthy();
+    expect(screen.getByText('AI 分析与转人工').closest('section')?.hidden).toBe(
+      true,
+    );
+  });
 });
