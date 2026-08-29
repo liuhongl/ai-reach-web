@@ -146,8 +146,8 @@ const CreateAiCallTaskPage = () => {
         setVoiceProfiles(selectableVoices);
         setRules(ruleResult.rows);
         form.setFieldsValue({
-          taskMode: 'single',
-          answerMode: 'web',
+          taskMode: 'batch',
+          answerMode: 'linphone',
           executionMode: 'immediate',
           promptKey: promptResult.rows[0]
             ? getPromptKey(promptResult.rows[0])
@@ -412,13 +412,8 @@ const CreateAiCallTaskPage = () => {
               <Input maxLength={50} placeholder="请输入任务名称" />
             </Form.Item>
 
-            <Form.Item label="外呼方式" name="taskMode">
-              <Radio.Group
-                options={[
-                  { label: '单个客户', value: 'single' },
-                  { label: '名单外呼', value: 'batch' },
-                ]}
-              />
+            <Form.Item hidden name="taskMode">
+              <Input type="hidden" />
             </Form.Item>
 
             {taskMode === 'single' ? (
