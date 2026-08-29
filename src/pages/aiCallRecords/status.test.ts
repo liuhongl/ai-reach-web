@@ -60,6 +60,12 @@ describe('通话记录话后状态映射', () => {
         answerType: 'human',
       }),
     ).toBe(true);
+    expect(
+      isHumanConnectedRecord({
+        ...baseRecord,
+        callResult: 'connected',
+      }),
+    ).toBe(false);
   });
 
   it('区分语义分析中、失败和客户意向', () => {

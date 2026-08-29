@@ -158,7 +158,7 @@ export const isHumanConnectedRecord = (
   record: Pick<AiCallRecord, 'answerType' | 'callResult' | 'answeredAt' | 'endedAt' | 'status'>,
 ) =>
   resolveCallResult(record) === 'connected' &&
-  (!record.answerType || record.answerType === 'human');
+  record.answerType === 'human';
 
 export const getConnectionTimeLabel = (
   answerType?: AiCallRecord['answerType'],

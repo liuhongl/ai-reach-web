@@ -194,6 +194,7 @@ const mockRecord = {
   phoneNumber: '13800138000',
   attemptNo: 2,
   callResult: 'connected',
+  answerType: 'human',
   aiOutcome: '有兴趣',
   summary: '客户希望明天下午再次联系，并进一步了解产品价格。',
   recordingPlayUrl: 'https://example.com/call-1.mp3',
@@ -346,7 +347,7 @@ describe('AI Call 通话记录页面', () => {
     expect(await screen.findByText('张三')).toBeTruthy();
     expect(screen.getAllByText('新品回访').length).toBeGreaterThan(0);
     expect(screen.getByText(/客户希望明天下午再次联系/)).toBeTruthy();
-    const connectedResult = screen.getByText('已接通');
+    const connectedResult = screen.getByText('真人接通');
     expect(connectedResult.closest('.ant-tag')).toBeNull();
     expect(
       (connectedResult.closest('.ant-typography') as HTMLElement | null)?.style

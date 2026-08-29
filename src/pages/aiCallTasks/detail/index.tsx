@@ -100,7 +100,7 @@ const getLatestResultLabel = (target: AiCallTaskTarget) => {
     (target.providerStatusCode === '480' ||
       target.hangupCause === 'USER_UNAVAILABLE')
   ) {
-    return '被叫暂时不可用（SIP 480）';
+    return '未接通（线路最终返回 SIP 480）';
   }
   const result = callResultLabels[target.latestResult] || target.latestResult;
   if (target.latestDialerType === 'mock') {

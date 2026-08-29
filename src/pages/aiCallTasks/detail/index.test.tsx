@@ -332,7 +332,9 @@ describe('AI Call task detail page', () => {
 
     render(<AiCallTaskDetailPage />);
 
-    expect(await screen.findByText('被叫暂时不可用（SIP 480）')).toBeTruthy();
+    expect(
+      await screen.findByText('未接通（线路最终返回 SIP 480）'),
+    ).toBeTruthy();
     expect(screen.queryByText('无人接听')).toBeNull();
   });
 });
