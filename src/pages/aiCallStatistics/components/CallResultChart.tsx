@@ -9,7 +9,9 @@ const RESULT_META: Record<
   CallResultGroup,
   { label: string; color: string }
 > = {
-  connected: { label: '接通', color: '#5B8F8B' },
+  connected: { label: '真人接通', color: '#5B8F8B' },
+  voicemail: { label: '语音信箱', color: '#7C6BCB' },
+  transport_connected: { label: '仅线路接通', color: '#6F8FAF' },
   no_answer: { label: '无人接听', color: '#C49A5A' },
   rejected: { label: '拒接', color: '#C56A7A' },
   early_hangup: { label: '主动挂断', color: '#B9855B' },

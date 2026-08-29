@@ -26,7 +26,12 @@ import {
   getAiCallRecordRecording,
   getAiCallRecordSemanticAnalysis,
 } from './service';
-import { resolveCallResult } from './status';
+import {
+  describeConnectedOutcome,
+  getCallDurationLabel,
+  getConnectionTimeLabel,
+  resolveCallResult,
+} from './status';
 
 const { Text, Title } = Typography;
 
@@ -117,18 +122,26 @@ const formatDuration = (durationMs?: number | null) => {
 const describeRecordStatus = (record: AiCallRecord) =>
   statusLabels[record.status] || record.status;
 
-const describeCallResult = (record: AiCallRecord) =>
-  callResultLabels[resolveCallResult(record) || ''] || '-';
+const describeCallResult = (record: AiCallRecord) => {
+  const result = resolveCallResult(record);
+  return result === 'connected'
+    ? describeConnectedOutcome(record.answerType)
+    : callResultLabels[result || ''] || '-';
+};
 
 const describeEndResult = (record: AiCallRecord) =>
-  (record.failureMessage
-    ? describeEndReason(record.failureMessage)
-    : undefined) ||
-  (record.endReason
-    ? describeEndReason(record.endReason)
-    : record.status === 'failed'
-      ? '未知失败原因'
-      : '-');
+  record.answerType === 'voicemail'
+    ? '语音信箱流程结束'
+    : record.answerType === 'transport'
+      ? '线路连接结束（未确认真人接听）'
+      : (record.failureMessage
+          ? describeEndReason(record.failureMessage)
+          : undefined) ||
+        (record.endReason
+          ? describeEndReason(record.endReason)
+          : record.status === 'failed'
+            ? '未知失败原因'
+            : '-');
 
 type DetailErrors = Partial<
   Record<'recording' | 'dialogue' | 'analysis' | 'handoffs' | 'detail', string>
@@ -252,7 +265,7 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
             },
             {
               key: 'answeredAt',
-              label: '接通时间',
+              label: getConnectionTimeLabel(record.answerType),
               children: formatDateTime(record.answeredAt),
             },
             {
@@ -262,10 +275,10 @@ const CallRecordDetailContent = ({ callId }: CallRecordDetailContentProps) => {
             },
             {
               key: 'duration',
-              label:
-                resolveCallResult(record) === 'connected'
-                  ? '通话时长'
-                  : '呼叫耗时',
+              label: getCallDurationLabel(
+                resolveCallResult(record),
+                record.answerType,
+              ),
               children: formatDuration(record.durationMs),
             },
             {

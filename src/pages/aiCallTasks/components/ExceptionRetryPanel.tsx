@@ -331,13 +331,25 @@ const ExceptionRetryPanel = () => {
               <div className="exception-retry-card__summary">
                 <div>{meta.description}</div>
                 {retryable ? (
-                  <div>
-                    共 {card.totalCount} 个｜待重呼 {card.pendingCount}｜已达上限{' '}
-                    {card.maxedOutCount}
-                    {card.activeBatch
-                      ? `｜重呼进行中 ${card.activeBatch.completedCount}/${card.activeBatch.targetCount}`
-                      : ''}
-                  </div>
+                  <>
+                    <div>
+                      共 {card.totalCount} 个｜待重呼 {card.pendingCount}｜已达上限{' '}
+                      {card.maxedOutCount}
+                      {card.activeBatch
+                        ? `｜重呼进行中 ${card.activeBatch.completedCount}/${card.activeBatch.targetCount}`
+                        : ''}
+                    </div>
+                    {card.activeBatch ? (
+                      <div>
+                        发起人：
+                        {card.activeBatch.createdByName ||
+                          (card.activeBatch.createdBy
+                            ? `用户 ${card.activeBatch.createdBy}`
+                            : '未知')}
+                        ｜发起时间：{formatDateTime(card.activeBatch.startedAt)}
+                      </div>
+                    ) : null}
+                  </>
                 ) : (
                   <div>共 {card.totalCount} 个｜不可重呼 {card.totalCount}</div>
                 )}

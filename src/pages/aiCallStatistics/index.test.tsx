@@ -76,11 +76,13 @@ const statistics = {
   ],
   results: [
     { result: 'connected' as const, count: 712, rate: 0.5615 },
+    { result: 'voicemail' as const, count: 35, rate: 0.0276 },
+    { result: 'transport_connected' as const, count: 25, rate: 0.0197 },
     { result: 'no_answer' as const, count: 331, rate: 0.261 },
     { result: 'rejected' as const, count: 80, rate: 0.0631 },
     { result: 'early_hangup' as const, count: 45, rate: 0.0355 },
     { result: 'invalid_number' as const, count: 40, rate: 0.0315 },
-    { result: 'other' as const, count: 60, rate: 0.0473 },
+    { result: 'other' as const, count: 0, rate: 0 },
   ],
 };
 
@@ -104,6 +106,11 @@ describe('AI Call 外呼统计页面', () => {
     expect((await screen.findAllByText('1,268')).length).toBeGreaterThan(0);
     expect(screen.getAllByText('712').length).toBeGreaterThan(0);
     expect(screen.getAllByText('56.2%').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('真人接通').length).toBeGreaterThan(0);
+    expect(screen.getByText('真人接通率')).toBeTruthy();
+    expect(screen.getByText('真人通话总时长')).toBeTruthy();
+    expect(screen.getByText('语音信箱')).toBeTruthy();
+    expect(screen.getByText('仅线路接通')).toBeTruthy();
     expect(screen.getByText('24.0')).toBeTruthy();
     expect(screen.getByText('5')).toBeTruthy();
     expect(screen.getByText('38')).toBeTruthy();

@@ -78,12 +78,16 @@ import {
   scoreAiCallRecordQuality,
 } from './service';
 import {
+  describeConnectedOutcome,
+  getCallDurationLabel,
   getClassificationReviewPresentation,
+  getConnectionTimeLabel,
   getCustomerIntentPresentation,
   getFollowUpPresentation,
   getQualityReviewPresentation,
   getQualityScorePresentation,
   hasUnstablePostCallData,
+  isHumanConnectedRecord,
   isFormalOutboundRecord,
   resolveCallResult,
   type StatusPresentation,
@@ -150,6 +154,12 @@ const callResultColors: Record<string, string> = {
   busy: '#d48806',
   call_failed: '#cf1322',
   invalid_number: '#cf1322',
+};
+
+const answerTypeColors: Record<NonNullable<AiCallRecord['answerType']>, string> = {
+  human: '#389e0d',
+  voicemail: '#722ed1',
+  transport: '#1677ff',
 };
 
 const unansweredCallResults = new Set([
@@ -284,7 +294,7 @@ const qualityReviewOptions: Array<{
 ];
 
 const canOpenQualityReview = (row: AiCallRecord) =>
-  isFormalOutboundRecord(row) && row.callResult === 'connected';
+  isFormalOutboundRecord(row) && isHumanConnectedRecord(row);
 
 const buildQualityFallback = (row: AiCallRecord): AiCallQualityDetail => {
   if (
@@ -348,13 +358,22 @@ const describeMockResult = (row: AiCallRecord) => {
     : describeRecordStatus(row);
 };
 
-const describeCallResult = (row: AiCallRecord) =>
-  row.entryType === 'outbound_mock'
-    ? describeMockResult(row)
-    : callResultLabels[resolveCallResult(row) || ''] || '-';
+const describeCallResult = (row: AiCallRecord) => {
+  if (row.entryType === 'outbound_mock') return describeMockResult(row);
+  const result = resolveCallResult(row);
+  return result === 'connected'
+    ? describeConnectedOutcome(row.answerType)
+    : callResultLabels[result || ''] || '-';
+};
 
 const describeEndResult = (row: AiCallRecord) =>
-  row.entryType === 'outbound_mock' ? '-' : describeError(row);
+  row.entryType === 'outbound_mock'
+    ? '-'
+    : row.answerType === 'voicemail'
+      ? '语音信箱流程结束'
+      : row.answerType === 'transport'
+        ? '线路连接结束（未确认真人接听）'
+        : describeError(row);
 
 const renderPostCallStatus = (
   presentation: StatusPresentation | null,
@@ -1067,7 +1086,9 @@ const AiCallRecordsPage = () => {
                   color:
                     row.entryType === 'outbound_mock'
                       ? '#1677ff'
-                      : callResultColors[callResult || ''] || '#1f1f1f',
+                      : row.answerType
+                        ? answerTypeColors[row.answerType]
+                        : callResultColors[callResult || ''] || '#1f1f1f',
                 }}
               >
                 {describeCallResult(row)}
@@ -1289,7 +1310,7 @@ const AiCallRecordsPage = () => {
     recording?.tracks?.find((track) => track.playUrl)?.playUrl;
   const resolvedCallResult = record ? resolveCallResult(record) : undefined;
   const connectedCall = Boolean(
-    record?.answeredAt && resolvedCallResult === 'connected',
+    record?.answeredAt && isHumanConnectedRecord(record),
   );
   const failedBeforeAnswer = Boolean(
     record &&
@@ -1461,7 +1482,7 @@ const AiCallRecordsPage = () => {
                   },
                   {
                     key: 'answeredAt',
-                    label: '接通时间',
+                    label: getConnectionTimeLabel(record.answerType),
                     children:
                       record.entryType === 'outbound_mock'
                         ? '不适用（模拟执行）'
@@ -1474,17 +1495,23 @@ const AiCallRecordsPage = () => {
                   },
                   {
                     key: 'duration',
-                    label:
-                      resolvedCallResult === 'connected'
-                        ? '通话时长'
-                        : '呼叫耗时',
+                    label: getCallDurationLabel(
+                      resolvedCallResult,
+                      record.answerType,
+                    ),
                     children: formatDuration(record.durationMs),
                   },
                   {
                     key: 'callResult',
                     label: '呼叫结果',
                     children: resolvedCallResult ? (
-                      <Tag color={callResultColors[resolvedCallResult]}>
+                      <Tag
+                        color={
+                          record.answerType
+                            ? answerTypeColors[record.answerType]
+                            : callResultColors[resolvedCallResult]
+                        }
+                      >
                         {describeCallResult(record)}
                       </Tag>
                     ) : (
@@ -1641,6 +1668,26 @@ const AiCallRecordsPage = () => {
                               exceptionHandling.lastResult ||
                               '-',
                           },
+                          ...(exceptionHandling.startedAt
+                            ? [
+                                {
+                                  key: 'exceptionCreatedBy',
+                                  label: '重呼发起人',
+                                  children:
+                                    exceptionHandling.createdByName ||
+                                    (exceptionHandling.createdBy
+                                      ? `用户 ${exceptionHandling.createdBy}`
+                                      : '未知'),
+                                },
+                                {
+                                  key: 'exceptionStartedAt',
+                                  label: '重呼发起时间',
+                                  children: formatDateTime(
+                                    exceptionHandling.startedAt,
+                                  ),
+                                },
+                              ]
+                            : []),
                         ]
                       : []),
                   ]}

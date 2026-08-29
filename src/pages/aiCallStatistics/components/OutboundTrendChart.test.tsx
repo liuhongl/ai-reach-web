@@ -44,9 +44,11 @@ describe('OutboundTrendChart', () => {
     expect(typeof connectRateMark.tooltip?.items?.[0]).toBe('function');
     expect(
       connectRateMark.tooltip.items[0]({ connectRatePercent: 83.33 }),
-    ).toEqual({ name: '接通率', value: '83.3%' });
+    ).toEqual({ name: '真人接通率', value: '83.3%' });
     const legendLabel = mockDualAxesProps.legend.color.itemLabelText;
     expect(legendLabel({ label: 'dialAttempts' })).toBe('拨打次数（柱）');
-    expect(legendLabel({ label: 'connectRatePercent' })).toBe('接通率（折线）');
+    expect(legendLabel({ label: 'connectRatePercent' })).toBe(
+      '真人接通率（折线）',
+    );
   });
 });

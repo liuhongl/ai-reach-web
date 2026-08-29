@@ -555,7 +555,9 @@ describe('AI Call 通话记录页面', () => {
     render(<AiCallRecordsPage />);
 
     expect(await screen.findByText('无人接听')).toBeTruthy();
-    expect(screen.getByText(/原因：被叫暂时不可用（SIP 480）/)).toBeTruthy();
+    expect(
+      screen.getByText(/原因：未接通（线路最终返回 SIP 480）/),
+    ).toBeTruthy();
     expect(screen.queryByText('未复核')).toBeNull();
 
     fireEvent.click(screen.getByRole('button', { name: '查看详情' }));
@@ -566,7 +568,7 @@ describe('AI Call 通话记录页面', () => {
     expect(within(detailDrawer).getByText('呼叫结果')).toBeTruthy();
     expect(within(detailDrawer).getByText('无人接听')).toBeTruthy();
     expect(
-      within(detailDrawer).getByText('被叫暂时不可用（SIP 480）'),
+      within(detailDrawer).getByText('未接通（线路最终返回 SIP 480）'),
     ).toBeTruthy();
     expect(within(detailDrawer).queryByText('user_unavailable')).toBeNull();
     expect(
@@ -2038,6 +2040,9 @@ describe('AI Call 通话记录页面', () => {
         retryCount: 1,
         maxRetryCount: 3,
         lastResult: 'busy',
+        createdBy: '1',
+        createdByName: '管理员',
+        startedAt: '2026-08-29T20:29:40+08:00',
       },
     });
     (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue({
@@ -2063,6 +2068,10 @@ describe('AI Call 通话记录页面', () => {
     expect(within(detailDrawer).getByText('异常重呼进度')).toBeTruthy();
     expect(within(detailDrawer).getByText('1/3')).toBeTruthy();
     expect(within(detailDrawer).getByText('忙线')).toBeTruthy();
+    expect(within(detailDrawer).getByText('重呼发起人')).toBeTruthy();
+    expect(within(detailDrawer).getByText('管理员')).toBeTruthy();
+    expect(within(detailDrawer).getByText('重呼发起时间')).toBeTruthy();
+    expect(within(detailDrawer).getByText('2026-08-29 20:29:40')).toBeTruthy();
     expect(
       within(detailDrawer).getByText('试用意向初显').closest('.ant-tag')
         ?.className,

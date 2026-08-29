@@ -90,7 +90,7 @@ const getConnectedStatTitle = (task: AiCallTask) => {
   const dialerTypes = new Set(task.attemptDialerTypes || []);
   if (dialerTypes.size === 1 && dialerTypes.has('mock')) return '模拟成功数';
   if (dialerTypes.has('mock')) return '成功数（含模拟）';
-  return '接通数';
+  return '线路接通数';
 };
 
 const getLatestResultLabel = (target: AiCallTaskTarget) => {
@@ -103,11 +103,27 @@ const getLatestResultLabel = (target: AiCallTaskTarget) => {
     return '被叫暂时不可用（SIP 480）';
   }
   const result = callResultLabels[target.latestResult] || target.latestResult;
-  if (target.latestDialerType !== 'mock') return result;
-  return target.latestResult === 'connected'
-    ? '模拟执行完成'
-    : `模拟：${result}`;
+  if (target.latestDialerType === 'mock') {
+    return target.latestResult === 'connected'
+      ? '模拟执行完成'
+      : `模拟：${result}`;
+  }
+  if (target.latestResult !== 'connected') return result;
+  return target.answerType === 'human'
+    ? '真人接通'
+    : target.answerType === 'voicemail'
+      ? '语音信箱'
+      : target.answerType === 'transport'
+        ? '仅线路接通'
+        : result;
 };
+
+const getLatestResultColor = (target: AiCallTaskTarget) =>
+  target.answerType === 'voicemail'
+    ? 'purple'
+    : target.answerType === 'transport'
+      ? 'blue'
+      : callResultColors[target.latestResult || ''] || 'default';
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : '任务详情加载失败';
@@ -226,7 +242,7 @@ const AiCallTaskDetailPage = () => {
       search: false,
       render: (_, target) =>
         target.latestResult ? (
-          <Tag color={callResultColors[target.latestResult] || 'default'}>
+          <Tag color={getLatestResultColor(target)}>
             {getLatestResultLabel(target)}
           </Tag>
         ) : (

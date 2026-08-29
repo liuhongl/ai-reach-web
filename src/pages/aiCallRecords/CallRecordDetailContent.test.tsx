@@ -214,8 +214,41 @@ describe('CallRecordDetailContent', () => {
     expect(screen.getByText('呼叫结果')).toBeTruthy();
     expect(screen.getByText('无人接听')).toBeTruthy();
     expect(screen.getByText('呼叫耗时')).toBeTruthy();
-    expect(screen.getByText('被叫暂时不可用（SIP 480）')).toBeTruthy();
+    expect(screen.getByText('未接通（线路最终返回 SIP 480）')).toBeTruthy();
     expect(screen.getByText('当前场景没有在线可接范围坐席')).toBeTruthy();
+  });
+
+  it('把语音信箱与真人接通区分展示', async () => {
+    (getAiCallRecordDetail as jest.Mock).mockResolvedValue({
+      record: {
+        id: 'record-voicemail',
+        callId: 'call-voicemail',
+        entryType: 'sip_outbound',
+        status: 'completed',
+        callResult: 'connected',
+        answerType: 'voicemail',
+        answeredAt: '2026-08-29T09:08:39+08:00',
+        durationMs: 122_000,
+        startedAt: '2026-08-29T09:08:17+08:00',
+      },
+    });
+    (getAiCallRecordRecording as jest.Mock).mockResolvedValue(null);
+    (getAiCallRecordDialogue as jest.Mock).mockResolvedValue({
+      rows: [],
+      total: 0,
+    });
+    (getAiCallRecordSemanticAnalysis as jest.Mock).mockResolvedValue(null);
+    (getAiCallRecordHandoffs as jest.Mock).mockResolvedValue({
+      rows: [],
+      total: 0,
+    });
+
+    render(<CallRecordDetailContent callId="call-voicemail" />);
+
+    expect(await screen.findByText('语音信箱')).toBeTruthy();
+    expect(screen.getByText('语音信箱接入时间')).toBeTruthy();
+    expect(screen.getByText('语音信箱时长')).toBeTruthy();
+    expect(screen.getByText('语音信箱流程结束')).toBeTruthy();
   });
 
   it('展示新版话后分类作为坐席处置结果', async () => {

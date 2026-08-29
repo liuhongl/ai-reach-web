@@ -57,14 +57,14 @@ const OutboundTrendChart = ({ data, granularity }: OutboundTrendChartProps) => {
       axis: {
         y: {
           position: 'right',
-          title: '接通率',
+          title: '真人接通率',
           labelFormatter: (value: number) => `${value}%`,
         },
       },
       tooltip: {
         items: [
           (datum: { connectRatePercent: number }) => ({
-            name: '接通率',
+            name: '真人接通率',
             value: `${datum.connectRatePercent.toFixed(1)}%`,
           }),
         ],
@@ -88,7 +88,7 @@ const OutboundTrendChart = ({ data, granularity }: OutboundTrendChartProps) => {
           itemLabelText: (datum: { label?: string }) =>
             datum.label === 'dialAttempts'
               ? '拨打次数（柱）'
-              : '接通率（折线）',
+              : '真人接通率（折线）',
         },
       }}
     />

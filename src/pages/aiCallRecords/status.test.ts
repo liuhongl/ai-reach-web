@@ -1,10 +1,14 @@
 import {
+  describeConnectedOutcome,
+  getCallDurationLabel,
   getClassificationReviewPresentation,
+  getConnectionTimeLabel,
   getCustomerIntentPresentation,
   getFollowUpPresentation,
   getQualityReviewPresentation,
   getQualityScorePresentation,
   hasUnstablePostCallData,
+  isHumanConnectedRecord,
   resolveCallResult,
 } from './status';
 
@@ -32,6 +36,30 @@ describe('通话记录话后状态映射', () => {
         endedAt: '2026-08-27T10:33:49+08:00',
       }),
     ).toBe('connected');
+  });
+
+  it('区分真人接通、语音信箱和仅线路接通', () => {
+    expect(describeConnectedOutcome('human')).toBe('真人接通');
+    expect(describeConnectedOutcome('voicemail')).toBe('语音信箱');
+    expect(describeConnectedOutcome('transport')).toBe('仅线路接通');
+    expect(getConnectionTimeLabel('voicemail')).toBe('语音信箱接入时间');
+    expect(getCallDurationLabel('connected', 'transport')).toBe(
+      '线路接通时长',
+    );
+    expect(
+      isHumanConnectedRecord({
+        ...baseRecord,
+        callResult: 'connected',
+        answerType: 'voicemail',
+      }),
+    ).toBe(false);
+    expect(
+      isHumanConnectedRecord({
+        ...baseRecord,
+        callResult: 'connected',
+        answerType: 'human',
+      }),
+    ).toBe(true);
   });
 
   it('区分语义分析中、失败和客户意向', () => {

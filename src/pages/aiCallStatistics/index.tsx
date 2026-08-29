@@ -348,7 +348,7 @@ const AiCallStatisticsPage = () => {
               </Col>
               <Col xs={24} sm={12} lg={8} xl={4}>
                 <MetricCard
-                  title="接通通话"
+                  title="真人接通"
                   value={statistics.overview.connectedCalls.toLocaleString()}
                   unit="通"
                   comparison={formatChangeRate(
@@ -363,7 +363,7 @@ const AiCallStatisticsPage = () => {
               </Col>
               <Col xs={24} sm={12} lg={8} xl={4}>
                 <MetricCard
-                  title="接通率"
+                  title="真人接通率"
                   value={`${percentFormatter.format(statistics.overview.connectRate * 100)}%`}
                   comparison={formatChangePoints(
                     statistics.comparison.connectRateChangePoints,
@@ -377,7 +377,7 @@ const AiCallStatisticsPage = () => {
               </Col>
               <Col xs={24} sm={12} lg={8} xl={4}>
                 <MetricCard
-                  title="通话总时长"
+                  title="真人通话总时长"
                   value={durationMinutes(statistics.overview.totalDurationMs)}
                   unit="分钟"
                   comparison={formatChangeRate(

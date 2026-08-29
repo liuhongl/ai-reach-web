@@ -4,6 +4,8 @@ export type DateRange = [Dayjs, Dayjs];
 export type StatisticsGranularity = 'hour' | 'day';
 export type CallResultGroup =
   | 'connected'
+  | 'voicemail'
+  | 'transport_connected'
   | 'no_answer'
   | 'rejected'
   | 'early_hangup'

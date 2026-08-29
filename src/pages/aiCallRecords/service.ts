@@ -30,6 +30,7 @@ export type AiCallRecord = {
   phoneNumber?: string | null;
   attemptNo?: number | null;
   callResult?: string | null;
+  answerType?: 'human' | 'voicemail' | 'transport' | null;
   aiOutcome?: string | null;
   summary?: string | null;
   analysisStatus?: '0' | '1' | '2' | '3' | '4' | null;
@@ -156,6 +157,9 @@ export type AiCallRecordDetail = {
     retryCount: number;
     maxRetryCount: number;
     lastResult?: string | null;
+    createdBy?: string | null;
+    createdByName?: string | null;
+    startedAt?: string | null;
   } | null;
 };
 

@@ -144,6 +144,45 @@ export const resolveCallResult = (
       ? 'call_failed'
       : undefined);
 
+const connectedOutcomeLabels = {
+  human: '真人接通',
+  voicemail: '语音信箱',
+  transport: '仅线路接通',
+} as const;
+
+export const describeConnectedOutcome = (
+  answerType?: AiCallRecord['answerType'],
+) => (answerType ? connectedOutcomeLabels[answerType] : '已接通');
+
+export const isHumanConnectedRecord = (
+  record: Pick<AiCallRecord, 'answerType' | 'callResult' | 'answeredAt' | 'endedAt' | 'status'>,
+) =>
+  resolveCallResult(record) === 'connected' &&
+  (!record.answerType || record.answerType === 'human');
+
+export const getConnectionTimeLabel = (
+  answerType?: AiCallRecord['answerType'],
+) =>
+  answerType === 'human'
+    ? '真人接通时间'
+    : answerType === 'voicemail'
+      ? '语音信箱接入时间'
+      : answerType === 'transport'
+        ? '线路接通时间'
+        : '接通时间';
+
+export const getCallDurationLabel = (
+  callResult?: string,
+  answerType?: AiCallRecord['answerType'],
+) =>
+  callResult !== 'connected'
+    ? '呼叫耗时'
+    : answerType === 'voicemail'
+      ? '语音信箱时长'
+      : answerType === 'transport'
+        ? '线路接通时长'
+        : '通话时长';
+
 export const getCustomerIntentPresentation = (
   record: Pick<
     AiCallRecord,

@@ -116,6 +116,7 @@ describe('AI Call task detail page', () => {
           status: 'COMPLETED',
           attemptCount: 2,
           latestResult: 'connected',
+          answerType: 'human',
           updatedAt: '2026-07-27 09:30:00',
         },
       ],
@@ -132,6 +133,7 @@ describe('AI Call task detail page', () => {
     expect(screen.getByText('100')).toBeTruthy();
     expect(screen.getByText('30')).toBeTruthy();
     expect(screen.getByText('18')).toBeTruthy();
+    expect(screen.getByText('线路接通数')).toBeTruthy();
     expect(screen.getByText('4')).toBeTruthy();
     expect(screen.getByText('客户回访')).toBeTruthy();
     expect(screen.queryByText('客户回访 / intro_follow_up')).toBeNull();
@@ -167,7 +169,7 @@ describe('AI Call task detail page', () => {
         .slice(0, 4),
     ).toEqual(['客户名称', '最近呼叫结果', '执行状态', '拨打次数']);
     expect(
-      (await screen.findByText('已接通')).closest('.ant-tag'),
+      (await screen.findByText('真人接通')).closest('.ant-tag'),
     ).toBeTruthy();
     expect(
       (await screen.findByText('已完成')).closest('.ant-tag')?.className,

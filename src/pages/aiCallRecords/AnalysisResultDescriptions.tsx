@@ -31,8 +31,8 @@ const endReasonLabels: Record<string, string> = {
   callback_rejected: '已拒接',
   callback_invalid_contact: '联系方式无效',
   callback_technical_failure: '呼叫失败',
-  user_unavailable: '被叫暂时不可用（SIP 480）',
-  sip_480: '被叫暂时不可用（SIP 480）',
+  user_unavailable: '未接通（线路最终返回 SIP 480）',
+  sip_480: '未接通（线路最终返回 SIP 480）',
   sip_participant_left: '通话已结束（挂断方未确认）',
   unknown: '未知原因',
 };

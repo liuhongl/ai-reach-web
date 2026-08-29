@@ -120,6 +120,7 @@ export type AiCallTaskTarget = {
   status: TargetStatus;
   attemptCount: number;
   latestResult?: string | null;
+  answerType?: 'human' | 'voicemail' | 'transport' | null;
   latestDialerType?: string | null;
   providerStatusCode?: string | null;
   providerReason?: string | null;
@@ -159,6 +160,8 @@ export type ExceptionSummaryCard = {
     batchId: string;
     targetCount: number;
     completedCount: number;
+    createdBy?: string;
+    createdByName?: string | null;
     startedAt: string;
   } | null;
   canStart: boolean;

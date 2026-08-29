@@ -310,6 +310,8 @@ describe('AI Call task list page', () => {
             batchId: 'batch-1',
             targetCount: 9,
             completedCount: 2,
+            createdBy: '1',
+            createdByName: '测试管理员',
             startedAt: '2026-08-13T03:00:00Z',
           },
           canStart: false,
@@ -321,6 +323,8 @@ describe('AI Call task list page', () => {
     render(<AiCallTasksPage />);
 
     expect(await screen.findByText(/重呼进行中 2\/9/)).toBeTruthy();
+    expect(screen.getByText(/发起人：测试管理员/)).toBeTruthy();
+    expect(screen.getByText(/发起时间：/)).toBeTruthy();
     expect(
       (screen.getByRole('button', {
         name: /本批重新外呼中/,
