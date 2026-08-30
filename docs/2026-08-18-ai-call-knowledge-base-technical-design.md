@@ -956,7 +956,7 @@ COS 和 PostgreSQL 没有共同事务，通过不可变 Key、幂等任务和状
 
 1. 第 3 步前确认腾讯 COS 开发 Bucket、Region、独立前缀和服务端角色；上线前再确认生产参数、生命周期及备份规则；
 2. 文件和历史版本保留期限；
-3. 第 4 步前在上游 RuoYi 创建并分配 `ai_call:knowledge:view/manage`，确认普通用户 JWT 能实际获得对应权限；
+3. 第 4 步前在上游 RuoYi 创建 `ai_call:knowledge:view/manage` 权限点；本期生产只保持超级管理员通过 `*:*:*` 访问，不向租户角色扩权，待确认 AI Call 租户后再分配并验证其 JWT 权限；
 4. `productInfo` 推荐内容预算和总结模型；
 5. 云 ASR 模型已固定为 `qwen3-asr-flash-filetrans`；账号、地域、费用、数据出域和供应商保留策略仍待确认；
 6. PaddleOCR 在目标 Linux CPU 主机上的固定版本与冒烟结果仍待确认；

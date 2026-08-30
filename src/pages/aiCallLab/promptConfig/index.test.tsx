@@ -7,6 +7,7 @@ import {
   applyAiCallLabPromptVersion,
   extractAiCallLabProductInfo,
   getAiCallLabPromptCommonConfig,
+  getAiCallLabPromptComponents,
   getAiCallLabPromptProfiles,
   getAiCallLabPromptVersion,
   getAiCallLabPromptVersionApplications,
@@ -24,6 +25,7 @@ jest.mock('@/services/ruoyi/ai-call-lab', () => ({
   deleteAiCallLabPromptVersion: jest.fn(),
   extractAiCallLabProductInfo: jest.fn(),
   getAiCallLabPromptCommonConfig: jest.fn(),
+  getAiCallLabPromptComponents: jest.fn(),
   getAiCallLabPromptProfile: jest.fn(),
   getAiCallLabPromptProfiles: jest.fn(),
   getAiCallLabPromptVersion: jest.fn(),
@@ -43,6 +45,7 @@ jest.mock('@/components/Permission', () => ({
 const extractProductInfoMock = extractAiCallLabProductInfo as jest.Mock;
 const applyPromptVersionMock = applyAiCallLabPromptVersion as jest.Mock;
 const getPromptProfilesMock = getAiCallLabPromptProfiles as jest.Mock;
+const getPromptComponentsMock = getAiCallLabPromptComponents as jest.Mock;
 const getPromptVersionMock = getAiCallLabPromptVersion as jest.Mock;
 const getPromptVersionApplicationsMock =
   getAiCallLabPromptVersionApplications as jest.Mock;
@@ -92,6 +95,17 @@ describe('AiCallLabPromptConfigPage', () => {
       total: 2,
     });
     getCommonConfigMock.mockResolvedValue({ content: '统一使用专业语气。' });
+    getPromptComponentsMock.mockResolvedValue({
+      rows: [
+        {
+          componentKey: 'platform_constraints',
+          name: '平台关键约束',
+          content:
+            '7. 未确认的产品信息不得作确定性承诺。\n8. 工具未调用、失败、超时或结果未知时，不得声称成功。',
+        },
+      ],
+      total: 1,
+    });
     getPromptVersionsMock.mockResolvedValue({ rows: [], total: 0 });
     getPromptVersionApplicationsMock.mockResolvedValue({ rows: [], total: 0 });
     applyPromptVersionMock.mockResolvedValue({
@@ -177,6 +191,12 @@ describe('AiCallLabPromptConfigPage', () => {
     expect(await screen.findByDisplayValue('GEO 产品介绍')).toBeTruthy();
     const commonTemplate = screen.getByText('通用沟通规则模板');
     expect(commonTemplate.closest('.ai-call-prompt-common-card')).toBeTruthy();
+    expect(screen.getByText('平台固定约束')).toBeTruthy();
+    expect(screen.getByText('后端维护，所有场景强制生效')).toBeTruthy();
+    expect(screen.getByText(/未确认的产品信息不得作确定性承诺/)).toBeTruthy();
+    expect(
+      screen.getByText(/工具未调用、失败、超时或结果未知时，不得声称成功/),
+    ).toBeTruthy();
     expect(screen.getByText('仅替换当前场景的「三、沟通规则」')).toBeTruthy();
     expect(
       screen.queryByRole('heading', { name: 'AI Call 提示词配置' }),

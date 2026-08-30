@@ -29,6 +29,7 @@ import { ListPage, TableCard } from '@/components/ListLayout';
 import { usePermission } from '@/components/Permission';
 import {
   type AiCallLabProductInfoDraft,
+  type AiCallLabPromptComponent,
   type AiCallLabPromptProfile,
   type AiCallLabPromptVariable,
   type AiCallLabPromptVersion,
@@ -37,6 +38,7 @@ import {
   deleteAiCallLabPromptVersion,
   extractAiCallLabProductInfo,
   getAiCallLabPromptCommonConfig,
+  getAiCallLabPromptComponents,
   getAiCallLabPromptProfiles,
   getAiCallLabPromptVersion,
   getAiCallLabPromptVersionApplications,
@@ -196,6 +198,9 @@ const AiCallLabPromptConfigPage = () => {
   const [selectedProfile, setSelectedProfile] =
     useState<AiCallLabPromptProfile>(emptyProfile);
   const [commonPrompt, setCommonPrompt] = useState('');
+  const [promptComponents, setPromptComponents] = useState<
+    AiCallLabPromptComponent[]
+  >([]);
   const [versions, setVersions] = useState<AiCallLabPromptVersion[]>([]);
   const [versionApplications, setVersionApplications] = useState<
     AiCallLabPromptVersionApplication[]
@@ -253,12 +258,14 @@ const AiCallLabPromptConfigPage = () => {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [profileResult, commonResult] = await Promise.all([
+      const [profileResult, commonResult, componentResult] = await Promise.all([
         getAiCallLabPromptProfiles(),
         getAiCallLabPromptCommonConfig(),
+        getAiCallLabPromptComponents(),
       ]);
       setProfiles(profileResult.rows);
       setCommonPrompt(commonResult.content || '');
+      setPromptComponents(componentResult.rows);
       setCommonDirty(false);
       applyProfile(profileResult.rows[0] || emptyProfile);
     } catch {
@@ -589,6 +596,10 @@ const AiCallLabPromptConfigPage = () => {
     });
   };
 
+  const platformConstraints = promptComponents.find(
+    (component) => component.componentKey === 'platform_constraints',
+  );
+
   return (
     <ListPage className="ai-call-prompt-config-page" title="AI Call 提示词配置">
       {messageContextHolder}
@@ -597,7 +608,20 @@ const AiCallLabPromptConfigPage = () => {
           <Space orientation="vertical" size={16} style={{ width: '100%' }}>
             <Collapse
               className="ai-call-prompt-common-collapse ai-call-prompt-common-card"
+              defaultActiveKey={['platform']}
               items={[
+                {
+                  key: 'platform',
+                  label: '平台固定约束',
+                  extra: (
+                    <Text type="secondary">后端维护，所有场景强制生效</Text>
+                  ),
+                  children: (
+                    <pre className="ai-call-prompt-readonly">
+                      {platformConstraints?.content || '暂无平台固定约束'}
+                    </pre>
+                  ),
+                },
                 {
                   key: 'common',
                   label: '通用沟通规则模板',
